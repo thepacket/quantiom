@@ -3,8 +3,13 @@ import { buildMatrix, M_X } from "./matrices";
 import { applyKQubit } from "./apply";
 import { compileExpr, detectFreeVars } from "./expr";
 import { expandCustomGates, type CustomGate } from "../editor/customGates";
+import { isCliffordOnly, runClifford } from "./stabilizer";
 
 export const MAX_QUBITS = 20;
+/** Above this width, Clifford-only circuits flow through the tableau sim. */
+export const STABILIZER_THRESHOLD = 16;
+/** Stabilizer mode soft cap (memory: 2n·(2n+1) bytes). */
+export const MAX_QUBITS_STABILIZER = 1024;
 
 export type Amplitude = {
   basis: string;
@@ -43,6 +48,10 @@ export type SimResult = {
   isNoisy?: boolean;
   /** Number of trajectories averaged. Only set when `isNoisy`. */
   trajectories?: number;
+  /** True when the result came from the Aaronson-Gottesman tableau path.
+   *  Statevector / Probabilities / Density panels are unavailable in this
+   *  mode (full state has too many basis elements); Bloch is exact. */
+  isStabilizer?: boolean;
 };
 
 export type ParameterValues = Record<string, number>;
@@ -76,6 +85,24 @@ export function simulate(
 ): SimResult {
   const n = circuit.numQubits;
   if (n <= 0) throw new Error("numQubits must be ≥ 1");
+
+  // Inline-expand custom-gate references before scheduling.
+  const expanded = expandCustomGates(circuit.gates, customGates);
+  const gates = [...expanded].sort((a, b) =>
+    a.column !== b.column ? a.column - b.column : a.id.localeCompare(b.id),
+  );
+
+  // Stabilizer fast path: when the circuit is Clifford-only and large
+  // enough that the statevector would be cramped (or impossible), route to
+  // the O(n²) tableau simulator. Sub-threshold Clifford circuits keep the
+  // statevector path so the user still sees full amplitudes.
+  if (n > STABILIZER_THRESHOLD && isCliffordOnly(gates)) {
+    if (n > MAX_QUBITS_STABILIZER) {
+      throw new Error(`max ${MAX_QUBITS_STABILIZER} qubits in stabilizer mode (got ${n})`);
+    }
+    return stabilizerResult(circuit, n, gates);
+  }
+
   if (n > MAX_QUBITS) throw new Error(`max ${MAX_QUBITS} qubits (got ${n})`);
 
   const dim = 1 << n;
@@ -83,12 +110,6 @@ export function simulate(
   state[0] = 1;
 
   const skipped: SkippedGate[] = [];
-
-  // Inline-expand custom-gate references before scheduling.
-  const expanded = expandCustomGates(circuit.gates, customGates);
-  const gates = [...expanded].sort((a, b) =>
-    a.column !== b.column ? a.column - b.column : a.id.localeCompare(b.id),
-  );
 
   for (const g of gates) {
     if (MARKERS.has(g.gateId)) continue;
@@ -156,6 +177,34 @@ export function simulate(
     },
     get blochVectors() {
       if (!_blochs) _blochs = computeBloch(state, n);
+      return _blochs;
+    },
+  };
+}
+
+// ─── Stabilizer dispatch ───────────────────────────────────────────────
+
+function stabilizerResult(
+  circuit: Circuit,
+  n: number,
+  gates: ReadonlyArray<PlacedGate>,
+): SimResult {
+  const tab = runClifford(n, gates);
+  // Lazy: Bloch is the only derived field that's well-defined for arbitrary
+  // n in stabilizer mode. Statevector / probabilities / amplitudes would
+  // be 2^n-sized — we return stub empties and let the panels show notices.
+  let _blochs: BlochVector[] | null = null;
+  const empty = new Float64Array(0);
+  return {
+    numQubits: n,
+    state: empty,
+    amplitudes: [],
+    probabilities: [],
+    freeSymbols: collectFreeSymbols(circuit),
+    skipped: [],
+    isStabilizer: true,
+    get blochVectors() {
+      if (!_blochs) _blochs = tab.blochVectors();
       return _blochs;
     },
   };

@@ -91,6 +91,14 @@ export function ProbabilityPanel({ state }: Props) {
     >
       {!data ? (
         <div className="panel__placeholder">building circuit…</div>
+      ) : data.isStabilizer ? (
+        <div className="panel__notice">
+          Clifford fast path ({data.numQubits} qubits). The full probability
+          distribution has 2<sup>{data.numQubits}</sup> outcomes; a basis-state
+          sampler over a stabilizer state is on the follow-up list. The Bloch
+          panel gives the exact per-qubit marginals (each = (1+r·z)/2 for the
+          Z eigenstate convention).
+        </div>
       ) : (
         <>
           {mode === "shots" && (

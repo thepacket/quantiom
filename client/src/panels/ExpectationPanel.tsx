@@ -60,13 +60,21 @@ function ExpectationBody({ state }: Props) {
 
   if (!data) return <div className="panel__placeholder">building circuit…</div>;
   if (n === 0) return null;
+  if (data.isStabilizer) {
+    return (
+      <div className="panel__notice">
+        Clifford fast path — multi-qubit ⟨P⟩ via tableau measurement is
+        on the follow-up list. Bloch panel gives single-qubit ⟨X/Y/Z⟩
+        directly.
+      </div>
+    );
+  }
   if (data.isNoisy) {
     return (
       <div className="panel__notice">
-        Noise mode on — ⟨P⟩ from a single trajectory is biased. Trajectory-
-        averaged expectation values are on the follow-up list; for now, the
-        Bloch panel (which is trajectory-averaged) gives single-qubit Pauli
-        expectations.
+        Noise mode on — ⟨P⟩ from a single trajectory is biased. Use Bloch
+        for single-qubit Paulis (already trajectory-averaged), or wait for
+        the trajectory-averaged ⟨P⟩ follow-up.
       </div>
     );
   }

@@ -73,6 +73,15 @@ function DensityBody({ state }: Props) {
       </div>
     );
   }
+  if (data.isStabilizer) {
+    return (
+      <div className="panel__notice">
+        Clifford fast path — reduced density matrix from the tableau is on
+        the follow-up list. The Bloch panel gives the exact 1-qubit reduced
+        ρ as (I + r·σ)/2.
+      </div>
+    );
+  }
 
   return (
     <>

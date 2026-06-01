@@ -53,7 +53,15 @@ export function StatevectorPanel({ state }: Props) {
           ({data.trajectories} trajectories).
         </div>
       )}
-      {data && !data.isNoisy && (
+      {data?.isStabilizer && (
+        <div className="panel__notice">
+          Clifford fast path ({data.numQubits} qubits). The full statevector
+          has 2<sup>{data.numQubits}</sup> amplitudes and isn't materialised;
+          the tableau represents the same state in O(n²) memory. Bloch panel
+          gives the exact per-qubit reduced state.
+        </div>
+      )}
+      {data && !data.isNoisy && !data.isStabilizer && (
         <>
           <table className="statevector__table">
             <thead>
