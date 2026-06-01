@@ -3,22 +3,27 @@ import type { HistoryAction } from "./state";
 import { GATES_BY_ID, totalQubits } from "./gates";
 
 function ArbitraryMatrix({
+  dim,
   params,
   onChange,
 }: {
+  dim: number;
   params: string[];
   onChange: (idx: number, value: string) => void;
 }) {
-  // Params order: re00, im00, re01, im01, re10, im10, re11, im11
+  // Params order: row-major, two slots per cell (Re then Im).
+  const rows = Array.from({ length: dim }, (_, i) => i);
   return (
     <div className="arb-matrix">
-      <div className="arb-matrix__hint">2×2 matrix. Re + Im·i in each cell. Expressions ok.</div>
+      <div className="arb-matrix__hint">
+        {dim}×{dim} matrix. Re + Im·i in each cell. Expressions ok.
+      </div>
       <table className="arb-matrix__grid">
         <tbody>
-          {[0, 1].map((row) => (
+          {rows.map((row) => (
             <tr key={row}>
-              {[0, 1].map((col) => {
-                const baseIdx = (row * 2 + col) * 2;
+              {rows.map((col) => {
+                const baseIdx = (row * dim + col) * 2;
                 return (
                   <td key={col}>
                     <input
@@ -198,7 +203,9 @@ export function Inspector({ circuit, selectedGateId, dispatch, onSelect }: Props
         <fieldset className="inspector__group">
           <legend>Parameters</legend>
           {gate.gateId === "u_arb" ? (
-            <ArbitraryMatrix params={gate.params} onChange={updateParam} />
+            <ArbitraryMatrix dim={2} params={gate.params} onChange={updateParam} />
+          ) : gate.gateId === "u_arb_2" ? (
+            <ArbitraryMatrix dim={4} params={gate.params} onChange={updateParam} />
           ) : (
             def.params.map((p, i) => (
               <div key={`p-${i}`} className="inspector__row">

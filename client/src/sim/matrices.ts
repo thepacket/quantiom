@@ -279,6 +279,19 @@ export function buildMatrix(
       [c(params[0], params[1]), c(params[2], params[3])],
       [c(params[4], params[5]), c(params[6], params[7])],
     ];
+    case "u_arb_2": {
+      // 32 params = Re/Im for each of 16 cells, row-major.
+      const M: Complex[][] = [];
+      for (let r = 0; r < 4; r++) {
+        const row: Complex[] = [];
+        for (let cc = 0; cc < 4; cc++) {
+          const k = (r * 4 + cc) * 2;
+          row.push(c(params[k] ?? 0, params[k + 1] ?? 0));
+        }
+        M.push(row);
+      }
+      return M;
+    }
     // Two-qubit fixed
     case "swap": return M_SWAP;
     case "iswap": return M_iSWAP;

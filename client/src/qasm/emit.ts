@@ -172,6 +172,13 @@ function emitGate(g: PlacedGate): string[] {
     return [`ctrl(${n}) @ ${base}${params} ${args};`];
   }
 
+  // ── Arbitrary user-entered matrices (no stdgate form) ──────────────
+  if (g.gateId === "u_arb" || g.gateId === "u_arb_2") {
+    const args = [...g.controls, ...g.targets].map(qref).join(", ");
+    const cells = g.params.map(asciify).join(", ");
+    return [`// ${g.gateId}([${cells}]) ${args}; -- arbitrary unitary, not in stdgates.inc`];
+  }
+
   // ── Standard gates table ────────────────────────────────────────────
   const name = QASM_NAME[g.gateId];
   if (!name) {

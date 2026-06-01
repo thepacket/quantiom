@@ -1,4 +1,4 @@
-import type { GateDef, GateCategory } from "./types";
+import type { GateDef, GateCategory, ParamSpec } from "./types";
 
 const def = (g: Partial<GateDef> & Pick<GateDef, "id" | "symbol" | "name" | "category">): GateDef => ({
   numControls: 0,
@@ -15,6 +15,23 @@ const lambda = { name: "λ", default: "π/2" };
 const gamma = { name: "γ", default: "0" };
 const beta = { name: "β", default: "π/4" };
 const tau = { name: "τ", default: "0" };
+
+/**
+ * Build the parameter spec for an arbitrary d×d unitary matrix.
+ * Two params per cell — real and imaginary part — in row-major order,
+ * defaulting to the identity matrix.
+ */
+function arbMatrixParams(d: number): ParamSpec[] {
+  const out: ParamSpec[] = [];
+  for (let r = 0; r < d; r++) {
+    for (let c = 0; c < d; c++) {
+      const isDiag = r === c;
+      out.push({ name: `Re M${r}${c}`, default: isDiag ? "1" : "0" });
+      out.push({ name: `Im M${r}${c}`, default: "0" });
+    }
+  }
+  return out;
+}
 
 export const GATES: GateDef[] = [
   // ─── Identity & Pauli ──────────────────────────────────────────────────
@@ -43,6 +60,23 @@ export const GATES: GateDef[] = [
   def({ id: "u1", symbol: "U1", name: "U1(λ)", category: "general-u", params: [lambda], description: "Legacy single-param phase. Equivalent to P(λ)." }),
   def({ id: "u2", symbol: "U2", name: "U2(φ,λ)", category: "general-u", params: [phi, lambda], description: "Legacy two-parameter rotation." }),
   def({ id: "u3", symbol: "U3", name: "U3(θ,φ,λ)", category: "general-u", params: [theta, phi, lambda], description: "Legacy U3. Equivalent to U(θ,φ,λ)." }),
+  def({
+    id: "u_arb",
+    symbol: "M",
+    name: "Arbitrary 2×2 unitary",
+    category: "general-u",
+    params: arbMatrixParams(2),
+    description: "User-entered 2×2 complex matrix. Inspector shows a Re/Im grid; expressions allowed (π/2, 1/sqrt(2), etc.). No unitarity check.",
+  }),
+  def({
+    id: "u_arb_2",
+    symbol: "M₄",
+    name: "Arbitrary 4×4 unitary",
+    category: "general-u",
+    numTargets: 2,
+    params: arbMatrixParams(4),
+    description: "User-entered 4×4 complex matrix on two qubits. Same Re/Im grid scheme as the 2×2 form; no unitarity check.",
+  }),
 
   // ─── Two-qubit Clifford ────────────────────────────────────────────────
   def({ id: "cx", symbol: "X", name: "CNOT (CX)", category: "two-qubit-clifford", numControls: 1, targetGlyph: "x-target", description: "Controlled-X. Workhorse two-qubit gate." }),
