@@ -6,6 +6,7 @@ import { GatePalette } from "./GatePalette";
 import { Inspector } from "./Inspector";
 import { FileMenu } from "./FileMenu";
 import { StepBar } from "./StepBar";
+import { loadCustomGates, newCustomGateId, saveCustomGates, type CustomGate } from "./customGates";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -21,6 +22,31 @@ export function CircuitEditor() {
   const [circuit, dispatch, history] = useCircuit();
   const [selectedGateId, setSelectedGateId] = useState<string | null>(null);
   const [paramValues, setParamValues] = useState<ParameterValues>({});
+  const [customGates, setCustomGates] = useState<CustomGate[]>(() => loadCustomGates());
+
+  useEffect(() => {
+    saveCustomGates(customGates);
+  }, [customGates]);
+
+  const onSaveAsGate = () => {
+    const name = window.prompt("Name for this gate?", circuit.name ?? "myblock");
+    if (!name) return;
+    if (circuit.gates.length === 0) {
+      window.alert("Add at least one gate before saving as a custom gate.");
+      return;
+    }
+    const cg: CustomGate = {
+      id: newCustomGateId(),
+      name: name.trim(),
+      numQubits: circuit.numQubits,
+      gates: circuit.gates.map((g) => ({ ...g })),
+    };
+    setCustomGates((prev) => [...prev, cg]);
+  };
+
+  const removeCustomGate = (id: string) => {
+    setCustomGates((prev) => prev.filter((c) => c.id !== id));
+  };
 
   // Step-through state. null means "follow the end of the circuit" — i.e.
   // the user hasn't picked a step explicitly, so the simulation reflects
@@ -37,7 +63,7 @@ export function CircuitEditor() {
     return { ...circuit, gates: circuit.gates.filter((g) => g.column <= effectiveStep) };
   }, [circuit, pickedStep, effectiveStep]);
 
-  const simState = useStatevector(steppedCircuit, paramValues);
+  const simState = useStatevector(steppedCircuit, paramValues, customGates);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -77,7 +103,7 @@ export function CircuitEditor() {
         <div className="app__title">{circuit.name ?? "Untitled"}</div>
         <div className="app__header-right" />
       </header>
-      <GatePalette />
+      <GatePalette customGates={customGates} onRemoveCustomGate={removeCustomGate} />
       <div className="editor__center">
         <div className="editor__toolbar">
           <div className="editor__counts">
@@ -106,6 +132,7 @@ export function CircuitEditor() {
             >
               Redo
             </button>
+            <button onClick={onSaveAsGate} title="Save the current circuit as a reusable custom gate">Save as gate</button>
             <button onClick={() => dispatch({ type: "clear" })} title="Clear circuit">Clear</button>
           </div>
         </div>
@@ -117,6 +144,7 @@ export function CircuitEditor() {
             selectedGateId={selectedGateId}
             onSelect={setSelectedGateId}
             currentStep={effectiveStep}
+            customGates={customGates}
           />
         </div>
         <Inspector

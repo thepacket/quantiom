@@ -134,6 +134,9 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .gate[data-cat="non-unitary"]         { --cat-color: #c47878; }
 .gate[data-cat="control-flow"]        { --cat-color: #d4c267; }
 .gate[data-cat="marker"]              { --cat-color: #6e7888; }
+.gate--custom { --cat-color: #ff9bd2; }
+.gate__box--custom { fill: rgba(255, 155, 210, 0.08); stroke: #ff9bd2; stroke-width: 1.6; }
+.palette__tile--custom { border-color: #ff9bd2; border-style: dashed; }
 
 .gate__connector { stroke: var(--cat-color); stroke-width: 1.4; }
 .gate__control { fill: var(--cat-color); stroke: none; }

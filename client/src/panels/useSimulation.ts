@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { Circuit } from "../editor/types";
 import { simulate, type ParameterValues, type SimResult } from "../sim/simulate";
+import type { CustomGate } from "../editor/customGates";
 
 /** Backwards-compatible wrapper shape used by panel components. */
 export type SimState =
@@ -18,14 +19,18 @@ export function dataOf(state: SimState): SimResult | null {
  * parameterValues). No network, no debounce, no in-flight tracking — the
  * simulator is fast enough that React re-renders absorb the work.
  */
-export function useStatevector(circuit: Circuit, parameterValues: ParameterValues): SimState {
+export function useStatevector(
+  circuit: Circuit,
+  parameterValues: ParameterValues,
+  customGates: CustomGate[] = [],
+): SimState {
   return useMemo<SimState>(() => {
     try {
-      const data = simulate(circuit, parameterValues);
+      const data = simulate(circuit, parameterValues, customGates);
       return { kind: "ready", data };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       return { kind: "error", message, data: null };
     }
-  }, [circuit, parameterValues]);
+  }, [circuit, parameterValues, customGates]);
 }

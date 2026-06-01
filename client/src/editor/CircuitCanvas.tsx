@@ -4,6 +4,7 @@ import { buildPlacedGate, qubitSpan } from "./state";
 import type { Circuit, GateDef, PlacedGate } from "./types";
 import { GATES_BY_ID, totalQubits } from "./gates";
 import { DND_MIME, makeDragGhost } from "./GatePalette";
+import { CUSTOM_PREFIX, type CustomGate } from "./customGates";
 
 const MOVE_MIME = "application/x-quantiom-move";
 const REASSIGN_CONTROL_MIME = "application/x-quantiom-reassign-control";
@@ -22,6 +23,8 @@ type Props = {
   /** Step cursor column. Gates with column > currentStep are faded out;
    *  a vertical line marks where the cursor is. */
   currentStep?: number;
+  /** Registry used to resolve custom-gate references for rendering. */
+  customGates?: CustomGate[];
 };
 
 type HoverState =
@@ -29,7 +32,7 @@ type HoverState =
   | { kind: "move"; col: number; row: number; gateId: string; placedId: string }
   | null;
 
-export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep }: Props) {
+export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep, customGates = [] }: Props) {
   const [hover, setHover] = useState<HoverState>(null);
   // Tracks the in-flight move-gate drag so dragOver (which can't read payload) knows the gate.
   const dragMove = useRef<{ placedId: string; gateId: string } | null>(null);
@@ -100,6 +103,27 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
     }
     const gateId = e.dataTransfer.getData(DND_MIME) || e.dataTransfer.getData("text/plain");
     if (!gateId) return;
+    // Custom (user-defined) gate path.
+    if (gateId.startsWith(CUSTOM_PREFIX)) {
+      const customDef = customGates.find((c) => c.id === gateId.slice(CUSTOM_PREFIX.length));
+      if (!customDef) return;
+      const qubits = defaultQubitsFromDrop(row, customDef.numQubits, circuit.numQubits);
+      if (qubits.length !== customDef.numQubits) return;
+      dispatch({
+        type: "place-gate",
+        gate: {
+          id: `g_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          gateId,
+          column: col,
+          controls: [],
+          targets: qubits,
+          clbits: [],
+          params: [],
+        },
+      });
+      setHover(null);
+      return;
+    }
     const def = GATES_BY_ID[gateId];
     if (!def) return;
     const need = totalQubits(def);
@@ -198,7 +222,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
         )}
 
         {/* drop hover preview */}
-        {hover && <DropPreview hover={hover} circuit={circuit} />}
+        {hover && <DropPreview hover={hover} circuit={circuit} customGates={customGates} />}
 
         {/* step cursor (vertical line between the executed and pending columns) */}
         {currentStep !== undefined && currentStep < numCols - 1 && (
@@ -218,6 +242,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
             selected={g.id === selectedGateId}
             onClick={() => onSelect(g.id)}
             past={currentStep !== undefined && g.column > currentStep}
+            customGates={customGates}
           />
         ))}
       </svg>
@@ -315,13 +340,21 @@ function defaultQubitsFromDrop(dropRow: number, need: number, numQubits: number)
 function DropPreview({
   hover,
   circuit,
+  customGates,
 }: {
   hover: NonNullable<HoverState>;
   circuit: Circuit;
+  customGates: CustomGate[];
 }) {
-  const def = GATES_BY_ID[hover.gateId];
-  if (!def) return null;
-  const need = totalQubits(def);
+  let need: number | undefined;
+  if (hover.gateId.startsWith(CUSTOM_PREFIX)) {
+    const cd = customGates.find((c) => c.id === hover.gateId.slice(CUSTOM_PREFIX.length));
+    need = cd?.numQubits;
+  } else {
+    const def = GATES_BY_ID[hover.gateId];
+    need = def ? totalQubits(def) : undefined;
+  }
+  if (need === undefined) return null;
   const qubits = defaultQubitsFromDrop(hover.row, need, circuit.numQubits);
   if (qubits.length !== need) return null;
   const lo = Math.min(...qubits);
@@ -343,18 +376,45 @@ function PlacedGateView({
   selected,
   onClick,
   past,
+  customGates,
 }: {
   gate: PlacedGate;
   selected: boolean;
   onClick: () => void;
   past?: boolean;
+  customGates: CustomGate[];
 }) {
-  const def = GATES_BY_ID[gate.gateId];
+  const isCustom = gate.gateId.startsWith(CUSTOM_PREFIX);
+  const customDef = isCustom
+    ? customGates.find((c) => c.id === gate.gateId.slice(CUSTOM_PREFIX.length))
+    : undefined;
+  const def = isCustom ? undefined : GATES_BY_ID[gate.gateId];
   const x = colX(gate.column);
   const all = [...gate.controls, ...gate.targets];
   if (all.length === 0) return null;
   const lo = Math.min(...all);
   const hi = Math.max(...all);
+
+  // Custom gates render as a single coloured box spanning the qubit range.
+  if (isCustom) {
+    const yTop = lo * ROW_H + 8;
+    const boxH = (hi - lo + 1) * ROW_H - 16;
+    const label = customDef?.name ?? "?";
+    const w = Math.max(40, label.length * 8 + 12);
+    return (
+      <g
+        className={"gate gate--custom" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "")}
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+      >
+        <rect x={x - w / 2} y={yTop} width={w} height={boxH} rx={6} className="gate__box gate__box--custom" />
+        <text x={x} y={(lo * ROW_H + (hi + 1) * ROW_H) / 2 + 5} textAnchor="middle" className="gate__label">
+          {label.slice(0, 8)}
+        </text>
+      </g>
+    );
+  }
+
+  if (!def) return null;
 
   return (
     <g

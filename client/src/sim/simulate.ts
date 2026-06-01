@@ -2,6 +2,7 @@ import type { Circuit, PlacedGate } from "../editor/types";
 import { buildMatrix, M_X } from "./matrices";
 import { applyKQubit } from "./apply";
 import { compileExpr, detectFreeVars } from "./expr";
+import { expandCustomGates, type CustomGate } from "../editor/customGates";
 
 export const MAX_QUBITS = 20;
 
@@ -58,7 +59,11 @@ const PREP_AMPS: Record<string, [number, number, number, number]> = {
  * state. n ≤ 20 keeps that under 16 MB. Time per gate is O(d · 2^n) where
  * d is the gate's dimension (2, 4, 8, …).
  */
-export function simulate(circuit: Circuit, paramValues: ParameterValues): SimResult {
+export function simulate(
+  circuit: Circuit,
+  paramValues: ParameterValues,
+  customGates: CustomGate[] = [],
+): SimResult {
   const n = circuit.numQubits;
   if (n <= 0) throw new Error("numQubits must be ≥ 1");
   if (n > MAX_QUBITS) throw new Error(`max ${MAX_QUBITS} qubits (got ${n})`);
@@ -69,7 +74,9 @@ export function simulate(circuit: Circuit, paramValues: ParameterValues): SimRes
 
   const skipped: SkippedGate[] = [];
 
-  const gates = [...circuit.gates].sort((a, b) =>
+  // Inline-expand custom-gate references before scheduling.
+  const expanded = expandCustomGates(circuit.gates, customGates);
+  const gates = [...expanded].sort((a, b) =>
     a.column !== b.column ? a.column - b.column : a.id.localeCompare(b.id),
   );
 

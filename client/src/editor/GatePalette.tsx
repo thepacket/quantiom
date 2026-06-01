@@ -1,8 +1,15 @@
 import { useMemo, useState } from "react";
 import type { GateDef, GateCategory } from "./types";
 import { CATEGORY_LABELS, CATEGORY_ORDER, GATES } from "./gates";
+import type { CustomGate } from "./customGates";
+import { CUSTOM_PREFIX } from "./customGates";
 
 export const DND_MIME = "application/x-quantiom-gate";
+
+type Props = {
+  customGates?: CustomGate[];
+  onRemoveCustomGate?: (id: string) => void;
+};
 
 /**
  * Spawn a small DOM element styled like a placed gate to use as the drag
@@ -19,9 +26,9 @@ export function makeDragGhost(symbol: string): HTMLDivElement {
   return ghost;
 }
 
-export function GatePalette() {
+export function GatePalette({ customGates = [], onRemoveCustomGate }: Props) {
   const [query, setQuery] = useState("");
-  const [collapsed, setCollapsed] = useState<Set<GateCategory>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<GateCategory | "custom">>(new Set());
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -44,7 +51,7 @@ export function GatePalette() {
     return m;
   }, [filtered]);
 
-  const toggle = (cat: GateCategory) => {
+  const toggle = (cat: GateCategory | "custom") => {
     setCollapsed((c) => {
       const n = new Set(c);
       if (n.has(cat)) n.delete(cat);
@@ -52,6 +59,13 @@ export function GatePalette() {
       return n;
     });
   };
+
+  // Search filter for custom gates.
+  const filteredCustom = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return customGates;
+    return customGates.filter((g) => g.id.includes(q) || g.name.toLowerCase().includes(q));
+  }, [customGates, query]);
 
   const onDragStart = (e: React.DragEvent<HTMLDivElement>, gateId: string, symbol: string) => {
     e.dataTransfer.setData(DND_MIME, gateId);
@@ -74,6 +88,37 @@ export function GatePalette() {
         />
       </div>
       <div className="palette__groups">
+        {filteredCustom.length > 0 && (
+          <section className="palette__group">
+            <button className="palette__group-header" onClick={() => toggle("custom")}>
+              <span className="palette__chevron">{collapsed.has("custom") ? "▸" : "▾"}</span>
+              Your gates
+              <span className="palette__count">{filteredCustom.length}</span>
+            </button>
+            {!collapsed.has("custom") && (
+              <div className="palette__grid">
+                {filteredCustom.map((g) => (
+                  <div
+                    key={g.id}
+                    className="palette__tile palette__tile--custom"
+                    draggable
+                    onDragStart={(e) => onDragStart(e, `${CUSTOM_PREFIX}${g.id}`, g.name.slice(0, 3))}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      if (onRemoveCustomGate && window.confirm(`Delete custom gate "${g.name}"?`)) {
+                        onRemoveCustomGate(g.id);
+                      }
+                    }}
+                    title={`${g.name} — ${g.numQubits} qubit${g.numQubits === 1 ? "" : "s"} · right-click to delete`}
+                  >
+                    <span className="palette__symbol">{g.name.slice(0, 4)}</span>
+                    <span className="palette__id">{g.numQubits}q</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
         {CATEGORY_ORDER.map((cat) => {
           const gates = grouped.get(cat);
           if (!gates || gates.length === 0) return null;
