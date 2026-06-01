@@ -26,26 +26,66 @@ import hadamard3 from "../../examples/hadamard_transform_3q.qasm?raw";
 
 export type Example = { id: string; label: string; qasm: string };
 
-export const EXAMPLES: Example[] = [
-  { id: "bell", label: "Bell state", qasm: bell },
-  { id: "ghz", label: "GHZ state (3q)", qasm: ghz },
-  { id: "w_state", label: "W state (3q)", qasm: wState },
-  { id: "bv", label: "Bernstein–Vazirani", qasm: bv },
-  { id: "dj", label: "Deutsch–Jozsa", qasm: dj },
-  { id: "grover", label: "Grover (2q, 1 iter)", qasm: grover },
-  { id: "qft", label: "QFT (3q)", qasm: qft },
-  { id: "teleport", label: "Teleportation", qasm: teleport },
-  { id: "kickback", label: "Phase kickback", qasm: kickback },
-  { id: "vqe", label: "Variational ansatz", qasm: vqe },
-  { id: "animated", label: "Animated (Rabi + Larmor)", qasm: animated },
-  { id: "coin-flip", label: "Quantum coin flip", qasm: coinFlip },
-  { id: "hadamard-3", label: "Walsh–Hadamard transform (3q)", qasm: hadamard3 },
-  { id: "superdense", label: "Superdense coding", qasm: superdense },
-  { id: "chsh", label: "CHSH test", qasm: chsh },
-  { id: "iqft", label: "Inverse QFT (3q)", qasm: iqft },
-  { id: "qpe", label: "Quantum phase estimation", qasm: qpe },
-  { id: "half-adder", label: "Half adder", qasm: halfAdder },
-  { id: "bit-flip", label: "Bit-flip error code", qasm: bitFlip },
-  { id: "qaoa", label: "QAOA MaxCut (triangle)", qasm: qaoa },
-  { id: "cluster", label: "Cluster state (4q linear)", qasm: cluster },
+export type ExampleCategory = { label: string; items: Example[] };
+
+export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
+  {
+    label: "Intro",
+    items: [
+      { id: "coin-flip", label: "Quantum coin flip (1q)", qasm: coinFlip },
+      { id: "hadamard-3", label: "Walsh–Hadamard transform (3q)", qasm: hadamard3 },
+    ],
+  },
+  {
+    label: "Entanglement",
+    items: [
+      { id: "bell", label: "Bell state (2q)", qasm: bell },
+      { id: "ghz", label: "GHZ state (3q)", qasm: ghz },
+      { id: "w_state", label: "W state (3q)", qasm: wState },
+      { id: "cluster", label: "Linear cluster (4q)", qasm: cluster },
+    ],
+  },
+  {
+    label: "Protocols",
+    items: [
+      { id: "teleport", label: "Quantum teleportation (3q)", qasm: teleport },
+      { id: "superdense", label: "Superdense coding (2q)", qasm: superdense },
+      { id: "kickback", label: "Phase kickback (2q)", qasm: kickback },
+      { id: "chsh", label: "CHSH inequality test (2q)", qasm: chsh },
+    ],
+  },
+  {
+    label: "Algorithms",
+    items: [
+      { id: "bv", label: "Bernstein–Vazirani (4q)", qasm: bv },
+      { id: "dj", label: "Deutsch–Jozsa (4q)", qasm: dj },
+      { id: "grover", label: "Grover, 1 iter (2q)", qasm: grover },
+      { id: "qft", label: "QFT (3q)", qasm: qft },
+      { id: "iqft", label: "Inverse QFT (3q)", qasm: iqft },
+      { id: "qpe", label: "Quantum phase estimation (4q)", qasm: qpe },
+    ],
+  },
+  {
+    label: "Arithmetic & ECC",
+    items: [
+      { id: "half-adder", label: "Half adder (4q)", qasm: halfAdder },
+      { id: "bit-flip", label: "Bit-flip code (3q)", qasm: bitFlip },
+    ],
+  },
+  {
+    label: "Variational",
+    items: [
+      { id: "qaoa", label: "QAOA MaxCut triangle (3q)", qasm: qaoa },
+      { id: "vqe", label: "Hardware-efficient ansatz (4q)", qasm: vqe },
+    ],
+  },
+  {
+    label: "Animation",
+    items: [
+      { id: "animated", label: "Rabi + Larmor (2q, drives t)", qasm: animated },
+    ],
+  },
 ];
+
+/** Flat list — kept for any caller that doesn't care about grouping. */
+export const EXAMPLES: Example[] = EXAMPLE_CATEGORIES.flatMap((c) => c.items);

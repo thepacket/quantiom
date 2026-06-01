@@ -3,7 +3,7 @@ import type { Circuit } from "./types";
 import type { HistoryAction } from "./state";
 import { emitQasm3 } from "../qasm/emit";
 import { parseQasm3 } from "../qasm/parse";
-import { EXAMPLES } from "../examples";
+import { EXAMPLE_CATEGORIES, EXAMPLES } from "../examples";
 
 type Props = {
   circuit: Circuit;
@@ -66,8 +66,12 @@ export function FileMenu({ circuit, dispatch }: Props) {
       <button onClick={onDownload} title="Download as .qasm">Download</button>
       <select className="file-menu__examples" onChange={onExampleChange} defaultValue="" title="Load an example">
         <option value="">Examples…</option>
-        {EXAMPLES.map((ex) => (
-          <option key={ex.id} value={ex.id}>{ex.label}</option>
+        {EXAMPLE_CATEGORIES.map((cat) => (
+          <optgroup key={cat.label} label={cat.label}>
+            {cat.items.map((ex) => (
+              <option key={ex.id} value={ex.id}>{ex.label}</option>
+            ))}
+          </optgroup>
         ))}
       </select>
     </div>
