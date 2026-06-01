@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { version as APP_VERSION } from "../../package.json";
 import { useCircuit } from "./state";
 import { CircuitCanvas } from "./CircuitCanvas";
 import { GatePalette } from "./GatePalette";
 import { Inspector } from "./Inspector";
 import { FileMenu } from "./FileMenu";
+import { StepBar } from "./StepBar";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -18,7 +19,23 @@ export function CircuitEditor() {
   const [circuit, dispatch, history] = useCircuit();
   const [selectedGateId, setSelectedGateId] = useState<string | null>(null);
   const [paramValues, setParamValues] = useState<ParameterValues>({});
-  const simState = useStatevector(circuit, paramValues);
+
+  // Step-through state. null means "follow the end of the circuit" — i.e.
+  // the user hasn't picked a step explicitly, so the simulation reflects
+  // every gate. A non-null number freezes the simulation at that column.
+  const [pickedStep, setPickedStep] = useState<number | null>(null);
+  const maxColumn = useMemo(
+    () => circuit.gates.reduce((m, g) => Math.max(m, g.column), -1),
+    [circuit.gates],
+  );
+  const effectiveStep = pickedStep === null ? maxColumn : Math.min(pickedStep, maxColumn);
+
+  const steppedCircuit = useMemo(() => {
+    if (pickedStep === null) return circuit;
+    return { ...circuit, gates: circuit.gates.filter((g) => g.column <= effectiveStep) };
+  }, [circuit, pickedStep, effectiveStep]);
+
+  const simState = useStatevector(steppedCircuit, paramValues);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -90,12 +107,14 @@ export function CircuitEditor() {
             <button onClick={() => dispatch({ type: "clear" })} title="Clear circuit">Clear</button>
           </div>
         </div>
+        <StepBar maxColumn={maxColumn} step={effectiveStep} onChange={setPickedStep} />
         <div className="editor__canvas-scroll">
           <CircuitCanvas
             circuit={circuit}
             dispatch={dispatch}
             selectedGateId={selectedGateId}
             onSelect={setSelectedGateId}
+            currentStep={effectiveStep}
           />
         </div>
         <Inspector

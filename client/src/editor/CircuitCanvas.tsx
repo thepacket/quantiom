@@ -19,6 +19,9 @@ type Props = {
   dispatch: React.Dispatch<HistoryAction>;
   selectedGateId: string | null;
   onSelect: (id: string | null) => void;
+  /** Step cursor column. Gates with column > currentStep are faded out;
+   *  a vertical line marks where the cursor is. */
+  currentStep?: number;
 };
 
 type HoverState =
@@ -26,7 +29,7 @@ type HoverState =
   | { kind: "move"; col: number; row: number; gateId: string; placedId: string }
   | null;
 
-export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: Props) {
+export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep }: Props) {
   const [hover, setHover] = useState<HoverState>(null);
   // Tracks the in-flight move-gate drag so dragOver (which can't read payload) knows the gate.
   const dragMove = useRef<{ placedId: string; gateId: string } | null>(null);
@@ -197,6 +200,16 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: P
         {/* drop hover preview */}
         {hover && <DropPreview hover={hover} circuit={circuit} />}
 
+        {/* step cursor (vertical line between the executed and pending columns) */}
+        {currentStep !== undefined && currentStep < numCols - 1 && (
+          <line
+            x1={LABEL_W + (currentStep + 1) * COL_W}
+            y1={0}
+            x2={LABEL_W + (currentStep + 1) * COL_W}
+            y2={height}
+            className="canvas__step-cursor"
+          />
+        )}
         {/* placed gates */}
         {circuit.gates.map((g) => (
           <PlacedGateView
@@ -204,6 +217,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: P
             gate={g}
             selected={g.id === selectedGateId}
             onClick={() => onSelect(g.id)}
+            past={currentStep !== undefined && g.column > currentStep}
           />
         ))}
       </svg>
@@ -328,10 +342,12 @@ function PlacedGateView({
   gate,
   selected,
   onClick,
+  past,
 }: {
   gate: PlacedGate;
   selected: boolean;
   onClick: () => void;
+  past?: boolean;
 }) {
   const def = GATES_BY_ID[gate.gateId];
   const x = colX(gate.column);
@@ -342,7 +358,7 @@ function PlacedGateView({
 
   return (
     <g
-      className={"gate" + (selected ? " gate--selected" : "")}
+      className={"gate" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "")}
       data-cat={def.category}
       onClick={(e) => {
         e.stopPropagation();
