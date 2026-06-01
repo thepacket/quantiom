@@ -45,3 +45,8 @@ Composer) or read them as a worked-example reference.
 | [sono_phase_slide.qasm](sono_phase_slide.qasm) | 1 | Sonorizer demo: animated phase via RZ(t) |
 | [sono_bell_chord.qasm](sono_bell_chord.qasm) | 2 | Sonorizer demo: fundamental + 2-octave-up partial |
 | [sono_sawtooth.qasm](sono_sawtooth.qasm) | 4 | Sonorizer demo: 16 equal partials |
+| [anim_qft_state.qasm](anim_qft_state.qasm) | 3 | QFT of an input that evolves with t |
+| [anim_phase_fountain.qasm](anim_phase_fountain.qasm) | 4 | Four entangled qubits, four phase rates |
+| [anim_ising_trotter.qasm](anim_ising_trotter.qasm) | 4 | Transverse-field Ising dynamics by Trotter |
+| [anim_cascade_5q.qasm](anim_cascade_5q.qasm) | 5 | Five qubits, five rotation rates (1,2,3,5,7) |
+| [anim_swirl_6q.qasm](anim_swirl_6q.qasm) | 6 | Dense 6-qubit ansatz, ~35 t-parameterized gates |

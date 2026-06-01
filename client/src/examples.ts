@@ -40,6 +40,11 @@ import sonoPhase from "../../examples/sono_phase_slide.qasm?raw";
 import sonoTremolo from "../../examples/sono_tremolo.qasm?raw";
 import sonoSaw from "../../examples/sono_sawtooth.qasm?raw";
 import sonoBell from "../../examples/sono_bell_chord.qasm?raw";
+import animCascade from "../../examples/anim_cascade_5q.qasm?raw";
+import animIsing from "../../examples/anim_ising_trotter.qasm?raw";
+import animFountain from "../../examples/anim_phase_fountain.qasm?raw";
+import animQft from "../../examples/anim_qft_state.qasm?raw";
+import animSwirl from "../../examples/anim_swirl_6q.qasm?raw";
 
 export type Example = { id: string; label: string; qasm: string };
 
@@ -116,7 +121,12 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
   {
     label: "Animation",
     items: [
-      { id: "animated", label: "Rabi + Larmor (2q, drives t)", qasm: animated },
+      { id: "animated", label: "Rabi + Larmor (2q)", qasm: animated },
+      { id: "anim-qft", label: "QFT of evolving state (3q)", qasm: animQft },
+      { id: "anim-fountain", label: "Phase fountain (4q)", qasm: animFountain },
+      { id: "anim-ising", label: "Ising Trotter (4q, ~25 gates)", qasm: animIsing },
+      { id: "anim-cascade", label: "Multi-frequency cascade (5q)", qasm: animCascade },
+      { id: "anim-swirl", label: "Dense swirl (6q, ~35 gates)", qasm: animSwirl },
     ],
   },
   {
