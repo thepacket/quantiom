@@ -174,13 +174,16 @@ def _apply_unitary(
     for other_val in range(max(1, other_count)):
         # Extract the 2^k subspace amplitudes.
         sub = [state[_idx(s, other_val)] for s in range(d)]
-        # Multiply U · sub.
+        # Multiply U · sub. We deliberately skip per-step sp.simplify here:
+        # for circuits with many parameterized gates it dominates wallclock
+        # and locks up animation playback. A single optional simplify is
+        # done after the full circuit in _cached_symbolic_state.
         for i in range(d):
             acc: sp.Expr = sp.Integer(0)
             for j in range(d):
                 if U[i, j] != 0:
                     acc += U[i, j] * sub[j]
-            new_state[_idx(i, other_val)] = sp.simplify(acc)
+            new_state[_idx(i, other_val)] = acc
 
     return new_state
 
@@ -226,9 +229,9 @@ def _apply_prep(
             base = state[idx]
             if base == 0:
                 continue
-            new_state[idx] = sp.simplify(amp0 * base)
+            new_state[idx] = amp0 * base
             mate = idx | (1 << (n - 1 - q))
-            new_state[mate] = sp.simplify(amp1 * base)
+            new_state[mate] = amp1 * base
     return new_state
 
 
