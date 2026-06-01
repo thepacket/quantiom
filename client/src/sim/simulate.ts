@@ -24,6 +24,10 @@ export type SkippedGate = {
 export type SimResult = {
   numQubits: number;
   amplitudes: Amplitude[];
+  /** Raw state vector: Float64Array of length 2·2^n with re at even
+   *  indices and im at odd. Exposed for panels that want to run their
+   *  own derived computations (Pauli expectations, density matrix). */
+  state: Float64Array;
   probabilities: number[];
   blochVectors: BlochVector[];
   freeSymbols: string[];
@@ -116,6 +120,7 @@ export function simulate(circuit: Circuit, paramValues: ParameterValues): SimRes
   return {
     numQubits: n,
     amplitudes: extractAmplitudes(state, n),
+    state,
     probabilities: computeProbabilities(state, dim),
     blochVectors: computeBloch(state, n),
     freeSymbols: collectFreeSymbols(circuit),
