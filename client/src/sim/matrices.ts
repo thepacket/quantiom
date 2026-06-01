@@ -275,6 +275,10 @@ export function buildMatrix(
     case "u1": return M_U1(params[0]);
     case "u2": return M_U2(params[0], params[1]);
     case "u3": return M_U3(params[0], params[1], params[2]);
+    case "u_arb": return [
+      [c(params[0], params[1]), c(params[2], params[3])],
+      [c(params[4], params[5]), c(params[6], params[7])],
+    ];
     // Two-qubit fixed
     case "swap": return M_SWAP;
     case "iswap": return M_iSWAP;

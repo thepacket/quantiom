@@ -187,6 +187,14 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .density__purity { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-top: 6px; }
 .density__purity-note { color: var(--border-strong); }
 
+/* ─── Arbitrary 2×2 matrix entry ────────────────────────────────────── */
+.arb-matrix { display: flex; flex-direction: column; gap: 6px; }
+.arb-matrix__hint { color: var(--muted); font-size: 10px; }
+.arb-matrix__grid { border-collapse: collapse; width: 100%; }
+.arb-matrix__grid td { padding: 4px; border: 1px solid var(--border); }
+.arb-matrix__cell { width: 100%; font-family: ui-monospace, monospace; font-size: 11px; padding: 2px 4px; box-sizing: border-box; display: block; }
+.arb-matrix__cell--im { margin-top: 2px; color: #c4a96d; }
+
 /* ─── Inspector ─────────────────────────────────────────────────────── */
 .inspector { border-top: 1px solid var(--border); background: var(--panel); padding: 10px 12px; max-height: 38vh; overflow: auto; }
 .inspector--empty { color: var(--muted); font-size: 12px; }

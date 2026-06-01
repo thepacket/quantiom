@@ -2,6 +2,48 @@ import type { Circuit, PlacedGate } from "./types";
 import type { HistoryAction } from "./state";
 import { GATES_BY_ID, totalQubits } from "./gates";
 
+function ArbitraryMatrix({
+  params,
+  onChange,
+}: {
+  params: string[];
+  onChange: (idx: number, value: string) => void;
+}) {
+  // Params order: re00, im00, re01, im01, re10, im10, re11, im11
+  return (
+    <div className="arb-matrix">
+      <div className="arb-matrix__hint">2×2 matrix. Re + Im·i in each cell. Expressions ok.</div>
+      <table className="arb-matrix__grid">
+        <tbody>
+          {[0, 1].map((row) => (
+            <tr key={row}>
+              {[0, 1].map((col) => {
+                const baseIdx = (row * 2 + col) * 2;
+                return (
+                  <td key={col}>
+                    <input
+                      className="arb-matrix__cell"
+                      value={params[baseIdx] ?? ""}
+                      onChange={(e) => onChange(baseIdx, e.target.value)}
+                      title={`Re M${row}${col}`}
+                    />
+                    <input
+                      className="arb-matrix__cell arb-matrix__cell--im"
+                      value={params[baseIdx + 1] ?? ""}
+                      onChange={(e) => onChange(baseIdx + 1, e.target.value)}
+                      title={`Im M${row}${col}`}
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 type Props = {
   circuit: Circuit;
   selectedGateId: string | null;
@@ -155,12 +197,16 @@ export function Inspector({ circuit, selectedGateId, dispatch, onSelect }: Props
       {def.params.length > 0 && (
         <fieldset className="inspector__group">
           <legend>Parameters</legend>
-          {def.params.map((p, i) => (
-            <div key={`p-${i}`} className="inspector__row">
-              <label>{p.name}</label>
-              <input value={gate.params[i] ?? ""} onChange={(e) => updateParam(i, e.target.value)} />
-            </div>
-          ))}
+          {gate.gateId === "u_arb" ? (
+            <ArbitraryMatrix params={gate.params} onChange={updateParam} />
+          ) : (
+            def.params.map((p, i) => (
+              <div key={`p-${i}`} className="inspector__row">
+                <label>{p.name}</label>
+                <input value={gate.params[i] ?? ""} onChange={(e) => updateParam(i, e.target.value)} />
+              </div>
+            ))
+          )}
         </fieldset>
       )}
 
