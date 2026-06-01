@@ -1,5 +1,5 @@
 app = "quantiom"
-primary_region = "iad"
+primary_region = "yyz"
 
 [build]
 
