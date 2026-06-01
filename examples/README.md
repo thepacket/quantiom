@@ -17,3 +17,4 @@ Composer) or read them as a worked-example reference.
 | [teleportation.qasm](teleportation.qasm) | 3 | State transfer via Bell pair + classical feedback |
 | [phase_kickback.qasm](phase_kickback.qasm) | 2 | The mechanism behind most quantum speedups |
 | [variational_ansatz.qasm](variational_ansatz.qasm) | 4 | Hardware-efficient ansatz with symbolic parameters |
+| [animated_rabi_larmor.qasm](animated_rabi_larmor.qasm) | 2 | Uses the special `t` symbol; hit ▶ on the Parameters panel |

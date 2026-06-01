@@ -12,6 +12,7 @@ import qft from "../../examples/qft_3q.qasm?raw";
 import teleport from "../../examples/teleportation.qasm?raw";
 import kickback from "../../examples/phase_kickback.qasm?raw";
 import vqe from "../../examples/variational_ansatz.qasm?raw";
+import animated from "../../examples/animated_rabi_larmor.qasm?raw";
 
 export type Example = { id: string; label: string; qasm: string };
 
@@ -26,4 +27,5 @@ export const EXAMPLES: Example[] = [
   { id: "teleport", label: "Teleportation", qasm: teleport },
   { id: "kickback", label: "Phase kickback", qasm: kickback },
   { id: "vqe", label: "Variational ansatz", qasm: vqe },
+  { id: "animated", label: "Animated (Rabi + Larmor)", qasm: animated },
 ];
