@@ -89,9 +89,6 @@ export function CircuitEditor() {
             onSelect={setSelectedGateId}
           />
         </div>
-        <div className="editor__bottom">
-          <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
-        </div>
         <Inspector
           circuit={circuit}
           dispatch={dispatch}
@@ -105,6 +102,7 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="formal-math"><FormalMathPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
