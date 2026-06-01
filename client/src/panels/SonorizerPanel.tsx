@@ -19,7 +19,14 @@ export function SonorizerPanel({ state }: Props) {
   // Build/destroy the engine on play toggle.
   useEffect(() => {
     if (playing && !engineRef.current) {
-      engineRef.current = new SynthEngine(baseFreq);
+      const eng = new SynthEngine(baseFreq);
+      engineRef.current = eng;
+      // Seed with the current amplitudes — otherwise the oscillator stays on
+      // its silent default waveform until the next /api/simulate response,
+      // which for a static circuit may never arrive.
+      if (data) {
+        eng.setAmplitudes(data.amplitudes.map((a) => [a.re ?? 0, a.im ?? 0] as const));
+      }
     }
     if (engineRef.current) {
       engineRef.current.setMasterGain(playing ? volume : 0);
