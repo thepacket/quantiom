@@ -17,6 +17,7 @@ export type Action =
   | { type: "remove-gate"; id: string }
   | { type: "update-gate"; id: string; patch: Partial<PlacedGate> }
   | { type: "move-gate"; id: string; column: number; anchorQubit: number }
+  | { type: "replace-circuit"; circuit: Circuit }
   | { type: "clear" };
 
 export type HistoryAction = Action | { type: "undo" } | { type: "redo" };
@@ -72,6 +73,8 @@ function reducer(state: Circuit, action: Action): Circuit {
       const placed = relocateIfCollision(without, moved);
       return { ...state, gates: [...without, placed] };
     }
+    case "replace-circuit":
+      return action.circuit;
     case "clear":
       return { ...state, gates: [] };
   }

@@ -1,23 +1,70 @@
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Circuit } from "../editor/types";
+import type { HistoryAction } from "../editor/state";
 import { emitQasm3 } from "../qasm/emit";
+import { parseQasm3 } from "../qasm/parse";
 
-type Props = { circuit: Circuit };
+type Props = {
+  circuit: Circuit;
+  dispatch: React.Dispatch<HistoryAction>;
+};
 
-export function QasmPanel({ circuit }: Props) {
-  const qasm = useMemo(() => emitQasm3(circuit), [circuit]);
+const PARSE_DEBOUNCE_MS = 350;
+
+export function QasmPanel({ circuit, dispatch }: Props) {
+  const [text, setText] = useState<string>(() => emitQasm3(circuit));
+  const [editing, setEditing] = useState(false);
+  const [parseError, setParseError] = useState<{ line: number; message: string } | null>(null);
+  const [warnings, setWarnings] = useState<Array<{ line: number; message: string }>>([]);
   const [copied, setCopied] = useState(false);
-  const lines = qasm.split("\n");
+  const parseTimer = useRef<number | null>(null);
+  const lastDispatchedRef = useRef<string>("");
+
+  // External circuit changes overwrite the textarea ONLY when the user isn't editing.
+  useEffect(() => {
+    if (editing) return;
+    const emitted = emitQasm3(circuit);
+    setText(emitted);
+    lastDispatchedRef.current = emitted;
+    setParseError(null);
+    setWarnings([]);
+  }, [circuit, editing]);
+
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const next = e.target.value;
+    setText(next);
+    if (parseTimer.current) window.clearTimeout(parseTimer.current);
+    parseTimer.current = window.setTimeout(() => parseAndDispatch(next), PARSE_DEBOUNCE_MS);
+  };
+
+  const parseAndDispatch = (source: string) => {
+    const result = parseQasm3(source);
+    if (!result.ok) {
+      setParseError({ line: result.line, message: result.error });
+      setWarnings([]);
+      return;
+    }
+    setParseError(null);
+    setWarnings(result.warnings);
+    // Avoid dispatching if the resulting circuit emits the same QASM we already
+    // dispatched — prevents pointless undo entries when the user types whitespace.
+    const reemitted = emitQasm3(result.circuit);
+    if (reemitted === lastDispatchedRef.current) return;
+    lastDispatchedRef.current = reemitted;
+    dispatch({ type: "replace-circuit", circuit: result.circuit });
+  };
 
   const onCopy = async () => {
     try {
-      await navigator.clipboard.writeText(qasm);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      // No-op — clipboard may be unavailable in some contexts.
+      /* clipboard may be unavailable */
     }
   };
+
+  const lineCount = text.split("\n").length;
 
   return (
     <section className="panel panel--qasm">
@@ -27,14 +74,38 @@ export function QasmPanel({ circuit }: Props) {
           <button onClick={onCopy}>{copied ? "copied" : "copy"}</button>
         </div>
       </header>
-      <pre className="qasm__code">
-        {lines.map((line, i) => (
-          <div key={i} className="qasm__line">
-            <span className="qasm__ln">{i + 1}</span>
-            <code>{line || " "}</code>
-          </div>
-        ))}
-      </pre>
+      <div className="qasm__editor">
+        <div className="qasm__lns" aria-hidden>
+          {Array.from({ length: lineCount }, (_, i) => (
+            <div key={i} className={parseError && parseError.line === i + 1 ? "qasm__ln qasm__ln--error" : "qasm__ln"}>
+              {i + 1}
+            </div>
+          ))}
+        </div>
+        <textarea
+          className="qasm__text"
+          value={text}
+          spellCheck={false}
+          onChange={onChange}
+          onFocus={() => setEditing(true)}
+          onBlur={() => setEditing(false)}
+          wrap="off"
+        />
+      </div>
+      {parseError && (
+        <div className="qasm__error">
+          line {parseError.line}: {parseError.message}
+        </div>
+      )}
+      {warnings.length > 0 && !parseError && (
+        <ul className="qasm__warnings">
+          {warnings.map((w, i) => (
+            <li key={i}>
+              line {w.line}: {w.message}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

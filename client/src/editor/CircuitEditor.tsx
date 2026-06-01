@@ -94,7 +94,7 @@ export function CircuitEditor() {
         <ProbabilityPanel state={simState} />
         <QSpherePanel state={simState} />
         <BlochPanel state={simState} />
-        <QasmPanel circuit={circuit} />
+        <QasmPanel circuit={circuit} dispatch={dispatch} />
       </div>
     </div>
   );
