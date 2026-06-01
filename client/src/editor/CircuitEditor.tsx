@@ -8,7 +8,6 @@ import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
 import { BlochPanel } from "../panels/BlochPanel";
-import { QSpherePanel } from "../panels/QSpherePanel";
 import { FormalMathPanel } from "../panels/FormalMathPanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
@@ -91,7 +90,6 @@ export function CircuitEditor() {
           />
         </div>
         <div className="editor__bottom">
-          <ErrorBoundary label="q-sphere"><QSpherePanel state={simState} /></ErrorBoundary>
           <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
         </div>
         <Inspector
