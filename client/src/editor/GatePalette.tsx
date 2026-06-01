@@ -4,6 +4,21 @@ import { CATEGORY_LABELS, CATEGORY_ORDER, GATES } from "./gates";
 
 export const DND_MIME = "application/x-quantiom-gate";
 
+/**
+ * Spawn a small DOM element styled like a placed gate to use as the drag
+ * image, then schedule its removal once the browser has snapshotted it.
+ */
+export function makeDragGhost(symbol: string): HTMLDivElement {
+  const ghost = document.createElement("div");
+  ghost.className = "drag-ghost";
+  ghost.textContent = symbol;
+  ghost.style.position = "absolute";
+  ghost.style.top = "-1000px";
+  ghost.style.left = "-1000px";
+  document.body.appendChild(ghost);
+  return ghost;
+}
+
 export function GatePalette() {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Set<GateCategory>>(new Set());
@@ -38,10 +53,14 @@ export function GatePalette() {
     });
   };
 
-  const onDragStart = (e: React.DragEvent<HTMLDivElement>, gateId: string) => {
+  const onDragStart = (e: React.DragEvent<HTMLDivElement>, gateId: string, symbol: string) => {
     e.dataTransfer.setData(DND_MIME, gateId);
     e.dataTransfer.setData("text/plain", gateId);
     e.dataTransfer.effectAllowed = "copy";
+    const ghost = makeDragGhost(symbol);
+    e.dataTransfer.setDragImage(ghost, 20, 14);
+    // Cleanup once the browser has captured the image.
+    setTimeout(() => ghost.remove(), 0);
   };
 
   return (
@@ -73,7 +92,7 @@ export function GatePalette() {
                       key={g.id}
                       className="palette__tile"
                       draggable
-                      onDragStart={(e) => onDragStart(e, g.id)}
+                      onDragStart={(e) => onDragStart(e, g.id, g.symbol)}
                       title={`${g.name}${g.description ? " — " + g.description : ""}`}
                     >
                       <span className="palette__symbol">{g.symbol}</span>

@@ -7,14 +7,28 @@ import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 
 export function CircuitEditor() {
-  const [circuit, dispatch] = useCircuit();
+  const [circuit, dispatch, history] = useCircuit();
   const [selectedGateId, setSelectedGateId] = useState<string | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedGateId) {
-        const target = e.target as HTMLElement | null;
-        if (target && (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA")) return;
+      const target = e.target as HTMLElement | null;
+      const inField =
+        target && (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA");
+
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        dispatch({ type: e.shiftKey ? "redo" : "undo" });
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        dispatch({ type: "redo" });
+        return;
+      }
+
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedGateId && !inField) {
         dispatch({ type: "remove-gate", id: selectedGateId });
         setSelectedGateId(null);
       }
@@ -38,6 +52,20 @@ export function CircuitEditor() {
             <button onClick={() => dispatch({ type: "add-clbit" })} title="Add a classical bit">+</button>
           </div>
           <div className="editor__actions">
+            <button
+              onClick={() => dispatch({ type: "undo" })}
+              disabled={!history.canUndo}
+              title="Undo (⌘Z / Ctrl+Z)"
+            >
+              Undo
+            </button>
+            <button
+              onClick={() => dispatch({ type: "redo" })}
+              disabled={!history.canRedo}
+              title="Redo (⇧⌘Z / Ctrl+Shift+Z)"
+            >
+              Redo
+            </button>
             <button onClick={() => dispatch({ type: "clear" })} title="Clear circuit">Clear</button>
           </div>
         </div>

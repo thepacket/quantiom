@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
-import type { Action } from "./state";
+import { useMemo, useRef, useState } from "react";
+import type { HistoryAction } from "./state";
 import { buildPlacedGate, qubitSpan } from "./state";
 import type { Circuit, GateDef, PlacedGate } from "./types";
 import { GATES_BY_ID, totalQubits } from "./gates";
-import { DND_MIME } from "./GatePalette";
+import { DND_MIME, makeDragGhost } from "./GatePalette";
+
+const MOVE_MIME = "application/x-quantiom-move";
 
 const COL_W = 56;
 const ROW_H = 44;
@@ -12,13 +14,20 @@ const MIN_COLS = 16;
 
 type Props = {
   circuit: Circuit;
-  dispatch: React.Dispatch<Action>;
+  dispatch: React.Dispatch<HistoryAction>;
   selectedGateId: string | null;
   onSelect: (id: string | null) => void;
 };
 
+type HoverState =
+  | { kind: "new"; col: number; row: number; gateId: string }
+  | { kind: "move"; col: number; row: number; gateId: string; placedId: string }
+  | null;
+
 export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: Props) {
-  const [hover, setHover] = useState<{ col: number; row: number; gateId: string } | null>(null);
+  const [hover, setHover] = useState<HoverState>(null);
+  // Tracks the in-flight move-gate drag so dragOver (which can't read payload) knows the gate.
+  const dragMove = useRef<{ placedId: string; gateId: string } | null>(null);
 
   const usedCols = circuit.gates.reduce((m, g) => Math.max(m, g.column + 1), 0);
   const numCols = Math.max(MIN_COLS, usedCols + 4);
@@ -27,18 +36,44 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: P
   const height = totalRows * ROW_H + 16;
 
   const onCellDragOver = (e: React.DragEvent, col: number, row: number) => {
-    if (!e.dataTransfer.types.includes(DND_MIME) && !e.dataTransfer.types.includes("text/plain")) return;
+    const types = e.dataTransfer.types;
+    const isMove = types.includes(MOVE_MIME);
+    const isNew = types.includes(DND_MIME) || types.includes("text/plain");
+    if (!isMove && !isNew) return;
     e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-    const gateId =
-      (e.dataTransfer.getData(DND_MIME) || e.dataTransfer.getData("text/plain") || "").toLowerCase();
-    if (gateId && (!hover || hover.col !== col || hover.row !== row || hover.gateId !== gateId)) {
-      setHover({ col, row, gateId });
+    e.dataTransfer.dropEffect = isMove ? "move" : "copy";
+    if (isMove) {
+      // We can't read move payload until drop; track only position.
+      if (!hover || hover.kind !== "move" || hover.col !== col || hover.row !== row) {
+        // dragMoveId/symbol set on dragstart in module-scope refs
+        if (dragMove.current) {
+          setHover({
+            kind: "move",
+            col,
+            row,
+            gateId: dragMove.current.gateId,
+            placedId: dragMove.current.placedId,
+          });
+        }
+      }
+    } else {
+      const gateId =
+        (e.dataTransfer.getData(DND_MIME) || e.dataTransfer.getData("text/plain") || "").toLowerCase();
+      if (gateId && (!hover || hover.kind !== "new" || hover.col !== col || hover.row !== row || hover.gateId !== gateId)) {
+        setHover({ kind: "new", col, row, gateId });
+      }
     }
   };
 
   const onCellDrop = (e: React.DragEvent, col: number, row: number) => {
     e.preventDefault();
+    const moveId = e.dataTransfer.getData(MOVE_MIME);
+    if (moveId) {
+      dispatch({ type: "move-gate", id: moveId, column: col, anchorQubit: row });
+      setHover(null);
+      dragMove.current = null;
+      return;
+    }
     const gateId = e.dataTransfer.getData(DND_MIME) || e.dataTransfer.getData("text/plain");
     if (!gateId) return;
     const def = GATES_BY_ID[gateId];
@@ -54,6 +89,21 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: P
   };
 
   const onCellDragLeave = () => setHover(null);
+
+  const onGateDragStart = (e: React.DragEvent<HTMLDivElement>, gate: PlacedGate) => {
+    const def = GATES_BY_ID[gate.gateId];
+    e.dataTransfer.setData(MOVE_MIME, gate.id);
+    e.dataTransfer.effectAllowed = "move";
+    dragMove.current = { placedId: gate.id, gateId: gate.gateId };
+    const ghost = makeDragGhost(def.symbol);
+    e.dataTransfer.setDragImage(ghost, 20, 14);
+    setTimeout(() => ghost.remove(), 0);
+  };
+
+  const onGateDragEnd = () => {
+    dragMove.current = null;
+    setHover(null);
+  };
 
   return (
     <div className="canvas">
@@ -139,6 +189,33 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: P
             />
           )),
         )}
+        {/* Per-gate draggable overlays for move gesture. Sit above cells. */}
+        {circuit.gates.map((g) => {
+          const all = [...g.controls, ...g.targets];
+          if (all.length === 0) return null;
+          const lo = Math.min(...all);
+          const hi = Math.max(...all);
+          return (
+            <div
+              key={`move-${g.id}`}
+              className="canvas__move-handle"
+              style={{
+                left: LABEL_W + g.column * COL_W + 6,
+                top: lo * ROW_H + 4,
+                width: COL_W - 12,
+                height: (hi - lo + 1) * ROW_H - 8,
+              }}
+              draggable
+              onDragStart={(e) => onGateDragStart(e, g)}
+              onDragEnd={onGateDragEnd}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(g.id);
+              }}
+              title="drag to move"
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -163,7 +240,7 @@ function DropPreview({
   hover,
   circuit,
 }: {
-  hover: { col: number; row: number; gateId: string };
+  hover: NonNullable<HoverState>;
   circuit: Circuit;
 }) {
   const def = GATES_BY_ID[hover.gateId];

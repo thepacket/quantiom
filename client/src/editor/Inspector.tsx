@@ -1,11 +1,11 @@
 import type { Circuit, PlacedGate } from "./types";
-import type { Action } from "./state";
+import type { HistoryAction } from "./state";
 import { GATES_BY_ID, totalQubits } from "./gates";
 
 type Props = {
   circuit: Circuit;
   selectedGateId: string | null;
-  dispatch: React.Dispatch<Action>;
+  dispatch: React.Dispatch<HistoryAction>;
   onSelect: (id: string | null) => void;
 };
 
