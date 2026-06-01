@@ -40,3 +40,8 @@ Composer) or read them as a worked-example reference.
 | [schrodinger_cat_phase.qasm](schrodinger_cat_phase.qasm) | 3 | Phased cat state with a φ slider |
 | [cuccaro_adder_2bit.qasm](cuccaro_adder_2bit.qasm) | 6 | Cuccaro ripple-carry adder, 2-bit + 2-bit |
 | [steane_encode_logical_zero.qasm](steane_encode_logical_zero.qasm) | 7 | Steane [[7,1,3]] encoder for the logical \|0⟩ |
+| [sono_octave.qasm](sono_octave.qasm) | 1 | Sonorizer demo: pure octave |
+| [sono_tremolo.qasm](sono_tremolo.qasm) | 1 | Sonorizer demo: amplitude tremolo via RY(t) |
+| [sono_phase_slide.qasm](sono_phase_slide.qasm) | 1 | Sonorizer demo: animated phase via RZ(t) |
+| [sono_bell_chord.qasm](sono_bell_chord.qasm) | 2 | Sonorizer demo: fundamental + 2-octave-up partial |
+| [sono_sawtooth.qasm](sono_sawtooth.qasm) | 4 | Sonorizer demo: 16 equal partials |
