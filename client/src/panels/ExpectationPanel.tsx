@@ -4,22 +4,26 @@ import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { paulis as evalPaulis, type Pauli } from "../sim/expectation";
 import { noisyPauliExpectation } from "../sim/simulateNoisy";
+import { optimizeExpectation } from "../sim/optimize";
 import type { NoiseModel } from "../sim/noise";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 import type { ParameterValues } from "../sim/simulate";
 
+type OptimizerContext = {
+  circuit: Circuit;
+  paramValues: ParameterValues;
+  customGates: CustomGate[];
+  noise: NoiseModel;
+  onParamChange: (next: ParameterValues) => void;
+};
+
 type Props = {
   state: SimState;
   /** Optional handles for re-running the simulator. When provided, the panel
    *  computes trajectory-averaged ⟨P⟩ in noise mode rather than displaying
-   *  a single biased trajectory. */
-  noisyContext?: {
-    circuit: Circuit;
-    paramValues: ParameterValues;
-    customGates: CustomGate[];
-    noise: NoiseModel;
-  };
+   *  a single biased trajectory, and enables the Optimize button. */
+  noisyContext?: OptimizerContext;
 };
 
 const PAULIS: Pauli[] = ["I", "X", "Y", "Z"];
@@ -119,6 +123,128 @@ function ExpectationBody({ state, noisyContext }: Props) {
           <span className="exp__noisy-tag">avg of {data.trajectories} trajectories</span>
         )}
       </div>
+      {noisyContext && data.freeSymbols.length > 0 && (
+        <Optimizer
+          ctx={noisyContext}
+          observable={selection}
+          freeSymbols={data.freeSymbols}
+          currentValue={value}
+        />
+      )}
+    </div>
+  );
+}
+
+function Optimizer({
+  ctx,
+  observable,
+  freeSymbols,
+  currentValue,
+}: {
+  ctx: OptimizerContext;
+  observable: Pauli[];
+  freeSymbols: string[];
+  currentValue: number | null;
+}) {
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(freeSymbols));
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<{ step: number; value: number } | null>(null);
+  const [steps, setSteps] = useState(30);
+  const [lr, setLr] = useState(0.3);
+  const [goal, setGoal] = useState<"minimize" | "maximize">("minimize");
+  const cancelRef = { current: false };
+
+  // Keep `picked` in sync when free symbols set changes.
+  useEffect(() => {
+    setPicked((prev) => {
+      const next = new Set<string>();
+      for (const s of freeSymbols) if (prev.has(s) || prev.size === 0) next.add(s);
+      // If `prev` was empty (initial), default to all symbols.
+      return next.size === 0 ? new Set(freeSymbols) : next;
+    });
+  }, [freeSymbols]);
+
+  const toggle = (s: string) => {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s); else next.add(s);
+      return next;
+    });
+  };
+
+  const start = () => {
+    if (running || picked.size === 0) return;
+    setRunning(true);
+    setProgress({ step: 0, value: currentValue ?? 0 });
+    // Run async so the UI updates between steps.
+    setTimeout(() => {
+      try {
+        const result = optimizeExpectation(
+          ctx.circuit,
+          ctx.customGates,
+          {
+            symbols: [...picked],
+            observable,
+            initial: ctx.paramValues,
+            steps,
+            learningRate: lr,
+            epsilon: 1e-3,
+            goal,
+            onProgress: (step, value, params) => {
+              setProgress({ step, value });
+              // Push intermediate params so panels animate. Heavy if every
+              // step triggers a re-render; we throttle to ~ every 4 steps.
+              if (step % 4 === 0 || step === steps) ctx.onParamChange({ ...params });
+              return !cancelRef.current;
+            },
+          },
+          ctx.noise.enabled ? ctx.noise : undefined,
+        );
+        ctx.onParamChange({ ...result.finalParams });
+        setProgress({ step: result.steps, value: result.finalValue });
+      } finally {
+        setRunning(false);
+      }
+    }, 0);
+  };
+
+  const stop = () => { cancelRef.current = true; };
+
+  return (
+    <div className="exp__opt">
+      <div className="exp__opt-head">
+        <span>Optimise ⟨P⟩ over free symbols</span>
+      </div>
+      <div className="exp__opt-syms">
+        {freeSymbols.map((s) => (
+          <label key={s} className={"exp__opt-sym" + (picked.has(s) ? " exp__opt-sym--on" : "")}>
+            <input type="checkbox" checked={picked.has(s)} onChange={() => toggle(s)} />
+            {s}
+          </label>
+        ))}
+      </div>
+      <div className="exp__opt-config">
+        <select value={goal} onChange={(e) => setGoal(e.target.value as "minimize" | "maximize")}>
+          <option value="minimize">minimise</option>
+          <option value="maximize">maximise</option>
+        </select>
+        <label>steps
+          <input type="number" min={1} max={500} value={steps} onChange={(e) => setSteps(parseInt(e.target.value || "30", 10))} />
+        </label>
+        <label>lr
+          <input type="number" min={0.001} step={0.01} value={lr} onChange={(e) => setLr(parseFloat(e.target.value || "0.3"))} />
+        </label>
+        {!running ? (
+          <button className="exp__opt-run" onClick={start} disabled={picked.size === 0}>Run</button>
+        ) : (
+          <button className="exp__opt-run exp__opt-run--stop" onClick={stop}>Stop</button>
+        )}
+      </div>
+      {progress && (
+        <div className="exp__opt-progress">
+          step {progress.step}/{steps} · ⟨P⟩={progress.value.toFixed(4)}
+        </div>
+      )}
     </div>
   );
 }

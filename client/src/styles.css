@@ -177,6 +177,20 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .exp__op { color: var(--muted); font-family: ui-monospace, monospace; font-size: 13px; }
 .exp__value { color: var(--fg); font-family: ui-monospace, monospace; font-size: 16px; font-weight: 600; }
 .exp__noisy-tag { color: #c8b88a; font-size: 10px; margin-left: 8px; }
+.exp__opt { display: flex; flex-direction: column; gap: 6px; padding: 6px; margin-top: 6px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; }
+.exp__opt-head { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+.exp__opt-syms { display: flex; flex-wrap: wrap; gap: 4px; }
+.exp__opt-sym { display: inline-flex; align-items: center; gap: 3px; padding: 1px 5px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px; font-family: ui-monospace, monospace; color: var(--muted); cursor: pointer; }
+.exp__opt-sym input { margin: 0; }
+.exp__opt-sym--on { color: var(--fg); border-color: var(--accent); background: rgba(124, 196, 255, 0.1); }
+.exp__opt-config { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; }
+.exp__opt-config label { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); }
+.exp__opt-config input[type="number"] { width: 56px; font-size: 11px; }
+.exp__opt-config select { font-size: 11px; }
+.exp__opt-run { padding: 3px 10px; font-size: 11px; background: var(--accent); color: var(--bg); border: 1px solid var(--accent); border-radius: 3px; cursor: pointer; font-weight: 600; }
+.exp__opt-run--stop { background: var(--danger); border-color: var(--danger); color: var(--bg); }
+.exp__opt-run:disabled { opacity: 0.4; cursor: not-allowed; }
+.exp__opt-progress { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; }
 
 /* ─── Phase disk panel ──────────────────────────────────────────────── */
 .phase-disk__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }

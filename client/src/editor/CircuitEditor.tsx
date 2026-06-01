@@ -187,7 +187,13 @@ export function CircuitEditor() {
         <ErrorBoundary label="expectation">
           <ExpectationPanel
             state={simState}
-            noisyContext={{ circuit: steppedCircuit, paramValues, customGates, noise }}
+            noisyContext={{
+              circuit: steppedCircuit,
+              paramValues,
+              customGates,
+              noise,
+              onParamChange: setParamValues,
+            }}
           />
         </ErrorBoundary>
         <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
