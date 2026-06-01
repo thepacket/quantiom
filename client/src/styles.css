@@ -169,11 +169,11 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .panel__placeholder { color: var(--muted); font-size: 11px; }
 .panel__error { color: var(--danger); font-size: 11px; padding: 6px 8px; background: #2a1818; border: 1px solid #4a2828; border-radius: 4px; margin-bottom: 8px; }
 
-.statevector__ket { padding: 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow-x: auto; }
+.statevector__ket { padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow-x: auto; font-size: 15px; }
 .statevector__ket .katex-display { margin: 0; }
-.statevector__table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+.statevector__table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
 .statevector__table th { color: var(--muted); text-align: left; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; font-size: 9px; padding: 4px 6px; border-bottom: 1px solid var(--border); }
-.statevector__table td { padding: 4px 6px; border-bottom: 1px solid #1a1f27; vertical-align: middle; }
+.statevector__table td { padding: 6px 6px; border-bottom: 1px solid #1a1f27; vertical-align: middle; }
 .statevector__basis { width: 60px; }
 .statevector__row--zero { opacity: 0.4; }
 .statevector__skipped { margin-top: 12px; font-size: 11px; color: var(--muted); }
