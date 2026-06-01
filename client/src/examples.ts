@@ -13,6 +13,16 @@ import teleport from "../../examples/teleportation.qasm?raw";
 import kickback from "../../examples/phase_kickback.qasm?raw";
 import vqe from "../../examples/variational_ansatz.qasm?raw";
 import animated from "../../examples/animated_rabi_larmor.qasm?raw";
+import superdense from "../../examples/superdense_coding.qasm?raw";
+import chsh from "../../examples/chsh_test.qasm?raw";
+import qpe from "../../examples/quantum_phase_estimation.qasm?raw";
+import iqft from "../../examples/inverse_qft_3q.qasm?raw";
+import halfAdder from "../../examples/half_adder.qasm?raw";
+import bitFlip from "../../examples/bit_flip_code.qasm?raw";
+import qaoa from "../../examples/qaoa_maxcut_triangle.qasm?raw";
+import cluster from "../../examples/cluster_state_4q.qasm?raw";
+import coinFlip from "../../examples/quantum_coin_flip.qasm?raw";
+import hadamard3 from "../../examples/hadamard_transform_3q.qasm?raw";
 
 export type Example = { id: string; label: string; qasm: string };
 
@@ -28,4 +38,14 @@ export const EXAMPLES: Example[] = [
   { id: "kickback", label: "Phase kickback", qasm: kickback },
   { id: "vqe", label: "Variational ansatz", qasm: vqe },
   { id: "animated", label: "Animated (Rabi + Larmor)", qasm: animated },
+  { id: "coin-flip", label: "Quantum coin flip", qasm: coinFlip },
+  { id: "hadamard-3", label: "Walsh–Hadamard transform (3q)", qasm: hadamard3 },
+  { id: "superdense", label: "Superdense coding", qasm: superdense },
+  { id: "chsh", label: "CHSH test", qasm: chsh },
+  { id: "iqft", label: "Inverse QFT (3q)", qasm: iqft },
+  { id: "qpe", label: "Quantum phase estimation", qasm: qpe },
+  { id: "half-adder", label: "Half adder", qasm: halfAdder },
+  { id: "bit-flip", label: "Bit-flip error code", qasm: bitFlip },
+  { id: "qaoa", label: "QAOA MaxCut (triangle)", qasm: qaoa },
+  { id: "cluster", label: "Cluster state (4q linear)", qasm: cluster },
 ];

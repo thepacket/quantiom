@@ -18,3 +18,13 @@ Composer) or read them as a worked-example reference.
 | [phase_kickback.qasm](phase_kickback.qasm) | 2 | The mechanism behind most quantum speedups |
 | [variational_ansatz.qasm](variational_ansatz.qasm) | 4 | Hardware-efficient ansatz with symbolic parameters |
 | [animated_rabi_larmor.qasm](animated_rabi_larmor.qasm) | 2 | Uses the special `t` symbol; hit ▶ on the Parameters panel |
+| [quantum_coin_flip.qasm](quantum_coin_flip.qasm) | 1 | The simplest non-trivial circuit |
+| [hadamard_transform_3q.qasm](hadamard_transform_3q.qasm) | 3 | H⊗H⊗H — the uniform superposition |
+| [superdense_coding.qasm](superdense_coding.qasm) | 2 | 2 classical bits over 1 qubit using shared entanglement |
+| [chsh_test.qasm](chsh_test.qasm) | 2 | Bell inequality with parameterized measurement angles |
+| [inverse_qft_3q.qasm](inverse_qft_3q.qasm) | 3 | Companion to the QFT example |
+| [quantum_phase_estimation.qasm](quantum_phase_estimation.qasm) | 4 | QPE for T gate; exact answer with 3 counting qubits |
+| [half_adder.qasm](half_adder.qasm) | 4 | Reversible quantum half adder |
+| [bit_flip_code.qasm](bit_flip_code.qasm) | 3 | 3-qubit repetition code + majority-vote decoder |
+| [qaoa_maxcut_triangle.qasm](qaoa_maxcut_triangle.qasm) | 3 | QAOA on K₃ with γ, β parameters |
+| [cluster_state_4q.qasm](cluster_state_4q.qasm) | 4 | Linear cluster — the MBQC resource |
