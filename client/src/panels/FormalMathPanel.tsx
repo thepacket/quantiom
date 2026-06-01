@@ -13,13 +13,20 @@ type State =
   | { kind: "error"; message: string; data: UnitaryResponse | null };
 
 const DEBOUNCE_MS = 350;
+const MAX_QUBITS_FOR_UNITARY = 4;
 
 export function FormalMathPanel({ circuit }: Props) {
   const [state, setState] = useState<State>({ kind: "idle" });
   const lastDataRef = useRef<UnitaryResponse | null>(null);
   const aborterRef = useRef<AbortController | null>(null);
+  const tooLarge = circuit.numQubits > MAX_QUBITS_FOR_UNITARY;
 
   useEffect(() => {
+    if (tooLarge) {
+      lastDataRef.current = null;
+      setState({ kind: "idle" });
+      return;
+    }
     const handle = setTimeout(() => {
       aborterRef.current?.abort();
       const ac = new AbortController();
@@ -37,7 +44,7 @@ export function FormalMathPanel({ circuit }: Props) {
         });
     }, DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [circuit]);
+  }, [circuit, tooLarge]);
 
   const loading = state.kind === "loading";
   const data = state.kind === "ready" || state.kind === "loading" || state.kind === "error" ? state.data : null;
@@ -50,6 +57,11 @@ export function FormalMathPanel({ circuit }: Props) {
       defaultCollapsed
       toolbar={loading ? <span className="panel__spinner">…</span> : null}
     >
+      {tooLarge ? (
+        <div className="panel__placeholder">
+          matrix omitted — {circuit.numQubits} qubits ({1 << circuit.numQubits}² entries)
+        </div>
+      ) : (<>
       {error && <div className="panel__error">{error}</div>}
       {data && (
         <div className="formal-math__matrix">
@@ -63,6 +75,7 @@ export function FormalMathPanel({ circuit }: Props) {
         </div>
       )}
       {!data && !error && <div className="panel__placeholder">computing unitary…</div>}
+      </>)}
     </PanelShell>
   );
 }
