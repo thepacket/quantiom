@@ -112,7 +112,7 @@ export function simulate(
     if (n > MAX_QUBITS_STABILIZER) {
       throw new Error(`max ${MAX_QUBITS_STABILIZER} qubits in stabilizer mode (got ${n})`);
     }
-    return stabilizerResult(circuit, n, gates);
+    return stabilizerResult(circuit, n, gates, paramValues);
   }
 
   if (n > MAX_QUBITS) throw new Error(`max ${MAX_QUBITS} qubits (got ${n})`);
@@ -245,11 +245,13 @@ function stabilizerResult(
   circuit: Circuit,
   n: number,
   gates: ReadonlyArray<PlacedGate>,
+  paramValues: ParameterValues,
 ): SimResult {
-  const tab = runClifford(n, gates);
-  // Lazy: Bloch is the only derived field that's well-defined for arbitrary
-  // n in stabilizer mode. Statevector / probabilities / amplitudes would
-  // be 2^n-sized — we return stub empties and let the panels show notices.
+  // Deterministic measurement outcomes per circuit + params, so re-renders
+  // don't shuffle. Stabilizer measurements are otherwise truly random.
+  const seedText = JSON.stringify({ g: circuit.gates, q: circuit.numQubits, p: paramValues });
+  const rng = mulberry32(fnv1a(seedText));
+  const { tab, classical } = runClifford(n, gates, rng, circuit.numClbits);
   let _blochs: BlochVector[] | null = null;
   const empty = new Float64Array(0);
   return {
@@ -260,6 +262,9 @@ function stabilizerResult(
     freeSymbols: collectFreeSymbols(circuit),
     skipped: [],
     isStabilizer: true,
+    measurementRecord: classical.length > 0
+      ? Array.from(classical.slice(0, circuit.numClbits))
+      : undefined,
     get blochVectors() {
       if (!_blochs) _blochs = tab.blochVectors();
       return _blochs;

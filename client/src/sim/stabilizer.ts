@@ -171,6 +171,97 @@ export class Stabilizer {
     this.h(a);
   }
 
+  // ─── Measurement (Aaronson-Gottesman §4.1–4.2) ─────────────────────
+
+  /**
+   * Sample a Z-basis measurement of qubit a. Returns the classical outcome
+   * (0 or 1) and updates the tableau to reflect the post-measurement state.
+   *
+   * Two cases:
+   *   • Random — at least one stabilizer anti-commutes with Z_a. We pick
+   *     the first such stabilizer, multiply it into every other anti-
+   *     commuting generator (so only it remains), copy it down to the
+   *     destabilizer slot, then replace it with Z_a carrying a random
+   *     sign. The outcome is that random bit.
+   *   • Deterministic — every stabilizer commutes with Z_a; the outcome
+   *     is fixed by the destabilizer rows. We compute it by accumulating
+   *     a scratch Pauli over the relevant stabilizer generators and
+   *     reading its sign.
+   */
+  measureZ(a: number, rng: () => number): number {
+    const n = this.n;
+    const stride = this.stride;
+    // Find a stabilizer row p with x[p][a] = 1.
+    let p = -1;
+    for (let i = n; i < 2 * n; i++) {
+      if (this.get(i, a) === 1) { p = i; break; }
+    }
+    if (p !== -1) {
+      // Random case.
+      for (let i = 0; i < 2 * n; i++) {
+        if (i !== p && this.get(i, a) === 1) this.rowsum(i, p);
+      }
+      // Copy row p down to its destabilizer slot.
+      const dest = p - n;
+      for (let c = 0; c < stride; c++) {
+        this.tab[dest * stride + c] = this.tab[p * stride + c];
+      }
+      // Replace row p with Z_a, sign = random bit.
+      for (let c = 0; c < 2 * n; c++) this.tab[p * stride + c] = 0;
+      this.set(p, n + a, 1);
+      const outcome = rng() < 0.5 ? 0 : 1;
+      this.setR(p, outcome);
+      return outcome;
+    }
+    // Deterministic case — scratch row accumulates the product.
+    const scratch = new Uint8Array(stride);
+    for (let i = 0; i < n; i++) {
+      if (this.get(i, a) === 1) {
+        // Accumulate stabilizer row (n + i) into scratch.
+        let g = 0;
+        for (let q = 0; q < n; q++) {
+          const x1 = this.get(n + i, q);
+          const z1 = this.get(n + i, n + q);
+          const x2 = scratch[q];
+          const z2 = scratch[n + q];
+          g += gFunction(x1, z1, x2, z2);
+        }
+        const total = 2 * scratch[2 * n] + 2 * this.r(n + i) + g;
+        const mod4 = ((total % 4) + 4) % 4;
+        scratch[2 * n] = mod4 === 2 ? 1 : 0;
+        for (let c = 0; c < 2 * n; c++) scratch[c] ^= this.tab[(n + i) * stride + c];
+      }
+    }
+    return scratch[2 * n];
+  }
+
+  /** Reset qubit a to |0⟩ — measure and conditionally flip. */
+  resetQubit(a: number, rng: () => number): void {
+    const outcome = this.measureZ(a, rng);
+    if (outcome === 1) this.x(a);
+  }
+
+  /** Row addition with phase tracking. Adds row j into row h (mod 2 on
+   *  the binary columns; tracked carefully on the phase bit). */
+  private rowsum(h: number, j: number): void {
+    const n = this.n;
+    const stride = this.stride;
+    let g = 0;
+    for (let q = 0; q < n; q++) {
+      const x1 = this.get(j, q);
+      const z1 = this.get(j, n + q);
+      const x2 = this.get(h, q);
+      const z2 = this.get(h, n + q);
+      g += gFunction(x1, z1, x2, z2);
+    }
+    const total = 2 * this.r(h) + 2 * this.r(j) + g;
+    const mod4 = ((total % 4) + 4) % 4;
+    this.setR(h, mod4 === 2 ? 1 : 0);
+    for (let c = 0; c < 2 * n; c++) {
+      this.tab[h * stride + c] ^= this.tab[j * stride + c];
+    }
+  }
+
   // ─── Single-qubit Pauli extraction ───────────────────────────────────
 
   /**
@@ -280,8 +371,21 @@ const CLIFFORD_GATES = new Set([
   "cx", "cy", "cz", "swap",
 ]);
 
+/** Measurement / reset are well-defined on stabilizer states via
+ *  Aaronson-Gottesman §4. The fast path handles them per-trajectory. */
+const CLIFFORD_MEASUREMENTS = new Set(["measure", "measure_x", "measure_y", "reset"]);
+
 /** Gate ids that are no-ops or already represented (barrier, delay, init0). */
 const CLIFFORD_NOOPS = new Set(["barrier", "delay", "init0"]);
+
+/** g(x1, z1, x2, z2) from Aaronson-Gottesman §4.1 — the symplectic phase
+ *  contribution per qubit when multiplying two Pauli strings. */
+function gFunction(x1: number, z1: number, x2: number, z2: number): number {
+  if (x1 === 0 && z1 === 0) return 0;
+  if (x1 === 1 && z1 === 1) return z2 - x2;
+  if (x1 === 1 && z1 === 0) return z2 * (2 * x2 - 1);
+  return x2 * (1 - 2 * z2);
+}
 
 /**
  * Return true if every gate in `gates` is either Clifford or a representable
@@ -290,7 +394,11 @@ const CLIFFORD_NOOPS = new Set(["barrier", "delay", "init0"]);
  */
 export function isCliffordOnly(gates: ReadonlyArray<{ gateId: string }>): boolean {
   for (const g of gates) {
-    if (!CLIFFORD_GATES.has(g.gateId) && !CLIFFORD_NOOPS.has(g.gateId)) return false;
+    if (
+      !CLIFFORD_GATES.has(g.gateId) &&
+      !CLIFFORD_NOOPS.has(g.gateId) &&
+      !CLIFFORD_MEASUREMENTS.has(g.gateId)
+    ) return false;
   }
   return true;
 }
@@ -306,12 +414,32 @@ export function runClifford(
     gateId: string;
     controls: number[];
     targets: number[];
+    clbits: number[];
     controlStates?: boolean[];
+    condition?: { clbit: number; value: number };
   }>,
-): Stabilizer {
+  rng: () => number = Math.random,
+  numClbits = 0,
+): { tab: Stabilizer; classical: Uint8Array } {
   const tab = new Stabilizer(n);
+  const classical = new Uint8Array(Math.max(1, numClbits));
   for (const g of gates) {
     if (CLIFFORD_NOOPS.has(g.gateId)) continue;
+    if (g.condition && classical[g.condition.clbit] !== g.condition.value) continue;
+    if (g.gateId === "measure") { classical[g.clbits[0]] = tab.measureZ(g.targets[0], rng); continue; }
+    if (g.gateId === "measure_x") {
+      tab.h(g.targets[0]);
+      classical[g.clbits[0]] = tab.measureZ(g.targets[0], rng);
+      tab.h(g.targets[0]);
+      continue;
+    }
+    if (g.gateId === "measure_y") {
+      tab.sdg(g.targets[0]); tab.h(g.targets[0]);
+      classical[g.clbits[0]] = tab.measureZ(g.targets[0], rng);
+      tab.h(g.targets[0]); tab.s(g.targets[0]);
+      continue;
+    }
+    if (g.gateId === "reset") { tab.resetQubit(g.targets[0], rng); continue; }
     const antis: number[] = [];
     if (g.controlStates) {
       for (let i = 0; i < g.controls.length; i++) {
@@ -322,7 +450,28 @@ export function runClifford(
     applyClifford(tab, g);
     for (const q of antis) tab.x(q);
   }
-  return tab;
+  return { tab, classical };
+}
+
+/**
+ * Run a Clifford circuit `shots` times, sampling fresh measurement outcomes
+ * each shot. Returns a Map from bitstring (over the active classical bits)
+ * to count. Used by the Syndromes panel — the bread-and-butter of QEC
+ * research (decoder benchmarks, detector slice histograms, etc.).
+ */
+export function sampleSyndromes(
+  n: number,
+  gates: Parameters<typeof runClifford>[1],
+  numClbits: number,
+  shots: number,
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (let s = 0; s < shots; s++) {
+    const { classical } = runClifford(n, gates, Math.random, numClbits);
+    const key = Array.from(classical.slice(0, numClbits)).reverse().join("");
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
 }
 
 function applyClifford(tab: Stabilizer, g: {

@@ -18,6 +18,7 @@ import { NoisePanel } from "../panels/NoisePanel";
 import { PhaseDiskPanel } from "../panels/PhaseDiskPanel";
 import { ResourcePanel } from "../panels/ResourcePanel";
 import { EquivalencePanel } from "../panels/EquivalencePanel";
+import { SyndromePanel } from "../panels/SyndromePanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
@@ -202,6 +203,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="equivalence">
           <EquivalencePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="syndromes">
+          <SyndromePanel circuit={circuit} customGates={customGates} />
         </ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>

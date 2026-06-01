@@ -242,6 +242,23 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .statevector__measurements-bits { display: flex; gap: 8px; font-family: ui-monospace, monospace; font-size: 11px; }
 .statevector__cbit { color: var(--accent); }
 
+/* ─── Syndromes panel ──────────────────────────────────────────────── */
+.syndromes { display: flex; flex-direction: column; gap: 8px; }
+.syndromes__bar { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.syndromes__label { color: var(--muted); }
+.syndromes__select { font-size: 11px; }
+.syndromes__run { padding: 3px 10px; font-size: 11px; background: var(--accent); color: var(--bg); border: 1px solid var(--accent); border-radius: 3px; cursor: pointer; font-weight: 600; }
+.syndromes__run:disabled { opacity: 0.4; cursor: not-allowed; }
+.syndromes__total { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; }
+.syndromes__list { display: flex; flex-direction: column; gap: 4px; }
+.syndromes__table { width: 100%; border-collapse: collapse; font-size: 11px; font-family: ui-monospace, monospace; }
+.syndromes__bits { color: var(--accent); padding: 1px 4px; white-space: nowrap; }
+.syndromes__bar-cell { width: 100%; padding: 1px 4px; }
+.syndromes__bar-bg { background: var(--bg-2); border: 1px solid var(--border); border-radius: 2px; height: 10px; overflow: hidden; }
+.syndromes__bar-fg { background: var(--accent); height: 100%; }
+.syndromes__count { color: var(--fg); padding: 1px 4px; text-align: right; }
+.syndromes__pct { color: var(--muted); padding: 1px 4px; text-align: right; width: 50px; }
+
 /* ─── Density matrix panel ──────────────────────────────────────────── */
 .density__pick { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 8px; }
 .density__label { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-right: 4px; }
