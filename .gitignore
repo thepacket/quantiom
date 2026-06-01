@@ -1,0 +1,20 @@
+# Node
+node_modules/
+dist/
+.vite/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

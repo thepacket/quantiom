@@ -1,0 +1,36 @@
+:root {
+  color-scheme: dark;
+  --bg: #0e1014;
+  --panel: #161a21;
+  --border: #262c36;
+  --fg: #e6e8ec;
+  --muted: #8a93a3;
+  --accent: #7cc4ff;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); }
+
+.app { display: flex; flex-direction: column; height: 100%; }
+.app__header {
+  display: flex; align-items: baseline; gap: 12px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+}
+.app__header h1 { font-size: 16px; margin: 0; letter-spacing: 0.5px; }
+.app__tagline { color: var(--muted); font-size: 12px; }
+
+.app__main { display: grid; grid-template-columns: 1fr 360px; gap: 0; flex: 1; min-height: 0; }
+.app__panels { border-left: 1px solid var(--border); overflow: auto; }
+
+.editor { padding: 16px; overflow: auto; }
+.editor__title { font-size: 13px; color: var(--muted); margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px; }
+.editor__wires { display: flex; flex-direction: column; gap: 24px; }
+.wire { display: flex; align-items: center; gap: 12px; }
+.wire__label { width: 28px; color: var(--muted); font-family: ui-monospace, monospace; }
+.wire__line { flex: 1; height: 1px; background: var(--border); }
+
+.panel { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.panel h2 { font-size: 12px; margin: 0 0 6px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+.panel__placeholder { color: var(--muted); font-size: 12px; margin: 0; }
