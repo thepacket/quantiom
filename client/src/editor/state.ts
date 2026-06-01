@@ -17,6 +17,7 @@ export type Action =
   | { type: "remove-gate"; id: string }
   | { type: "update-gate"; id: string; patch: Partial<PlacedGate> }
   | { type: "move-gate"; id: string; column: number; anchorQubit: number }
+  | { type: "reassign-qubit"; id: string; role: "controls" | "targets"; index: number; newQubit: number }
   | { type: "replace-circuit"; circuit: Circuit }
   | { type: "clear" };
 
@@ -71,6 +72,23 @@ function reducer(state: Circuit, action: Action): Circuit {
         targets: g.targets.map((q) => q + shift),
       };
       const placed = relocateIfCollision(without, moved);
+      return { ...state, gates: [...without, placed] };
+    }
+    case "reassign-qubit": {
+      const g = state.gates.find((x) => x.id === action.id);
+      if (!g) return state;
+      if (action.newQubit < 0 || action.newQubit >= state.numQubits) return state;
+      const updated = { ...g, [action.role]: [...g[action.role]] } as PlacedGate;
+      updated[action.role][action.index] = action.newQubit;
+      // Reject if any qubit ends up assigned to more than one role.
+      const combined = [...updated.controls, ...updated.targets];
+      const seen = new Set<number>();
+      for (const q of combined) {
+        if (seen.has(q)) return state;
+        seen.add(q);
+      }
+      const without = state.gates.filter((x) => x.id !== g.id);
+      const placed = relocateIfCollision(without, updated);
       return { ...state, gates: [...without, placed] };
     }
     case "replace-circuit":

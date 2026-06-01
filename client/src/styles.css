@@ -82,6 +82,9 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .canvas__move-handle { position: absolute; cursor: grab; border-radius: 4px; }
 .canvas__move-handle:hover { background: rgba(124, 196, 255, 0.06); box-shadow: inset 0 0 0 1px rgba(124, 196, 255, 0.25); }
 .canvas__move-handle:active { cursor: grabbing; }
+.canvas__reassign { position: absolute; cursor: grab; border-radius: 50%; }
+.canvas__reassign:hover { background: rgba(124, 196, 255, 0.18); box-shadow: 0 0 0 1.5px var(--accent); }
+.canvas__reassign:active { cursor: grabbing; }
 
 /* Custom drag image — visible during DnD */
 .drag-ghost {

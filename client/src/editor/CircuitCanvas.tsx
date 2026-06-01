@@ -6,6 +6,8 @@ import { GATES_BY_ID, totalQubits } from "./gates";
 import { DND_MIME, makeDragGhost } from "./GatePalette";
 
 const MOVE_MIME = "application/x-quantiom-move";
+const REASSIGN_CONTROL_MIME = "application/x-quantiom-reassign-control";
+const REASSIGN_TARGET_MIME = "application/x-quantiom-reassign-target";
 
 const COL_W = 56;
 const ROW_H = 44;
@@ -37,11 +39,16 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: P
 
   const onCellDragOver = (e: React.DragEvent, col: number, row: number) => {
     const types = e.dataTransfer.types;
+    const isReassign = types.includes(REASSIGN_CONTROL_MIME) || types.includes(REASSIGN_TARGET_MIME);
     const isMove = types.includes(MOVE_MIME);
     const isNew = types.includes(DND_MIME) || types.includes("text/plain");
-    if (!isMove && !isNew) return;
+    if (!isReassign && !isMove && !isNew) return;
     e.preventDefault();
-    e.dataTransfer.dropEffect = isMove ? "move" : "copy";
+    e.dataTransfer.dropEffect = isReassign || isMove ? "move" : "copy";
+    if (isReassign) {
+      // No floating preview rect for reassign — the cell hover background suffices.
+      return;
+    }
     if (isMove) {
       // We can't read move payload until drop; track only position.
       if (!hover || hover.kind !== "move" || hover.col !== col || hover.row !== row) {
@@ -67,6 +74,20 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: P
 
   const onCellDrop = (e: React.DragEvent, col: number, row: number) => {
     e.preventDefault();
+    const reassignCtrl = e.dataTransfer.getData(REASSIGN_CONTROL_MIME);
+    if (reassignCtrl) {
+      const [id, idxStr] = reassignCtrl.split(":");
+      dispatch({ type: "reassign-qubit", id, role: "controls", index: parseInt(idxStr, 10), newQubit: row });
+      setHover(null);
+      return;
+    }
+    const reassignTgt = e.dataTransfer.getData(REASSIGN_TARGET_MIME);
+    if (reassignTgt) {
+      const [id, idxStr] = reassignTgt.split(":");
+      dispatch({ type: "reassign-qubit", id, role: "targets", index: parseInt(idxStr, 10), newQubit: row });
+      setHover(null);
+      return;
+    }
     const moveId = e.dataTransfer.getData(MOVE_MIME);
     if (moveId) {
       dispatch({ type: "move-gate", id: moveId, column: col, anchorQubit: row });
@@ -103,6 +124,23 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: P
   const onGateDragEnd = () => {
     dragMove.current = null;
     setHover(null);
+  };
+
+  const onReassignDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    gate: PlacedGate,
+    role: "controls" | "targets",
+    index: number,
+  ) => {
+    const def = GATES_BY_ID[gate.gateId];
+    const mime = role === "controls" ? REASSIGN_CONTROL_MIME : REASSIGN_TARGET_MIME;
+    e.dataTransfer.setData(mime, `${gate.id}:${index}`);
+    e.dataTransfer.effectAllowed = "move";
+    e.stopPropagation();
+    const symbol = role === "controls" ? "●" : def.symbol;
+    const ghost = makeDragGhost(symbol);
+    e.dataTransfer.setDragImage(ghost, 12, 12);
+    setTimeout(() => ghost.remove(), 0);
   };
 
   return (
@@ -216,6 +254,30 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect }: P
             />
           );
         })}
+        {/* Per-control and per-target reassign handles. Higher in DOM = on top. */}
+        {circuit.gates.flatMap((g) => [
+          ...g.controls.map((q, i) => ({ g, role: "controls" as const, index: i, row: q })),
+          ...g.targets.map((q, i) => ({ g, role: "targets" as const, index: i, row: q })),
+        ]).map(({ g, role, index, row }) => (
+          <div
+            key={`reassign-${g.id}-${role}-${index}`}
+            className={`canvas__reassign canvas__reassign--${role}`}
+            style={{
+              left: LABEL_W + g.column * COL_W + (COL_W - 22) / 2,
+              top: row * ROW_H + (ROW_H - 22) / 2,
+              width: 22,
+              height: 22,
+            }}
+            draggable
+            onDragStart={(e) => onReassignDragStart(e, g, role, index)}
+            onDragEnd={onGateDragEnd}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(g.id);
+            }}
+            title={`drag to reassign ${role === "controls" ? "control" : "target"}`}
+          />
+        ))}
       </div>
     </div>
   );
