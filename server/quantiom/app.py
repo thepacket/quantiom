@@ -16,7 +16,6 @@ from .simulator import (
     numeric_amplitudes,
     probabilities,
     simulate_statevector,
-    simulate_unitary,
 )
 
 app = FastAPI(title="Quantiom", version="0.0.0")
@@ -237,31 +236,6 @@ def symbolic(req: SimulateRequest) -> SymbolicResponse:
         "0" if not ket_terms else latex_clean(sp.latex(sp.Add(*ket_terms, evaluate=False)))
     )
     return SymbolicResponse(ketLatex=ket_latex, tooLarge=False)
-
-
-class UnitaryResponse(BaseModel):
-    numQubits: int
-    latex: str
-    entries: list[list[str]]
-    skipped: list[SkippedOut]
-
-
-@app.post("/api/simulate/unitary", response_model=UnitaryResponse)
-def unitary(req: SimulateRequest) -> UnitaryResponse:
-    try:
-        result = simulate_unitary(req.circuit)
-    except SimulationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    U = result.matrix
-    dim = U.shape[0]
-    entries = [[sp.sstr(U[i, j]) for j in range(dim)] for i in range(dim)]
-    return UnitaryResponse(
-        numQubits=result.numQubits,
-        latex=latex_clean(sp.latex(U)),
-        entries=entries,
-        skipped=[SkippedOut(id=s.id, gateId=s.gateId, reason=s.reason) for s in result.skipped],
-    )
 
 
 # ─── Static client (production) ────────────────────────────────────────────
