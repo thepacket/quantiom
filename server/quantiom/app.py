@@ -206,8 +206,7 @@ def statevector(req: SimulateRequest) -> StatevectorResponse:
 
 
 class SymbolicResponse(BaseModel):
-    ketLatex: str   # the |ψ⟩ = … expression (empty if tooLarge)
-    tooLarge: bool  # circuit exceeded the symbolic-display thresholds
+    ketLatex: str   # the |ψ⟩ = … expression
 
 
 @app.post("/api/simulate/symbolic", response_model=SymbolicResponse)
@@ -215,13 +214,14 @@ def symbolic(req: SimulateRequest) -> SymbolicResponse:
     """On-demand symbolic ket. The default statevector endpoint never builds
     LaTeX; this is the one place where simplification and sp.latex run, and
     only when the user clicks the "sym" button on the panel.
-    """
-    circuit = req.circuit
-    if len(circuit.gates) > _LATEX_MAX_GATES or circuit.numQubits > _LATEX_MAX_QUBITS:
-        return SymbolicResponse(ketLatex="", tooLarge=True)
 
+    Intentionally no gate-count or qubit-count gating beyond the simulator's
+    own MAX_QUBITS=8 hard cap — the user explicitly asked for the symbolic
+    form by clicking the button and accepts whatever wallclock cost comes
+    with their circuit.
+    """
     try:
-        result = simulate_statevector(circuit)
+        result = simulate_statevector(req.circuit)
     except SimulationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -235,7 +235,7 @@ def symbolic(req: SimulateRequest) -> SymbolicResponse:
     ket_latex = (
         "0" if not ket_terms else latex_clean(sp.latex(sp.Add(*ket_terms, evaluate=False)))
     )
-    return SymbolicResponse(ketLatex=ket_latex, tooLarge=False)
+    return SymbolicResponse(ketLatex=ket_latex)
 
 
 # ─── Static client (production) ────────────────────────────────────────────

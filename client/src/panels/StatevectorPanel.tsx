@@ -25,7 +25,6 @@ type SymState =
   | { kind: "off" }
   | { kind: "loading" }
   | { kind: "ready"; latex: string }
-  | { kind: "too-large" }
   | { kind: "error"; message: string };
 
 export function StatevectorPanel({ state, circuit }: Props) {
@@ -46,8 +45,7 @@ export function StatevectorPanel({ state, circuit }: Props) {
     setSym({ kind: "loading" });
     try {
       const res = await fetchSymbolic(circuit);
-      if (res.tooLarge) setSym({ kind: "too-large" });
-      else setSym({ kind: "ready", latex: res.ketLatex });
+      setSym({ kind: "ready", latex: res.ketLatex });
     } catch (e) {
       setSym({ kind: "error", message: e instanceof Error ? e.message : String(e) });
     }
@@ -94,9 +92,6 @@ export function StatevectorPanel({ state, circuit }: Props) {
         <div className="statevector__ket">
           <Tex latex={`|\\psi\\rangle = ${sym.latex}`} display />
         </div>
-      )}
-      {sym.kind === "too-large" && (
-        <div className="statevector__note">circuit too large for symbolic display (≤ 12 gates and ≤ 4 qubits)</div>
       )}
       {sym.kind === "error" && (
         <div className="panel__error">{sym.message}</div>

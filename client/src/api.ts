@@ -33,7 +33,6 @@ export type ParameterValues = Record<string, number>;
 
 export type SymbolicResponse = {
   ketLatex: string;
-  tooLarge: boolean;
 };
 
 export async function fetchSymbolic(circuit: Circuit, signal?: AbortSignal): Promise<SymbolicResponse> {
