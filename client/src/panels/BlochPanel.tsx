@@ -12,8 +12,19 @@ const R = 42;
 export function BlochPanel({ state }: Props) {
   const data = dataOf(state);
 
+  const copy = () => {
+    if (!data) return "";
+    return data.blochVectors
+      .map((b, i) =>
+        b
+          ? `q${i}: (${b.x.toFixed(4)}, ${b.y.toFixed(4)}, ${b.z.toFixed(4)})`
+          : `q${i}: symbolic`,
+      )
+      .join("\n");
+  };
+
   return (
-    <PanelShell id="bloch" title="Bloch spheres">
+    <PanelShell id="bloch" title="Bloch spheres" getCopyText={copy}>
       {!data ? (
         <div className="panel__placeholder">building circuit…</div>
       ) : data.blochVectors.some((b) => b === null) ? (

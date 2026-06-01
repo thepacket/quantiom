@@ -17,6 +17,7 @@ export function StatevectorPanel({ state }: Props) {
     <PanelShell
       id="statevector"
       title="Statevector"
+      getCopyText={() => (data ? `|\\psi\\rangle = ${data.ketLatex}` : "")}
       toolbar={
         <>
           <label className="panel__toggle">

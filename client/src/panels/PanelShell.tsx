@@ -4,8 +4,11 @@ type Props = {
   id: string;
   title: string;
   children: ReactNode;
-  /** Toolbar slot in the header, right-aligned (e.g. copy button, toggles). */
+  /** Toolbar slot in the header, right-aligned (e.g. toggles). */
   toolbar?: ReactNode;
+  /** If provided, a copy-to-clipboard button is added; the function returns
+   * the text payload (LaTeX, plain text, etc.) at the moment of the click. */
+  getCopyText?: () => string;
   /** Initial collapsed state when no preference is stored. */
   defaultCollapsed?: boolean;
   className?: string;
@@ -33,15 +36,29 @@ function persistCollapsed(id: string, collapsed: boolean) {
   }
 }
 
-export function PanelShell({ id, title, children, toolbar, defaultCollapsed = false, className }: Props) {
+export function PanelShell({ id, title, children, toolbar, getCopyText, defaultCollapsed = false, className }: Props) {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     const map = loadCollapsedMap();
     return id in map ? map[id] : defaultCollapsed;
   });
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     persistCollapsed(id, collapsed);
   }, [id, collapsed]);
+
+  const onCopy = async () => {
+    if (!getCopyText) return;
+    const text = getCopyText();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* clipboard may be unavailable */
+    }
+  };
 
   return (
     <section className={`panel${className ? " " + className : ""}`}>
@@ -55,7 +72,14 @@ export function PanelShell({ id, title, children, toolbar, defaultCollapsed = fa
           <span className="panel__chevron">{collapsed ? "▸" : "▾"}</span>
           <h2>{title}</h2>
         </button>
-        {toolbar && <div className="panel__toolbar">{toolbar}</div>}
+        <div className="panel__toolbar">
+          {toolbar}
+          {getCopyText && (
+            <button className="panel__copy" onClick={onCopy} title="Copy to clipboard">
+              {copied ? "✓" : "copy"}
+            </button>
+          )}
+        </div>
       </header>
       {!collapsed && <div className="panel__body">{children}</div>}
     </section>

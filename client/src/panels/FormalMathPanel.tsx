@@ -55,6 +55,7 @@ export function FormalMathPanel({ circuit }: Props) {
       id="formal-math"
       title="Formal math (U)"
       defaultCollapsed
+      getCopyText={() => (data && !tooLarge ? `U = ${data.latex}` : "")}
       toolbar={loading ? <span className="panel__spinner">…</span> : null}
     >
       {tooLarge ? (

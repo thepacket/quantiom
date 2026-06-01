@@ -17,7 +17,6 @@ export function QasmPanel({ circuit, dispatch }: Props) {
   const [editing, setEditing] = useState(false);
   const [parseError, setParseError] = useState<{ line: number; message: string } | null>(null);
   const [warnings, setWarnings] = useState<Array<{ line: number; message: string }>>([]);
-  const [copied, setCopied] = useState(false);
   const parseTimer = useRef<number | null>(null);
   const lastDispatchedRef = useRef<string>("");
 
@@ -55,16 +54,6 @@ export function QasmPanel({ circuit, dispatch }: Props) {
     dispatch({ type: "replace-circuit", circuit: result.circuit });
   };
 
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      /* clipboard may be unavailable */
-    }
-  };
-
   const lineCount = text.split("\n").length;
 
   return (
@@ -72,7 +61,7 @@ export function QasmPanel({ circuit, dispatch }: Props) {
       id="qasm"
       title="OpenQASM 3"
       className="panel--qasm"
-      toolbar={<button onClick={onCopy}>{copied ? "copied" : "copy"}</button>}
+      getCopyText={() => text}
     >
       <div className="qasm__editor">
         <div className="qasm__lns" aria-hidden>

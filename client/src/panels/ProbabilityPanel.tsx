@@ -9,8 +9,18 @@ const BAR_H = 14;
 export function ProbabilityPanel({ state }: Props) {
   const data = dataOf(state);
 
+  const copy = () => {
+    if (!data) return "";
+    return data.amplitudes
+      .map((a, i) => {
+        const p = data.probabilities[i];
+        return `|${a.basis}>  ${p == null ? "—" : (p * 100).toFixed(2) + "%"}`;
+      })
+      .join("\n");
+  };
+
   return (
-    <PanelShell id="probabilities" title="Probabilities">
+    <PanelShell id="probabilities" title="Probabilities" getCopyText={copy}>
       {!data ? (
         <div className="panel__placeholder">building circuit…</div>
       ) : data.probabilities.some((p) => p === null) ? (
