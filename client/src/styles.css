@@ -191,6 +191,8 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .statevector__row--zero { opacity: 0.4; }
 .statevector__skipped { margin-top: 12px; font-size: 11px; color: var(--muted); }
 .statevector__skipped-head { text-transform: uppercase; letter-spacing: 1px; font-size: 9px; color: #c4a96d; margin-bottom: 4px; }
+.statevector__note { color: #c4a96d; font-size: 11px; padding: 6px 8px; background: rgba(196, 169, 109, 0.05); border: 1px solid rgba(196, 169, 109, 0.25); border-radius: 4px; }
+.statevector__numeric { font-family: ui-monospace, monospace; font-size: 12px; color: var(--fg); }
 .statevector__skipped ul { margin: 0; padding-left: 16px; }
 .statevector__skipped code { color: var(--fg); background: var(--bg-2); padding: 0 4px; border-radius: 2px; }
 

@@ -26,6 +26,7 @@ export type StatevectorResponse = {
   probabilities: (number | null)[];
   blochVectors: (BlochVector | null)[];
   freeSymbols: string[];
+  isLarge: boolean;
 };
 
 export type ParameterValues = Record<string, number>;

@@ -59,11 +59,12 @@ class SkippedOut(BaseModel):
 class StatevectorResponse(BaseModel):
     numQubits: int
     amplitudes: list[Amplitude]
-    ketLatex: str        # the full |ψ⟩ = sum a_i |i⟩ expression
+    ketLatex: str        # the full |ψ⟩ = sum a_i |i⟩ expression (empty if isLarge)
     skipped: list[SkippedOut]
     probabilities: list[float | None]   # |amplitude|² per basis state (None if symbolic)
     blochVectors: list[BlochVector | None]  # one per qubit (None if any amp symbolic)
     freeSymbols: list[str]               # symbol names appearing in any amplitude
+    isLarge: bool                        # symbolic display skipped — render numeric
 
 
 class SimulateRequest(BaseModel):
@@ -119,10 +120,8 @@ def _circuit_key(circuit: Circuit) -> str:
     return repr((circuit.numQubits, gates))
 
 
-_LARGE_STUB_KET = (
-    r"\text{(state too large to render symbolically — numeric panels are live)}"
-)
-_LARGE_STUB_AMP = "…"
+_LARGE_STUB_KET = ""
+_LARGE_STUB_AMP = ""
 
 
 def _cached_symbolic_state(circuit: Circuit) -> CachedSymbolicState:
@@ -222,6 +221,7 @@ def statevector(req: SimulateRequest) -> StatevectorResponse:
         probabilities=probs,
         blochVectors=[None if b is None else BlochVector(x=b[0], y=b[1], z=b[2]) for b in blochs],
         freeSymbols=cached.freeSymbols,
+        isLarge=cached.isLarge,
     )
 
 
