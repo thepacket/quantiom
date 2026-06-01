@@ -61,12 +61,27 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .palette__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 2px 8px 6px; }
 .palette__tile {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px;
+  background: var(--panel-2); border: 1.5px solid var(--border); border-radius: 4px;
   height: 44px; cursor: grab; user-select: none;
-  transition: border-color 80ms, background 80ms, transform 80ms;
+  transition: border-color 80ms, background 80ms, transform 80ms, box-shadow 80ms;
 }
-.palette__tile:hover { border-color: var(--accent); background: #1f2530; }
+.palette__tile:hover { background: #1f2530; box-shadow: 0 0 0 1px currentColor inset; }
 .palette__tile:active { cursor: grabbing; transform: scale(0.97); }
+
+/* Category border colors — applied via data-cat attribute. */
+.palette__tile[data-cat="identity-pauli"]      { border-color: #7a8fa8; }
+.palette__tile[data-cat="clifford-t"]          { border-color: #5fa8c5; }
+.palette__tile[data-cat="phase-rotation"]      { border-color: #9fa3ff; }
+.palette__tile[data-cat="general-u"]           { border-color: #c98aff; }
+.palette__tile[data-cat="two-qubit-clifford"]  { border-color: #c4a96d; }
+.palette__tile[data-cat="controlled-rotation"] { border-color: #d99a55; }
+.palette__tile[data-cat="ising-native"]        { border-color: #d97560; }
+.palette__tile[data-cat="three-qubit"]         { border-color: #d97fb8; }
+.palette__tile[data-cat="multi-controlled"]    { border-color: #b85ec7; }
+.palette__tile[data-cat="state-prep"]          { border-color: #6dc4a4; }
+.palette__tile[data-cat="non-unitary"]         { border-color: #c47878; }
+.palette__tile[data-cat="control-flow"]        { border-color: #d4c267; }
+.palette__tile[data-cat="marker"]              { border-color: #6e7888; }
 .palette__symbol { font-family: ui-monospace, monospace; font-size: 13px; color: var(--fg); }
 .palette__id { font-size: 9px; color: var(--muted); }
 

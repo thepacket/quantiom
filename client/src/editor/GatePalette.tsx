@@ -91,6 +91,7 @@ export function GatePalette() {
                     <div
                       key={g.id}
                       className="palette__tile"
+                      data-cat={g.category}
                       draggable
                       onDragStart={(e) => onDragStart(e, g.id, g.symbol)}
                       title={`${g.name}${g.description ? " — " + g.description : ""}`}
