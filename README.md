@@ -51,6 +51,10 @@ Live: **<https://quantiom.fly.dev>**.
 - **File menu** — open `.qasm`, download `.qasm`, or pick from the
   bundled **Examples** dropdown.
 - **Dark theme** throughout.
+- **Title bar** — the current circuit's name is shown centered at the top of
+  the window. Loading from the Examples dropdown uses the example label;
+  opening a `.qasm` from disk uses the filename. The Quantiom logo on the
+  left also shows the running build's semver and short git SHA.
 
 ## Simulator (in the browser)
 
@@ -95,7 +99,15 @@ collapsed state per panel id in `localStorage`. Every panel has a
   orbit, the probability bars pulse, the sonorizer's harmonics rotate.
 - **Statevector** — basis-state table with numeric `Re + Im·i` per
   amplitude, formatted to 4 decimals. "hide zeros" toggle.
-- **Probabilities** — horizontal SVG bar chart of `|amplitude|²`.
+- **Probabilities** — horizontal SVG bar chart with two switchable modes:
+  - **exact** (default): each bar is `|amplitude|²`. Reads the truth out of
+    the state vector — no averaging needed.
+  - **shots**: samples N measurement outcomes from the exact distribution
+    and shows the empirical histogram, the way real quantum hardware
+    behaves. Preset shot counts (100, 1 024, 8 192, 100 000), a **↻
+    resample** button, and the exact distribution overlaid as a dashed
+    accent outline behind the sampled bars for direct comparison. Mode and
+    shot count persist in localStorage.
 - **Bloch spheres** — one axonometric sphere per qubit with axis labels
   (`|0⟩, |1⟩, |+⟩, |−⟩, |±i⟩`), state-vector arrow, and a `|r|` purity
   readout that quantifies how mixed the reduced state is.

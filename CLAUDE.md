@@ -48,6 +48,19 @@ host plus `/api/health`.
   function in [client/src/panels/ParameterPanel.tsx](client/src/panels/ParameterPanel.tsx).
 - The OpenQASM 3 emitter/parser pair preserves the symbolic look of the
   parameter expressions; it does not evaluate them.
+- **Circuit name** is an optional field on the IR (`Circuit.name`). It is
+  set by the FileMenu when a circuit is loaded (example label or file
+  basename) and rendered in the centre of the app header. Manual edits
+  preserve the name; Clear leaves it undefined ("Untitled").
+- **Version** in the header is built from `package.json` semver plus the
+  short git SHA injected at build time via `vite.config.ts` (`__GIT_SHA__`
+  global). The Dockerfile installs git and copies `.git` in so this works
+  inside the production image.
+- **Probabilities panel** has two modes — `exact` (truth) and `shots`
+  (sampled). The sampler is in [client/src/sim/sample.ts](client/src/sim/sample.ts);
+  it normalises the exact probabilities, builds a cumulative distribution,
+  and binary-searches per shot. Mode and shot count persist in
+  localStorage. Real hardware always behaves like the `shots` mode.
 
 ## Earlier architecture (gone)
 
