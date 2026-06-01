@@ -239,13 +239,15 @@ export function buildPlacedGate(
   if (qubits.length !== need) {
     throw new Error(`gate ${gateId} expects ${need} qubits, got ${qubits.length}`);
   }
+  const controls = qubits.slice(0, def.numControls);
   return {
     id: newGateId(),
     gateId,
     column,
-    controls: qubits.slice(0, def.numControls),
+    controls,
     targets: qubits.slice(def.numControls),
     clbits,
     params: def.params.map((p) => p.default),
+    controlStates: controls.length > 0 ? controls.map(() => true) : undefined,
   };
 }

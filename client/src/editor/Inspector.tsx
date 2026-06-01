@@ -81,18 +81,38 @@ export function Inspector({ circuit, selectedGateId, dispatch, onSelect }: Props
       {gate.controls.length > 0 && (
         <fieldset className="inspector__group">
           <legend>Controls</legend>
-          {gate.controls.map((q, i) => (
-            <div key={`c-${i}`} className="inspector__row">
-              <label>control {i}</label>
-              <select value={q} onChange={(e) => updateQubit("controls", i, parseInt(e.target.value, 10))}>
-                {qubitOptions.map((qi) => (
-                  <option key={qi} value={qi}>
-                    q{qi}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
+          {gate.controls.map((q, i) => {
+            const onState = gate.controlStates ? gate.controlStates[i] !== false : true;
+            const toggle = () => {
+              const next = gate.controls.map((_, j) =>
+                gate.controlStates ? gate.controlStates[j] !== false : true,
+              );
+              next[i] = !onState;
+              dispatch({ type: "update-gate", id: gate.id, patch: { controlStates: next } });
+            };
+            return (
+              <div key={`c-${i}`} className="inspector__row">
+                <label>control {i}</label>
+                <div className="inspector__ctrl">
+                  <select
+                    value={q}
+                    onChange={(e) => updateQubit("controls", i, parseInt(e.target.value, 10))}
+                  >
+                    {qubitOptions.map((qi) => (
+                      <option key={qi} value={qi}>q{qi}</option>
+                    ))}
+                  </select>
+                  <button
+                    className={"inspector__anti" + (onState ? " inspector__anti--on" : " inspector__anti--off")}
+                    onClick={toggle}
+                    title={onState ? "Fires on |1⟩ (normal control). Click for anti-control." : "Fires on |0⟩ (anti-control). Click for normal."}
+                  >
+                    {onState ? "●" : "○"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </fieldset>
       )}
 

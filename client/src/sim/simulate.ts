@@ -1,5 +1,5 @@
 import type { Circuit, PlacedGate } from "../editor/types";
-import { buildMatrix } from "./matrices";
+import { buildMatrix, M_X } from "./matrices";
 import { applyKQubit } from "./apply";
 import { compileExpr, detectFreeVars } from "./expr";
 
@@ -99,7 +99,18 @@ export function simulate(circuit: Circuit, paramValues: ParameterValues): SimRes
       continue;
     }
     const allQubits = [...g.controls, ...g.targets];
+    // Anti-controls: the controlled gate fires on |0⟩ for those positions.
+    // Bracket the gate with X on the anti-control qubits so the standard
+    // controlled-on-|1⟩ matrix produces the same effect.
+    const antiQubits: number[] = [];
+    if (g.controlStates) {
+      for (let i = 0; i < g.controls.length; i++) {
+        if (g.controlStates[i] === false) antiQubits.push(g.controls[i]);
+      }
+    }
+    for (const q of antiQubits) applyKQubit(state, n, [q], M_X);
     applyKQubit(state, n, allQubits, U);
+    for (const q of antiQubits) applyKQubit(state, n, [q], M_X);
   }
 
   return {

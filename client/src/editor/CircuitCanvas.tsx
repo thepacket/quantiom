@@ -354,9 +354,18 @@ function PlacedGateView({
         <line x1={x} y1={rowY(lo)} x2={x} y2={rowY(hi)} className="gate__connector" />
       )}
       {/* controls */}
-      {gate.controls.map((q) => (
-        <circle key={`ctrl-${q}`} cx={x} cy={rowY(q)} r={6} className="gate__control" />
-      ))}
+      {gate.controls.map((q, i) => {
+        const isAnti = gate.controlStates?.[i] === false;
+        return (
+          <circle
+            key={`ctrl-${q}-${i}`}
+            cx={x}
+            cy={rowY(q)}
+            r={6}
+            className={isAnti ? "gate__control gate__control--anti" : "gate__control"}
+          />
+        );
+      })}
       {/* targets */}
       {gate.targets.map((q, i) => (
         <TargetGlyph key={`tgt-${q}-${i}`} def={def} gate={gate} x={x} y={rowY(q)} />

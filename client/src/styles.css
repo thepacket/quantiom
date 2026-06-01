@@ -137,6 +137,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 
 .gate__connector { stroke: var(--cat-color); stroke-width: 1.4; }
 .gate__control { fill: var(--cat-color); stroke: none; }
+.gate__control--anti { fill: var(--panel); stroke: var(--cat-color); stroke-width: 1.6; }
 .gate__box { fill: var(--panel-2); stroke: var(--cat-color); stroke-width: 1.4; }
 .gate__box--target { fill: transparent; stroke: var(--cat-color); stroke-width: 1.4; }
 .gate__box--measure { fill: var(--panel-2); stroke: var(--cat-color); }
@@ -166,6 +167,10 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .inspector__group { display: grid; gap: 4px; }
 .inspector__row { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 8px; margin: 2px 0; }
 .inspector__row label { color: var(--muted); font-size: 11px; }
+.inspector__ctrl { display: grid; grid-template-columns: 1fr 28px; gap: 4px; align-items: center; }
+.inspector__anti { padding: 0; height: 22px; font-size: 12px; }
+.inspector__anti--on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.inspector__anti--off { background: transparent; color: var(--fg); border-color: var(--fg); }
 .inspector__desc { color: var(--muted); font-size: 11px; margin: 8px 0 0; line-height: 1.5; }
 
 /* ─── Panels ────────────────────────────────────────────────────────── */

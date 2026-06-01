@@ -63,6 +63,14 @@ export type PlacedGate = {
   clbits: number[]; // classical bit indices used (e.g. measure destination)
   params: string[]; // symbolic parameter values, parallel to GateDef.params
   /**
+   * Per-control firing condition. Same length as `controls`; entry true means
+   * the gate fires when that control qubit is |1⟩ (the default), false means
+   * it fires when the control is |0⟩ (an "anti-control" / "negctrl @" in
+   * OpenQASM 3). Absent on circuits saved before this field existed —
+   * absent ≡ all-true.
+   */
+  controlStates?: boolean[];
+  /**
    * Classical-bit-conditioned execution. Equivalent to OpenQASM `if (c == v) gate`.
    */
   condition?: { clbit: number; value: number };
