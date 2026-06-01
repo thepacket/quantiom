@@ -7,6 +7,7 @@ import { Inspector } from "./Inspector";
 import { FileMenu } from "./FileMenu";
 import { StepBar } from "./StepBar";
 import { loadCustomGates, newCustomGateId, saveCustomGates, type CustomGate } from "./customGates";
+import { decodeCircuitFromHash } from "./shareLink";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -14,6 +15,8 @@ import { BlochPanel } from "../panels/BlochPanel";
 import { ExpectationPanel } from "../panels/ExpectationPanel";
 import { DensityPanel } from "../panels/DensityPanel";
 import { NoisePanel } from "../panels/NoisePanel";
+import { PhaseDiskPanel } from "../panels/PhaseDiskPanel";
+import { ResourcePanel } from "../panels/ResourcePanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
@@ -34,6 +37,18 @@ export function CircuitEditor() {
   useEffect(() => {
     saveNoise(noise);
   }, [noise]);
+
+  // Auto-load circuit from URL hash (#c=<gzip+base64url>) once on mount.
+  // Wins over localStorage so shared links open the intended circuit even
+  // when the user already has a saved working circuit.
+  useEffect(() => {
+    let cancelled = false;
+    decodeCircuitFromHash(location.hash).then((c) => {
+      if (cancelled || !c) return;
+      dispatch({ type: "replace-circuit", circuit: c });
+    });
+    return () => { cancelled = true; };
+  }, [dispatch]);
 
   const onSaveAsGate = () => {
     const name = window.prompt("Name for this gate?", circuit.name ?? "myblock");
@@ -168,6 +183,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="expectation">
           <ExpectationPanel
             state={simState}
@@ -176,6 +192,7 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
+        <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>
