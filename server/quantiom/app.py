@@ -75,25 +75,82 @@ def _basis_label(index: int, n: int) -> str:
     return format(index, f"0{n}b")
 
 
+# ─── Symbolic-state cache ──────────────────────────────────────────────────
+# The symbolic statevector depends only on the circuit IR, not on the user's
+# parameter values. Caching it means parameter sweeps (e.g. the animation Play
+# button driving `t`) only re-run the cheap numeric substitution path.
+
+_STATE_CACHE: dict[str, tuple[list[sp.Expr], list, str, list[str]]] = {}
+_STATE_CACHE_LRU: list[str] = []
+_STATE_CACHE_MAX = 32
+
+
+def _circuit_key(circuit: Circuit) -> str:
+    """Stable hash key for a circuit IR, ignoring instance ids and column ties."""
+    gates = sorted(
+        (
+            g.gateId,
+            g.column,
+            tuple(g.controls),
+            tuple(g.targets),
+            tuple(g.clbits),
+            tuple(g.params),
+        )
+        for g in circuit.gates
+    )
+    return repr((circuit.numQubits, gates))
+
+
+def _cached_symbolic_state(
+    circuit: Circuit,
+) -> tuple[list[sp.Expr], list, str, list[str]]:
+    """Return (simplified amplitudes, skipped gates, ket latex, free symbols).
+
+    Cache miss runs the symbolic simulator + simplification + LaTeX rendering;
+    cache hit is a dict lookup.
+    """
+    key = _circuit_key(circuit)
+    cached = _STATE_CACHE.get(key)
+    if cached is not None:
+        _STATE_CACHE_LRU.remove(key)
+        _STATE_CACHE_LRU.append(key)
+        return cached
+
+    result = simulate_statevector(circuit)
+    n = result.numQubits
+    simplified = [sp.simplify(a) for a in result.amplitudes]
+    ket_terms: list[sp.Expr] = []
+    for i, simp in enumerate(simplified):
+        if simp != 0:
+            label = format(i, f"0{n}b")
+            ket_terms.append(simp * sp.Symbol(f"|{label}\\rangle"))
+    ket_latex = "0" if not ket_terms else latex_clean(sp.latex(sp.Add(*ket_terms, evaluate=False)))
+    free_syms = free_symbol_names(simplified)
+
+    value = (simplified, result.skipped, ket_latex, free_syms)
+    _STATE_CACHE[key] = value
+    _STATE_CACHE_LRU.append(key)
+    if len(_STATE_CACHE_LRU) > _STATE_CACHE_MAX:
+        oldest = _STATE_CACHE_LRU.pop(0)
+        _STATE_CACHE.pop(oldest, None)
+    return value
+
+
 @app.post("/api/simulate/statevector", response_model=StatevectorResponse)
 def statevector(req: SimulateRequest) -> StatevectorResponse:
     try:
-        result = simulate_statevector(req.circuit)
+        simplified, skipped, ket_latex, free_syms = _cached_symbolic_state(req.circuit)
     except SimulationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    n = result.numQubits
-    simplified = [sp.simplify(a) for a in result.amplitudes]
+    n = req.circuit.numQubits
     numeric = numeric_amplitudes(simplified, req.parameterValues)
     probs = probabilities(numeric)
     blochs = bloch_vectors(numeric, n)
-    free_syms = free_symbol_names(simplified)
 
     amps: list[Amplitude] = []
-    ket_terms: list[sp.Expr] = []
     for i, simp in enumerate(simplified):
         label = _basis_label(i, n)
-        is_zero = simp == 0
         num = numeric[i]
         amps.append(
             Amplitude(
@@ -101,25 +158,17 @@ def statevector(req: SimulateRequest) -> StatevectorResponse:
                 index=i,
                 expr=sp.sstr(simp),
                 latex=latex_clean(sp.latex(simp)),
-                isZero=is_zero,
+                isZero=simp == 0,
                 re=None if num is None else num[0],
                 im=None if num is None else num[1],
             )
         )
-        if not is_zero:
-            ket_symbol = sp.Symbol(f"|{label}\\rangle")
-            ket_terms.append(simp * ket_symbol)
-
-    if not ket_terms:
-        ket_latex = "0"
-    else:
-        ket_latex = latex_clean(sp.latex(sp.Add(*ket_terms, evaluate=False)))
 
     return StatevectorResponse(
         numQubits=n,
         amplitudes=amps,
         ketLatex=ket_latex,
-        skipped=[SkippedOut(id=s.id, gateId=s.gateId, reason=s.reason) for s in result.skipped],
+        skipped=[SkippedOut(id=s.id, gateId=s.gateId, reason=s.reason) for s in skipped],
         probabilities=probs,
         blochVectors=[None if b is None else BlochVector(x=b[0], y=b[1], z=b[2]) for b in blochs],
         freeSymbols=free_syms,

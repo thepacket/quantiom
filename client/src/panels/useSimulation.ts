@@ -13,7 +13,9 @@ export function dataOf(state: SimState): StatevectorResponse | null {
   return null;
 }
 
-const DEBOUNCE_MS = 250;
+// Lowered from 250ms so animation playback can stream updates at ~15fps;
+// the server's symbolic-state cache keeps this cheap.
+const DEBOUNCE_MS = 60;
 
 export function useStatevector(circuit: Circuit, parameterValues: ParameterValues): SimState {
   const [state, setState] = useState<SimState>({ kind: "idle" });
