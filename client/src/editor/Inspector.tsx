@@ -217,6 +217,51 @@ export function Inspector({ circuit, selectedGateId, dispatch, onSelect }: Props
         </fieldset>
       )}
 
+      {/* Classical condition — gate executes only if c[k] == v. Not
+          shown for measurements (those produce the bits) or markers. */}
+      {circuit.numClbits > 0
+        && gate.gateId !== "measure" && gate.gateId !== "measure_x" && gate.gateId !== "measure_y"
+        && gate.gateId !== "reset" && gate.gateId !== "barrier" && gate.gateId !== "delay" && (
+        <fieldset className="inspector__group">
+          <legend>Classical condition</legend>
+          <div className="inspector__row">
+            <label>
+              <input
+                type="checkbox"
+                checked={!!gate.condition}
+                onChange={(e) => {
+                  const next = e.target.checked
+                    ? { clbit: gate.condition?.clbit ?? 0, value: gate.condition?.value ?? 1 }
+                    : undefined;
+                  dispatch({ type: "update-gate", id: gate.id, patch: { condition: next } });
+                }}
+              />
+              <span style={{ marginLeft: 4 }}>fire only if</span>
+            </label>
+            {gate.condition && (
+              <>
+                <select
+                  value={gate.condition.clbit}
+                  onChange={(e) => dispatch({ type: "update-gate", id: gate.id, patch: { condition: { ...gate.condition!, clbit: parseInt(e.target.value, 10) } } })}
+                >
+                  {clbitOptions.map((ci) => (
+                    <option key={ci} value={ci}>c{ci}</option>
+                  ))}
+                </select>
+                <span style={{ color: "var(--muted)" }}>==</span>
+                <select
+                  value={gate.condition.value}
+                  onChange={(e) => dispatch({ type: "update-gate", id: gate.id, patch: { condition: { ...gate.condition!, value: parseInt(e.target.value, 10) } } })}
+                >
+                  <option value={0}>0</option>
+                  <option value={1}>1</option>
+                </select>
+              </>
+            )}
+          </div>
+        </fieldset>
+      )}
+
       {def.description && <p className="inspector__desc">{def.description}</p>}
     </div>
   );

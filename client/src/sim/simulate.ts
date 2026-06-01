@@ -4,6 +4,7 @@ import { applyKQubit } from "./apply";
 import { compileExpr, detectFreeVars } from "./expr";
 import { expandCustomGates, type CustomGate } from "../editor/customGates";
 import { isCliffordOnly, runClifford } from "./stabilizer";
+import { fnv1a, measureX, measureY, measureZ, mulberry32, reset as resetQubit } from "./measure";
 
 export const MAX_QUBITS = 20;
 /** Above this width, Clifford-only circuits flow through the tableau sim. */
@@ -48,6 +49,9 @@ export type SimResult = {
   isNoisy?: boolean;
   /** Number of trajectories averaged. Only set when `isNoisy`. */
   trajectories?: number;
+  /** Final classical-register values after any measurements. Length equals
+   *  circuit.numClbits. Undefined when the circuit has no measurements. */
+  measurementRecord?: number[];
   /** True when the result came from the Aaronson-Gottesman tableau path.
    *  Statevector / Probabilities / Density panels are unavailable in this
    *  mode (full state has too many basis elements); Bloch is exact. */
@@ -123,10 +127,49 @@ export function simulate(
 
   const skipped: SkippedGate[] = [];
 
+  // Classical register + RNG for mid-circuit measurements. Allocated only
+  // when a measurement appears in the gate list; circuits without measure/
+  // reset stay on the bare hot path with zero new cost.
+  const hasMeasurement = gates.some(
+    (g) => g.gateId === "measure" || g.gateId === "measure_x" || g.gateId === "measure_y" || g.gateId === "reset",
+  );
+  const hasConditions = gates.some((g) => g.condition !== undefined);
+  let cReg: Uint8Array | null = null;
+  let rng: (() => number) | null = null;
+  if (hasMeasurement || hasConditions) {
+    cReg = new Uint8Array(Math.max(1, circuit.numClbits));
+    // Deterministic seed: a hash of the circuit + parameter values keeps
+    // re-renders stable until the user actually changes something.
+    const seedText = JSON.stringify({ g: circuit.gates, q: circuit.numQubits, p: paramValues });
+    rng = mulberry32(fnv1a(seedText));
+  }
+
   for (const g of gates) {
     if (MARKERS.has(g.gateId)) continue;
+
+    // Classical-controlled execution: skip the gate when its condition's
+    // clbit doesn't match. Cheap to check; only fires when the IR contains
+    // any conditions at all (otherwise the field is undefined).
+    if (g.condition && cReg && cReg[g.condition.clbit] !== g.condition.value) continue;
+
+    if (g.gateId === "measure") {
+      if (cReg && rng) cReg[g.clbits[0]] = measureZ(state, n, g.targets[0], rng);
+      continue;
+    }
+    if (g.gateId === "measure_x") {
+      if (cReg && rng) cReg[g.clbits[0]] = measureX(state, n, g.targets[0], rng);
+      continue;
+    }
+    if (g.gateId === "measure_y") {
+      if (cReg && rng) cReg[g.clbits[0]] = measureY(state, n, g.targets[0], rng);
+      continue;
+    }
+    if (g.gateId === "reset") {
+      if (rng) resetQubit(state, n, g.targets[0], rng);
+      continue;
+    }
     if (NON_UNITARY.has(g.gateId)) {
-      skipped.push({ id: g.id, gateId: g.gateId, reason: "non-unitary (measurement / reset)" });
+      skipped.push({ id: g.id, gateId: g.gateId, reason: "non-unitary (not yet implemented)" });
       continue;
     }
     if (CONTROL_FLOW.has(g.gateId)) {
@@ -174,11 +217,13 @@ export function simulate(
   let _amps: Amplitude[] | null = null;
   let _probs: number[] | null = null;
   let _blochs: BlochVector[] | null = null;
+  const measurementRecord = cReg ? Array.from(cReg.slice(0, circuit.numClbits)) : undefined;
   return {
     numQubits: n,
     state,
     freeSymbols: collectFreeSymbols(circuit),
     skipped,
+    measurementRecord,
     get amplitudes() {
       if (!_amps) _amps = extractAmplitudes(state, n);
       return _amps;

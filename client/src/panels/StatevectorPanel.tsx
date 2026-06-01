@@ -85,6 +85,18 @@ export function StatevectorPanel({ state }: Props) {
                 ))}
             </tbody>
           </table>
+          {data.measurementRecord && data.measurementRecord.length > 0 && (
+            <div className="statevector__measurements">
+              <span className="statevector__measurements-head">classical</span>
+              <span className="statevector__measurements-bits">
+                {data.measurementRecord.map((b, i) => (
+                  <span key={i} className="statevector__cbit">
+                    c{i}={b}
+                  </span>
+                ))}
+              </span>
+            </div>
+          )}
           {data.skipped.length > 0 && (
             <div className="statevector__skipped">
               <div className="statevector__skipped-head">Skipped</div>

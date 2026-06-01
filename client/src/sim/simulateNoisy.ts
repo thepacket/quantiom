@@ -5,6 +5,7 @@ import { compileExpr } from "./expr";
 import { expandCustomGates, type CustomGate } from "../editor/customGates";
 import { paulis as evalPaulis, type Pauli } from "./expectation";
 import { rateFor, type NoiseModel } from "./noise";
+import { measureX, measureY, measureZ, reset as resetQubit } from "./measure";
 import {
   MAX_QUBITS,
   type Amplitude,
@@ -75,20 +76,34 @@ export function simulateNoisy(
   const skipped: SkippedGate[] = [];
   const skippedSeen = new Set<string>();
 
+  // Per-trajectory classical register for mid-circuit measurement + condition.
+  const numClbits = Math.max(1, circuit.numClbits);
+  const cReg = new Uint8Array(numClbits);
+
   for (let t = 0; t < T; t++) {
     const state = new Float64Array(2 * dim);
     state[0] = 1;
+    cReg.fill(0);
 
     for (let gi = 0; gi < gates.length; gi++) {
       const g = gates[gi];
       const m = gateMatrices[gi];
+
+      // Classical condition: skip when clbit doesn't match.
+      if (g.condition && cReg[g.condition.clbit] !== g.condition.value) continue;
+
+      // Measurement / reset — sample per trajectory.
+      if (g.gateId === "measure") { cReg[g.clbits[0]] = measureZ(state, n, g.targets[0], Math.random); continue; }
+      if (g.gateId === "measure_x") { cReg[g.clbits[0]] = measureX(state, n, g.targets[0], Math.random); continue; }
+      if (g.gateId === "measure_y") { cReg[g.clbits[0]] = measureY(state, n, g.targets[0], Math.random); continue; }
+      if (g.gateId === "reset") { resetQubit(state, n, g.targets[0], Math.random); continue; }
+
       if (!m) {
         // Skipped gate — only record the first time across all trajectories.
         if (!skippedSeen.has(g.id)) {
           skippedSeen.add(g.id);
           let reason = "gate not yet implemented";
-          if (NON_UNITARY.has(g.gateId)) reason = "non-unitary (measurement / reset)";
-          else if (CONTROL_FLOW.has(g.gateId)) reason = "control flow not simulated";
+          if (CONTROL_FLOW.has(g.gateId)) reason = "control flow not simulated";
           else if (MARKERS.has(g.gateId)) reason = "marker";
           skipped.push({ id: g.id, gateId: g.gateId, reason });
         }
@@ -429,13 +444,20 @@ export function noisyPauliExpectation(
     steps.push({ U, qubits, antiQubits });
   }
 
+  const cReg = new Uint8Array(Math.max(1, circuit.numClbits));
   let sum = 0;
   for (let t = 0; t < T; t++) {
     const state = new Float64Array(2 * dim);
     state[0] = 1;
+    cReg.fill(0);
     for (let gi = 0; gi < gates.length; gi++) {
       const s = steps[gi];
       const g = gates[gi];
+      if (g.condition && cReg[g.condition.clbit] !== g.condition.value) continue;
+      if (g.gateId === "measure") { cReg[g.clbits[0]] = measureZ(state, n, g.targets[0], Math.random); continue; }
+      if (g.gateId === "measure_x") { cReg[g.clbits[0]] = measureX(state, n, g.targets[0], Math.random); continue; }
+      if (g.gateId === "measure_y") { cReg[g.clbits[0]] = measureY(state, n, g.targets[0], Math.random); continue; }
+      if (g.gateId === "reset") { resetQubit(state, n, g.targets[0], Math.random); continue; }
       if (!s) {
         if (g.gateId in PREP_AMPS) applyPrep(state, n, g.targets[0], PREP_AMPS[g.gateId]);
         continue;

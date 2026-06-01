@@ -236,6 +236,12 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .equiv__detail { font-size: 10px; color: var(--muted); font-weight: normal; }
 .equiv__metrics { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-top: 4px; line-height: 1.5; }
 
+/* ─── Measurement record on statevector panel ─────────────────────── */
+.statevector__measurements { display: flex; align-items: baseline; gap: 8px; padding: 4px 6px; margin-top: 6px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 3px; }
+.statevector__measurements-head { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; }
+.statevector__measurements-bits { display: flex; gap: 8px; font-family: ui-monospace, monospace; font-size: 11px; }
+.statevector__cbit { color: var(--accent); }
+
 /* ─── Density matrix panel ──────────────────────────────────────────── */
 .density__pick { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 8px; }
 .density__label { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-right: 4px; }

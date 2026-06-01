@@ -294,7 +294,14 @@ export function emitQasm3(circuit: Circuit): string {
     (a, b) => a.column - b.column || a.id.localeCompare(b.id),
   );
   for (const g of sorted) {
-    for (const line of emitGate(g)) out.push(line);
+    const lines = emitGate(g);
+    if (g.condition) {
+      // Wrap each emitted statement in `if (c[k] == v) { … }`.
+      const cond = `if (c[${g.condition.clbit}] == ${g.condition.value}) `;
+      for (const line of lines) out.push(`${cond}${line}`);
+    } else {
+      for (const line of lines) out.push(line);
+    }
   }
 
   return out.join("\n");
