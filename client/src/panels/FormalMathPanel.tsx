@@ -13,7 +13,7 @@ type State =
   | { kind: "error"; message: string; data: UnitaryResponse | null };
 
 const DEBOUNCE_MS = 350;
-const MAX_QUBITS_FOR_UNITARY = 4;
+const MAX_QUBITS_FOR_UNITARY = 3;
 
 export function FormalMathPanel({ circuit }: Props) {
   const [state, setState] = useState<State>({ kind: "idle" });
