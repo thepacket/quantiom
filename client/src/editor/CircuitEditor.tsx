@@ -11,6 +11,7 @@ import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
 import { BlochPanel } from "../panels/BlochPanel";
 import { ExpectationPanel } from "../panels/ExpectationPanel";
+import { DensityPanel } from "../panels/DensityPanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
@@ -133,6 +134,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="expectation"><ExpectationPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>

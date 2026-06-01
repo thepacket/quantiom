@@ -174,6 +174,19 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .exp__op { color: var(--muted); font-family: ui-monospace, monospace; font-size: 13px; }
 .exp__value { color: var(--fg); font-family: ui-monospace, monospace; font-size: 16px; font-weight: 600; }
 
+/* ─── Density matrix panel ──────────────────────────────────────────── */
+.density__pick { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 8px; }
+.density__label { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-right: 4px; }
+.density__chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px; font-family: ui-monospace, monospace; color: var(--muted); cursor: pointer; }
+.density__chip input { margin: 0; }
+.density__chip--on { color: var(--fg); border-color: var(--accent); background: rgba(124, 196, 255, 0.1); }
+.density__matrix { width: 100%; border-collapse: collapse; font-family: ui-monospace, monospace; font-size: 10px; }
+.density__rowlabel { color: var(--muted); padding: 3px 6px 3px 0; text-align: right; font-weight: normal; }
+.density__cell { padding: 3px 6px; text-align: right; color: var(--fg); border-bottom: 1px solid #1a1f27; }
+.density__cell--diag { color: var(--accent); }
+.density__purity { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-top: 6px; }
+.density__purity-note { color: var(--border-strong); }
+
 /* ─── Inspector ─────────────────────────────────────────────────────── */
 .inspector { border-top: 1px solid var(--border); background: var(--panel); padding: 10px 12px; max-height: 38vh; overflow: auto; }
 .inspector--empty { color: var(--muted); font-size: 12px; }
