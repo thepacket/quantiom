@@ -10,16 +10,22 @@ type Props = {
   dispatch: React.Dispatch<HistoryAction>;
 };
 
+/** Slugify a name into something safe for a file system download. */
+function toFilename(name: string | undefined): string {
+  const base = (name ?? "circuit").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return (base || "circuit") + ".qasm";
+}
+
 export function FileMenu({ circuit, dispatch }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadQasm = (qasm: string) => {
+  const loadQasm = (qasm: string, name: string | undefined) => {
     const result = parseQasm3(qasm);
     if (!result.ok) {
       window.alert(`Parse error on line ${result.line}: ${result.error}`);
       return;
     }
-    dispatch({ type: "replace-circuit", circuit: result.circuit });
+    dispatch({ type: "replace-circuit", circuit: { ...result.circuit, name } });
   };
 
   const onOpen = () => fileInputRef.current?.click();
@@ -28,7 +34,9 @@ export function FileMenu({ circuit, dispatch }: Props) {
     const f = e.target.files?.[0];
     if (!f) return;
     const text = await f.text();
-    loadQasm(text);
+    // Drop the .qasm extension for the displayed title.
+    const name = f.name.replace(/\.qasm$/i, "");
+    loadQasm(text, name);
     e.target.value = "";
   };
 
@@ -38,7 +46,7 @@ export function FileMenu({ circuit, dispatch }: Props) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "circuit.qasm";
+    a.download = toFilename(circuit.name);
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -49,7 +57,7 @@ export function FileMenu({ circuit, dispatch }: Props) {
     const id = e.target.value;
     if (!id) return;
     const ex = EXAMPLES.find((x) => x.id === id);
-    if (ex) loadQasm(ex.qasm);
+    if (ex) loadQasm(ex.qasm, ex.label);
     e.target.value = "";
   };
 

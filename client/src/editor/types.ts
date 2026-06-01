@@ -72,4 +72,8 @@ export type Circuit = {
   numQubits: number;
   numClbits: number;
   gates: PlacedGate[];
+  /** Human-readable circuit title, surfaced in the app header. Optional —
+   * absent for blank/scratch circuits and replaced on every example or
+   * file load. */
+  name?: string;
 };

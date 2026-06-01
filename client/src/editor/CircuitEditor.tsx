@@ -49,6 +49,14 @@ export function CircuitEditor() {
 
   return (
     <div className="editor">
+      <header className="app__header">
+        <div className="app__header-left">
+          <h1>Quantiom</h1>
+          <span className="app__tagline">circuit editor · simulator · sonorizer · visualizer</span>
+        </div>
+        <div className="app__title">{circuit.name ?? "Untitled"}</div>
+        <div className="app__header-right" />
+      </header>
       <GatePalette />
       <div className="editor__center">
         <div className="editor__toolbar">
