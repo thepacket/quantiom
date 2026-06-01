@@ -1,4 +1,5 @@
-.git
+# Keep .git in the build context so the client build stage can read the
+# git short SHA and bake it into the version label.
 .gitignore
 .dockerignore
 Dockerfile

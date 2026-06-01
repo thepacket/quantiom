@@ -2,13 +2,20 @@
 FROM node:20-alpine AS client
 WORKDIR /app
 
+# git is needed during `vite build` to read the short SHA into the version
+# label.
+RUN apk add --no-cache git
+
 # Install deps first (cached unless lockfile changes).
 COPY client/package.json client/package-lock.json client/
 RUN cd client && npm ci
 
 # Source. The Vite build resolves raw imports from `../../examples/*.qasm`,
 # so the examples/ directory must be present at the layout the client expects.
+# The .git directory is included (see .dockerignore) so the build can read
+# the current short SHA.
 COPY examples/ examples/
+COPY .git/ .git/
 COPY client/ client/
 
 RUN cd client && npm run build

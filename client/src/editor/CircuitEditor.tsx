@@ -53,7 +53,7 @@ export function CircuitEditor() {
       <header className="app__header">
         <div className="app__header-left">
           <h1>Quantiom</h1>
-          <span className="app__version">v{APP_VERSION}</span>
+          <span className="app__version">v{APP_VERSION} ({__GIT_SHA__})</span>
           <span className="app__tagline">circuit editor · simulator · sonorizer · visualizer</span>
         </div>
         <div className="app__title">{circuit.name ?? "Untitled"}</div>
