@@ -47,6 +47,9 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .file-menu select { padding: 3px 6px; }
 .editor__actions { display: flex; gap: 6px; }
 .editor__canvas-scroll { overflow: auto; background: var(--bg); }
+.editor__bottom { display: grid; grid-template-columns: auto 1fr; border-top: 1px solid var(--border); background: var(--panel); max-height: 30vh; overflow: auto; }
+.editor__bottom > section { border-bottom: none; }
+.editor__bottom > section + section { border-left: 1px solid var(--border); }
 
 /* ─── Palette ───────────────────────────────────────────────────────── */
 .palette { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-right: 1px solid var(--border); }
