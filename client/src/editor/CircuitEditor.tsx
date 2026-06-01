@@ -5,10 +5,15 @@ import { GatePalette } from "./GatePalette";
 import { Inspector } from "./Inspector";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
+import { ProbabilityPanel } from "../panels/ProbabilityPanel";
+import { BlochPanel } from "../panels/BlochPanel";
+import { QSpherePanel } from "../panels/QSpherePanel";
+import { useStatevector } from "../panels/useSimulation";
 
 export function CircuitEditor() {
   const [circuit, dispatch, history] = useCircuit();
   const [selectedGateId, setSelectedGateId] = useState<string | null>(null);
+  const simState = useStatevector(circuit);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -85,7 +90,10 @@ export function CircuitEditor() {
         />
       </div>
       <div className="editor__right">
-        <StatevectorPanel circuit={circuit} />
+        <StatevectorPanel state={simState} />
+        <ProbabilityPanel state={simState} />
+        <QSpherePanel state={simState} />
+        <BlochPanel state={simState} />
         <QasmPanel circuit={circuit} />
       </div>
     </div>

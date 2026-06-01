@@ -2,16 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import type { Circuit } from "../editor/types";
 import { fetchStatevector, type StatevectorResponse } from "../api";
 
-type State =
+export type SimState =
   | { kind: "idle" }
   | { kind: "loading"; data: StatevectorResponse | null }
   | { kind: "ready"; data: StatevectorResponse }
   | { kind: "error"; message: string; data: StatevectorResponse | null };
 
+export function dataOf(state: SimState): StatevectorResponse | null {
+  if (state.kind === "ready" || state.kind === "loading" || state.kind === "error") return state.data;
+  return null;
+}
+
 const DEBOUNCE_MS = 250;
 
-export function useStatevector(circuit: Circuit): State {
-  const [state, setState] = useState<State>({ kind: "idle" });
+export function useStatevector(circuit: Circuit): SimState {
+  const [state, setState] = useState<SimState>({ kind: "idle" });
   const lastDataRef = useRef<StatevectorResponse | null>(null);
   const aborterRef = useRef<AbortController | null>(null);
 

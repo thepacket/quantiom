@@ -6,7 +6,11 @@ export type Amplitude = {
   expr: string;
   latex: string;
   isZero: boolean;
+  re: number | null;
+  im: number | null;
 };
+
+export type BlochVector = { x: number; y: number; z: number };
 
 export type SkippedGate = {
   id: string;
@@ -19,6 +23,8 @@ export type StatevectorResponse = {
   amplitudes: Amplitude[];
   ketLatex: string;
   skipped: SkippedGate[];
+  probabilities: (number | null)[];
+  blochVectors: (BlochVector | null)[];
 };
 
 export async function fetchStatevector(circuit: Circuit, signal?: AbortSignal): Promise<StatevectorResponse> {

@@ -1,15 +1,14 @@
 import { useState } from "react";
-import type { Circuit } from "../editor/types";
-import { useStatevector } from "./useSimulation";
+import type { SimState } from "./useSimulation";
+import { dataOf } from "./useSimulation";
 import { Tex } from "./Tex";
 
-type Props = { circuit: Circuit };
+type Props = { state: SimState };
 
-export function StatevectorPanel({ circuit }: Props) {
-  const state = useStatevector(circuit);
+export function StatevectorPanel({ state }: Props) {
   const [hideZeros, setHideZeros] = useState(true);
 
-  const data = state.kind === "ready" || state.kind === "loading" || state.kind === "error" ? state.data : null;
+  const data = dataOf(state);
   const loading = state.kind === "loading";
   const error = state.kind === "error" ? state.message : null;
 

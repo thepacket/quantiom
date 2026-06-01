@@ -152,6 +152,39 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .statevector__skipped ul { margin: 0; padding-left: 16px; }
 .statevector__skipped code { color: var(--fg); background: var(--bg-2); padding: 0 4px; border-radius: 2px; }
 
+/* ─── Probability histogram ─────────────────────────────────────────── */
+.prob__svg { display: block; }
+.prob__basis { fill: var(--muted); font-family: ui-monospace, monospace; font-size: 10px; }
+.prob__bar { fill: var(--accent-2); opacity: 0.8; }
+.prob__bar--zero { fill: var(--border); opacity: 0.5; }
+.prob__pct { fill: var(--muted); font-size: 10px; }
+
+/* ─── Bloch sphere grid ─────────────────────────────────────────────── */
+.bloch__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.bloch__cell { display: flex; flex-direction: column; align-items: center; padding: 4px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; }
+.bloch__svg { display: block; }
+.bloch__outline { fill: rgba(124, 196, 255, 0.04); stroke: var(--border-strong); stroke-width: 1; }
+.bloch__equator { fill: none; stroke: var(--border); stroke-width: 0.8; stroke-dasharray: 2 2; }
+.bloch__axis { stroke: var(--border-strong); stroke-width: 0.8; }
+.bloch__label { fill: var(--muted); font-size: 9px; font-family: ui-monospace, monospace; }
+.bloch__label--y { fill: #c4a96d; }
+.bloch__vector { stroke: var(--accent); stroke-width: 1.6; }
+.bloch__tip { fill: var(--accent); }
+.bloch__meta { display: flex; justify-content: space-between; width: 100%; padding: 0 4px; color: var(--muted); font-size: 10px; font-family: ui-monospace, monospace; }
+.bloch__qubit { color: var(--fg); }
+
+/* ─── Q-sphere ──────────────────────────────────────────────────────── */
+.qsphere__svg { display: block; margin: 0 auto; }
+.qsphere__outline { fill: rgba(124, 196, 255, 0.03); stroke: var(--border-strong); stroke-width: 1; }
+.qsphere__equator { fill: none; stroke: var(--border); stroke-width: 0.8; stroke-dasharray: 2 2; }
+.qsphere__pole { fill: var(--muted); font-family: ui-monospace, monospace; font-size: 10px; }
+.qsphere__spoke { stroke: var(--border-strong); stroke-width: 0.5; opacity: 0.6; }
+.qsphere__marker { stroke: rgba(0,0,0,0.5); stroke-width: 0.8; }
+.qsphere__zero { fill: var(--border-strong); }
+.qsphere__legend { display: flex; align-items: center; gap: 6px; padding: 6px 4px 0; color: var(--muted); font-size: 10px; font-family: ui-monospace, monospace; }
+.qsphere__legend-bar { flex: 1; height: 6px; border-radius: 2px; }
+.qsphere__legend-label { margin-left: 4px; }
+
 .qasm__code { margin: 0; padding: 8px 0 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow: auto; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.45; }
 .qasm__line { display: grid; grid-template-columns: 36px 1fr; gap: 0; }
 .qasm__line:hover { background: rgba(124, 196, 255, 0.04); }

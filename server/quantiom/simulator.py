@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import sympy as sp
 
 from .circuit import Circuit, PlacedGate
@@ -43,6 +44,63 @@ class StatevectorResult:
     numQubits: int
     amplitudes: list[sp.Expr]  # length 2^n, in big-endian basis-index order
     skipped: list[SkippedGate]
+
+
+def numeric_amplitudes(amps: list[sp.Expr]) -> list[tuple[float, float] | None]:
+    """Try to evaluate each amplitude to (re, im). Returns None per slot if the
+    amplitude still has free symbols (parameters like θ left unset).
+    """
+    out: list[tuple[float, float] | None] = []
+    for a in amps:
+        simp = sp.nsimplify(a) if a == 0 else a
+        if simp.free_symbols:
+            out.append(None)
+            continue
+        try:
+            v = complex(sp.N(simp))
+            out.append((float(v.real), float(v.imag)))
+        except (TypeError, ValueError):
+            out.append(None)
+    return out
+
+
+def probabilities(numeric: list[tuple[float, float] | None]) -> list[float | None]:
+    return [None if p is None else p[0] * p[0] + p[1] * p[1] for p in numeric]
+
+
+def bloch_vectors(
+    numeric: list[tuple[float, float] | None],
+    n: int,
+) -> list[tuple[float, float, float] | None]:
+    """Per-qubit Bloch vector (⟨X⟩, ⟨Y⟩, ⟨Z⟩) from the reduced density matrix.
+
+    Returns None for every qubit if any amplitude is still symbolic.
+    """
+    if any(p is None for p in numeric):
+        return [None] * n
+
+    amps = np.array([complex(re, im) for (re, im) in numeric], dtype=complex)
+    result: list[tuple[float, float, float] | None] = []
+    dim = 1 << n
+    for q in range(n):
+        bit_q = 1 << (n - 1 - q)
+        rest_mask = (dim - 1) ^ bit_q
+        rho = np.zeros((2, 2), dtype=complex)
+        for i in range(dim):
+            for j in range(dim):
+                if (i & rest_mask) != (j & rest_mask):
+                    continue
+                bi = 1 if (i & bit_q) else 0
+                bj = 1 if (j & bit_q) else 0
+                rho[bi, bj] += amps[i] * np.conj(amps[j])
+        # ⟨X⟩ = ρ[0,1] + ρ[1,0] = 2 Re(ρ[0,1])
+        # ⟨Y⟩ = i (ρ[0,1] − ρ[1,0]) = −2 Im(ρ[0,1])
+        # ⟨Z⟩ = ρ[0,0] − ρ[1,1]
+        x = float(2 * rho[0, 1].real)
+        y = float(-2 * rho[0, 1].imag)
+        z = float((rho[0, 0] - rho[1, 1]).real)
+        result.append((x, y, z))
+    return result
 
 
 # ─── Basis indexing helpers (big-endian) ───────────────────────────────────
