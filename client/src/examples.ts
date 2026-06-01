@@ -30,6 +30,11 @@ import bb84 from "../../examples/bb84_round.qasm?raw";
 import draperAdder from "../../examples/draper_adder.qasm?raw";
 import qWalk from "../../examples/quantum_walk_step.qasm?raw";
 import magicState from "../../examples/magic_state.qasm?raw";
+import deutsch1 from "../../examples/deutsch_1bit.qasm?raw";
+import simon2 from "../../examples/simon_2bit.qasm?raw";
+import catPhase from "../../examples/schrodinger_cat_phase.qasm?raw";
+import cuccaro from "../../examples/cuccaro_adder_2bit.qasm?raw";
+import steane from "../../examples/steane_encode_logical_zero.qasm?raw";
 
 export type Example = { id: string; label: string; qasm: string };
 
@@ -51,6 +56,7 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
       { id: "ghz", label: "GHZ state (3q)", qasm: ghz },
       { id: "w_state", label: "W state (3q)", qasm: wState },
       { id: "cluster", label: "Linear cluster (4q)", qasm: cluster },
+      { id: "cat-phase", label: "Phased Schrödinger cat (3q)", qasm: catPhase },
     ],
   },
   {
@@ -67,8 +73,10 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
   {
     label: "Algorithms",
     items: [
-      { id: "bv", label: "Bernstein–Vazirani (4q)", qasm: bv },
+      { id: "deutsch-1", label: "Deutsch, 1-bit (2q)", qasm: deutsch1 },
       { id: "dj", label: "Deutsch–Jozsa (4q)", qasm: dj },
+      { id: "bv", label: "Bernstein–Vazirani (4q)", qasm: bv },
+      { id: "simon-2", label: "Simon, s = 11 (4q)", qasm: simon2 },
       { id: "grover", label: "Grover, 1 iter (2q)", qasm: grover },
       { id: "grover-3q", label: "Grover, 2 iters (3q)", qasm: grover3 },
       { id: "qft", label: "QFT (3q)", qasm: qft },
@@ -82,7 +90,9 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
     label: "Arithmetic & ECC",
     items: [
       { id: "half-adder", label: "Half adder (4q)", qasm: halfAdder },
+      { id: "cuccaro", label: "Cuccaro ripple-carry, 2-bit (6q)", qasm: cuccaro },
       { id: "bit-flip", label: "Bit-flip code (3q)", qasm: bitFlip },
+      { id: "steane", label: "Steane [[7,1,3]] encoder (7q)", qasm: steane },
     ],
   },
   {

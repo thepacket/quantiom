@@ -35,3 +35,8 @@ Composer) or read them as a worked-example reference.
 | [bb84_round.qasm](bb84_round.qasm) | 1 | One round of BB84 with parameterized basis angles |
 | [draper_adder.qasm](draper_adder.qasm) | 2 | Fourier-basis addition of a classical constant |
 | [quantum_walk_step.qasm](quantum_walk_step.qasm) | 3 | One step of a coined walk on the 4-cycle |
+| [deutsch_1bit.qasm](deutsch_1bit.qasm) | 2 | Deutsch's original constant-vs-balanced algorithm |
+| [simon_2bit.qasm](simon_2bit.qasm) | 4 | Simon's algorithm with hidden string s = 11 |
+| [schrodinger_cat_phase.qasm](schrodinger_cat_phase.qasm) | 3 | Phased cat state with a φ slider |
+| [cuccaro_adder_2bit.qasm](cuccaro_adder_2bit.qasm) | 6 | Cuccaro ripple-carry adder, 2-bit + 2-bit |
+| [steane_encode_logical_zero.qasm](steane_encode_logical_zero.qasm) | 7 | Steane [[7,1,3]] encoder for the logical \|0⟩ |
