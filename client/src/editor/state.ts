@@ -1,4 +1,4 @@
-import { useCallback, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import type { Circuit, PlacedGate } from "./types";
 import { GATES_BY_ID, totalQubits } from "./gates";
 
@@ -188,9 +188,37 @@ function historyReducer(v: Versioned, action: HistoryAction): Versioned {
 
 const INITIAL_VERSIONED: Versioned = { past: [], present: INITIAL, future: [], coalesce: null };
 
+const STORAGE_KEY = "quantiom:circuit:v1";
+
+function loadFromStorage(): Versioned {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return INITIAL_VERSIONED;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof parsed.numQubits === "number" &&
+      Array.isArray(parsed.gates)
+    ) {
+      return { ...INITIAL_VERSIONED, present: parsed as Circuit };
+    }
+  } catch {
+    /* corrupted entry — ignore */
+  }
+  return INITIAL_VERSIONED;
+}
+
 export function useCircuit() {
-  const [versioned, raw] = useReducer(historyReducer, INITIAL_VERSIONED);
+  const [versioned, raw] = useReducer(historyReducer, INITIAL_VERSIONED, loadFromStorage);
   const dispatch = useCallback((a: HistoryAction) => raw(a), [raw]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(versioned.present));
+    } catch {
+      /* storage may be unavailable — fail quietly */
+    }
+  }, [versioned.present]);
   return [versioned.present, dispatch, { canUndo: versioned.past.length > 0, canRedo: versioned.future.length > 0 }] as const;
 }
 

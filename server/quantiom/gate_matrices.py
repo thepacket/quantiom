@@ -331,8 +331,25 @@ class UnsupportedGate(Exception):
     """Raised when the simulator doesn't (yet) support a gate id."""
 
 
-def build_matrix(gate_id: str, params: list[sp.Expr]) -> sp.Matrix:
+# Variable-arity multi-controlled gates. The number of controls is read from
+# the placed gate (len(controls)), not from a fixed table.
+_VARIABLE_CONTROLLED: dict[str, tuple[str, str]] = {
+    # gate_id → (kind, target_id) where kind ∈ {"single", "param-single"}
+    "mcx": ("single", "x"),
+    "mcp": ("param-single", "p"),
+    "mcu": ("param-single", "u"),
+}
+
+
+def build_matrix(
+    gate_id: str,
+    params: list[sp.Expr],
+    n_controls: int | None = None,
+) -> sp.Matrix:
     """Return the unitary matrix for a gate id and parsed parameters.
+
+    For variable-arity gates (mcx/mcp/mcu) the caller must supply n_controls;
+    for fixed-arity gates the argument is ignored.
 
     Raises UnsupportedGate for non-unitary or unimplemented gates.
     """
@@ -355,4 +372,14 @@ def build_matrix(gate_id: str, params: list[sp.Expr]) -> sp.Matrix:
     if gate_id in _CONTROLLED_TWO:
         tgt_id, n_ctrl = _CONTROLLED_TWO[gate_id]
         return controlled(_FIXED_TWO[tgt_id](), n_ctrl=n_ctrl)
+    if gate_id in _VARIABLE_CONTROLLED:
+        if n_controls is None or n_controls < 1:
+            raise UnsupportedGate(f"{gate_id} requires n_controls ≥ 1")
+        kind, tgt_id = _VARIABLE_CONTROLLED[gate_id]
+        if kind == "single":
+            return controlled(_FIXED_SINGLE[tgt_id](), n_ctrl=n_controls)
+        # param-single
+        builder = _PARAM_SINGLE[tgt_id]
+        builder_params = params[: builder.__code__.co_argcount]
+        return controlled(builder(*builder_params), n_ctrl=n_controls)
     raise UnsupportedGate(gate_id)

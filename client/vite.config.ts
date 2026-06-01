@@ -8,5 +8,9 @@ export default defineConfig({
     proxy: {
       "/api": "http://localhost:8000",
     },
+    fs: {
+      // Allow imports from the repo's examples/ directory (one level above client/).
+      allow: [".."],
+    },
   },
 });

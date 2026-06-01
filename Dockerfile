@@ -1,12 +1,17 @@
 # ─── Stage 1: build client ──────────────────────────────────────────────
 FROM node:20-alpine AS client
-WORKDIR /app/client
+WORKDIR /app
 
-COPY client/package.json client/package-lock.json ./
-RUN npm ci
+# Install deps first (cached unless lockfile changes).
+COPY client/package.json client/package-lock.json client/
+RUN cd client && npm ci
 
-COPY client/ ./
-RUN npm run build
+# Source. The Vite build resolves raw imports from `../../examples/*.qasm`,
+# so the examples/ directory must be present at the layout the client expects.
+COPY examples/ examples/
+COPY client/ client/
+
+RUN cd client && npm run build
 
 # ─── Stage 2: server runtime ────────────────────────────────────────────
 FROM python:3.13-slim AS server

@@ -265,7 +265,8 @@ def simulate_statevector(circuit: Circuit) -> StatevectorResult:
         # Unitary path.
         try:
             params = [parse_param(p) for p in g.params]
-            U = build_matrix(g.gateId, params)
+            n_controls = len(g.controls) if g.gateId in ("mcx", "mcp", "mcu") else None
+            U = build_matrix(g.gateId, params, n_controls=n_controls)
         except UnsupportedGate:
             skipped.append(SkippedGate(g.id, g.gateId, "gate not yet implemented"))
             continue

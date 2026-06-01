@@ -6,6 +6,10 @@ fly.toml
 README.md
 CLAUDE.md
 docs/
+LICENSE
+CONTRIBUTING.md
+SECURITY.md
+THIRD_PARTY_LICENSES.md
 
 # Node
 **/node_modules

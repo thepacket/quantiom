@@ -3,11 +3,13 @@ import { useCircuit } from "./state";
 import { CircuitCanvas } from "./CircuitCanvas";
 import { GatePalette } from "./GatePalette";
 import { Inspector } from "./Inspector";
+import { FileMenu } from "./FileMenu";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
 import { BlochPanel } from "../panels/BlochPanel";
 import { QSpherePanel } from "../panels/QSpherePanel";
+import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
 
 export function CircuitEditor() {
@@ -57,6 +59,8 @@ export function CircuitEditor() {
             <button onClick={() => dispatch({ type: "add-clbit" })} title="Add a classical bit">+</button>
           </div>
           <div className="editor__actions">
+            <FileMenu circuit={circuit} dispatch={dispatch} />
+            <span className="editor__sep">·</span>
             <button
               onClick={() => dispatch({ type: "undo" })}
               disabled={!history.canUndo}
@@ -90,11 +94,11 @@ export function CircuitEditor() {
         />
       </div>
       <div className="editor__right">
-        <StatevectorPanel state={simState} />
-        <ProbabilityPanel state={simState} />
-        <QSpherePanel state={simState} />
-        <BlochPanel state={simState} />
-        <QasmPanel circuit={circuit} dispatch={dispatch} />
+        <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="q-sphere"><QSpherePanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>
   );

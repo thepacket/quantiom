@@ -43,6 +43,8 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .editor__counts span { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; color: var(--fg); }
 .editor__counts button { width: 22px; height: 22px; padding: 0; line-height: 1; }
 .editor__sep { color: var(--border-strong); min-width: auto !important; }
+.file-menu { display: flex; gap: 4px; align-items: center; }
+.file-menu select { padding: 3px 6px; }
 .editor__actions { display: flex; gap: 6px; }
 .editor__canvas-scroll { overflow: auto; background: var(--bg); }
 
