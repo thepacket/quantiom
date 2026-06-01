@@ -78,10 +78,18 @@ const PREP_AMPS: Record<string, [number, number, number, number]> = {
  * state. n ≤ 20 keeps that under 16 MB. Time per gate is O(d · 2^n) where
  * d is the gate's dimension (2, 4, 8, …).
  */
+export type SimulateOptions = {
+  /** Computational basis index to initialise the state at. Default 0
+   *  (the |0…0⟩ ground state). Used by equivalence checking and other
+   *  workflows that need the per-column action of the circuit's unitary. */
+  startIndex?: number;
+};
+
 export function simulate(
   circuit: Circuit,
   paramValues: ParameterValues,
   customGates: CustomGate[] = [],
+  options?: SimulateOptions,
 ): SimResult {
   const n = circuit.numQubits;
   if (n <= 0) throw new Error("numQubits must be ≥ 1");
@@ -107,7 +115,11 @@ export function simulate(
 
   const dim = 1 << n;
   const state = new Float64Array(2 * dim);
-  state[0] = 1;
+  const startIndex = options?.startIndex ?? 0;
+  if (startIndex < 0 || startIndex >= dim) {
+    throw new Error(`startIndex ${startIndex} out of range [0, ${dim})`);
+  }
+  state[2 * startIndex] = 1;
 
   const skipped: SkippedGate[] = [];
 

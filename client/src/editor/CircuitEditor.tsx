@@ -17,6 +17,7 @@ import { DensityPanel } from "../panels/DensityPanel";
 import { NoisePanel } from "../panels/NoisePanel";
 import { PhaseDiskPanel } from "../panels/PhaseDiskPanel";
 import { ResourcePanel } from "../panels/ResourcePanel";
+import { EquivalencePanel } from "../panels/EquivalencePanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
@@ -199,6 +200,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
         <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} /></ErrorBoundary>
+        <ErrorBoundary label="equivalence">
+          <EquivalencePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>

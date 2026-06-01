@@ -216,6 +216,26 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .resources__hint { color: var(--muted); font-size: 9px; opacity: 0.7; }
 .resources__note { color: #c8b88a; font-size: 11px; padding: 4px 6px; background: #2a2418; border: 1px solid #4a3f24; border-radius: 3px; }
 
+/* ─── Equivalence panel ────────────────────────────────────────────── */
+.equiv { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.equiv__load { font-size: 11px; padding: 4px 8px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
+.equiv__load:hover { border-color: var(--accent); color: var(--accent); }
+.equiv__pair { display: flex; flex-direction: column; gap: 3px; font-family: ui-monospace, monospace; font-size: 11px; }
+.equiv__side { display: flex; gap: 6px; align-items: baseline; padding: 4px 6px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 3px; }
+.equiv__side span { color: var(--accent); font-weight: 600; font-size: 10px; min-width: 12px; }
+.equiv__actions { display: flex; gap: 6px; }
+.equiv__run { padding: 3px 10px; font-size: 11px; background: var(--accent); color: var(--bg); border: 1px solid var(--accent); border-radius: 3px; cursor: pointer; font-weight: 600; }
+.equiv__run:disabled { opacity: 0.4; cursor: not-allowed; }
+.equiv__clear { padding: 3px 10px; font-size: 11px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
+.equiv__result { padding: 6px 8px; border-radius: 3px; }
+.equiv__result--ok { background: rgba(130, 200, 122, 0.08); border: 1px solid #4a6244; }
+.equiv__result--fail { background: rgba(255, 122, 122, 0.08); border: 1px solid #6a3636; }
+.equiv__verdict { font-weight: 600; font-size: 13px; }
+.equiv__result--ok .equiv__verdict { color: #82c87a; }
+.equiv__result--fail .equiv__verdict { color: var(--danger); }
+.equiv__detail { font-size: 10px; color: var(--muted); font-weight: normal; }
+.equiv__metrics { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-top: 4px; line-height: 1.5; }
+
 /* ─── Density matrix panel ──────────────────────────────────────────── */
 .density__pick { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 8px; }
 .density__label { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; margin-right: 4px; }
