@@ -34,4 +34,9 @@ COPY server/quantiom/ ./quantiom/
 COPY --from=client /app/client/dist ./quantiom/static
 
 EXPOSE 8000
-CMD ["uvicorn", "quantiom.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Multiple worker processes so one stuck on a slow symbolic simulation
+# doesn't starve the rest. Each worker is its own Python process with its
+# own GIL — a CPU-bound sympy job in worker A doesn't block worker B from
+# answering a fresh request. Memory cost is ~100 MB per worker (sympy
+# import), well within the 1 GB Fly VM.
+CMD ["uvicorn", "quantiom.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
