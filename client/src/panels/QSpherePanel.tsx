@@ -6,8 +6,8 @@ import { PanelShell } from "./PanelShell";
 
 type Props = { state: SimState };
 
-const SIZE = 280;
-const R = 110;
+const SIZE = 200;
+const R = 78;
 
 export function QSpherePanel({ state }: Props) {
   const data = dataOf(state);
