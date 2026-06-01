@@ -4,3 +4,4 @@ declare module "*?raw" {
 }
 
 declare const __GIT_SHA__: string;
+declare const __GIT_COMMITS__: string;

@@ -12,10 +12,21 @@ function gitShortSha(): string {
   }
 }
 
+function gitCommitCount(): string {
+  try {
+    return execSync("git rev-list --count HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+  } catch {
+    return "0";
+  }
+}
+
 export default defineConfig({
   plugins: [react()],
   define: {
     __GIT_SHA__: JSON.stringify(gitShortSha()),
+    __GIT_COMMITS__: JSON.stringify(gitCommitCount()),
   },
   server: {
     port: 5173,

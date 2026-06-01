@@ -35,11 +35,6 @@ import simon2 from "../../examples/simon_2bit.qasm?raw";
 import catPhase from "../../examples/schrodinger_cat_phase.qasm?raw";
 import cuccaro from "../../examples/cuccaro_adder_2bit.qasm?raw";
 import steane from "../../examples/steane_encode_logical_zero.qasm?raw";
-import sonoOctave from "../../examples/sono_octave.qasm?raw";
-import sonoPhase from "../../examples/sono_phase_slide.qasm?raw";
-import sonoTremolo from "../../examples/sono_tremolo.qasm?raw";
-import sonoSaw from "../../examples/sono_sawtooth.qasm?raw";
-import sonoBell from "../../examples/sono_bell_chord.qasm?raw";
 import animCascade from "../../examples/anim_cascade_5q.qasm?raw";
 import animIsing from "../../examples/anim_ising_trotter.qasm?raw";
 import animFountain from "../../examples/anim_phase_fountain.qasm?raw";
@@ -180,16 +175,6 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
       { id: "anim-cascade", label: "Multi-frequency cascade (5q)", qasm: animCascade },
       { id: "anim-swirl", label: "Dense swirl (6q, ~35 gates)", qasm: animSwirl },
       { id: "anim-swirl-8", label: "Deep swirl (8q, ~100 gates)", qasm: animSwirl8 },
-    ],
-  },
-  {
-    label: "Sonorizer",
-    items: [
-      { id: "sono-octave", label: "Pure octave (1q)", qasm: sonoOctave },
-      { id: "sono-tremolo", label: "Tremolo, RY(t) (1q)", qasm: sonoTremolo },
-      { id: "sono-phase", label: "Animated phase, H + RZ(t) (1q)", qasm: sonoPhase },
-      { id: "sono-bell", label: "Bell chord (2q)", qasm: sonoBell },
-      { id: "sono-saw", label: "Sawtooth-like, H⊗⁴ (4q)", qasm: sonoSaw },
     ],
   },
 ];

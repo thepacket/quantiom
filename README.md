@@ -1,6 +1,6 @@
 # Quantiom
 
-Quantum-computing circuit editor, simulator, sonorizer, and visualizer.
+Quantum-computing circuit editor, simulator, and visualizer.
 Runs entirely in the browser.
 
 For users already comfortable with quantum-computing concepts. IBM Quantum
@@ -11,8 +11,7 @@ Live: **<https://quantiom.fly.dev>**.
 ## Shape
 
 - **client/** — Vite + React + TypeScript. The UI, the simulator, the
-  parameter expression evaluator, the OpenQASM 3 round-trip, the
-  sonorizer — all of it.
+  parameter expression evaluator, the OpenQASM 3 round-trip — all of it.
 - **server/** — minimal FastAPI app whose only job is `/api/health` for
   Fly's checks and serving the built client as static files.
 - **examples/** — 33 hand-written OpenQASM 3 example circuits.
@@ -96,7 +95,7 @@ collapsed state per panel id in `localStorage`. Every panel has a
   appears anywhere, the panel sprouts a circular **▶** button and an Hz
   slider (0.05–3 Hz). Playback runs an internal clock that pushes new t
   values directly into the React state at ~15 fps — the Bloch vectors
-  orbit, the probability bars pulse, the sonorizer's harmonics rotate.
+  orbit and the probability bars pulse.
 - **Statevector** — basis-state table with numeric `Re + Im·i` per
   amplitude, formatted to 4 decimals. "hide zeros" toggle.
 - **Probabilities** — horizontal SVG bar chart with two switchable modes:
@@ -111,13 +110,6 @@ collapsed state per panel id in `localStorage`. Every panel has a
 - **Bloch spheres** — one axonometric sphere per qubit with axis labels
   (`|0⟩, |1⟩, |+⟩, |−⟩, |±i⟩`), state-vector arrow, and a `|r|` purity
   readout that quantifies how mixed the reduced state is.
-- **Sonorizer** — Web Audio additive synthesis. A single `OscillatorNode`
-  whose waveform is rebuilt every frame from the statevector via
-  `createPeriodicWave(real, imag)`. Basis state |i⟩ becomes the (i+1)-th
-  harmonic of a base frequency; `Re[aᵢ]` is its cosine coefficient and
-  `Im[aᵢ]` its sine coefficient. The time-domain signal is literally the
-  inverse Fourier series of the amplitude vector. Controls: ▶, volume
-  slider, base-frequency slider (55–880 Hz, default 220 Hz = A3).
 - **OpenQASM 3** — editable textarea with line numbers. Edits debounce-
   parse and replace the circuit IR on every successful parse; failures
   surface inline with line numbers. Round-trips cleanly with the canvas.
@@ -143,8 +135,6 @@ The Examples dropdown bundles 33 hand-written circuits grouped by topic:
 - **Variational** — QAOA on a triangle, hardware-efficient ansatz
 - **Animation** — Rabi + Larmor, QFT of evolving state, phase fountain,
   Ising Trotter, multi-frequency cascade, dense swirl
-- **Sonorizer** — pure octave, tremolo, animated phase, Bell chord,
-  sawtooth-like
 
 ## Dev
 

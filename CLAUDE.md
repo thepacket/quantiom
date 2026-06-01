@@ -2,7 +2,7 @@
 
 ## What this is
 
-Quantum-computing circuit editor, simulator, sonorizer, and visualizer
+Quantum-computing circuit editor, simulator, and visualizer
 aimed at users **already comfortable with QC concepts**. A serious tool,
 not a vulgarizer. IBM Quantum Composer is the floor.
 
@@ -15,7 +15,7 @@ not a vulgarizer. IBM Quantum Composer is the floor.
   features are expected: arbitrary-angle rotations, custom gates,
   classical registers, mid-circuit measurement, conditional gates,
   barriers, subroutines, OpenQASM 3 round-trip, multi-circuit projects.
-- **Sonorizer is a peer panel**, not the headline. Same update cadence
+- **Visualizers are peer panels**, not the headline. Same update cadence
   and screen-space rights as statevector / probabilities / Bloch.
 
 ## Architecture (current)

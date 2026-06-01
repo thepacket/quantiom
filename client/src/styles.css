@@ -86,8 +86,8 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .palette__tile[data-cat="non-unitary"]         { border-color: #c47878; }
 .palette__tile[data-cat="control-flow"]        { border-color: #d4c267; }
 .palette__tile[data-cat="marker"]              { border-color: #6e7888; }
-.palette__symbol { font-family: ui-monospace, monospace; font-size: 13px; color: var(--fg); }
-.palette__id { font-size: 9px; color: var(--muted); }
+.palette__symbol { font-family: ui-monospace, monospace; font-size: 14px; color: var(--fg); }
+.palette__id { font-size: 11px; color: var(--muted); }
 
 /* ─── Canvas ────────────────────────────────────────────────────────── */
 .canvas { position: relative; padding: 16px; }
@@ -254,18 +254,6 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .params__play--on { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 .params__play--on:hover { background: var(--accent-2); color: var(--bg); }
 
-/* ─── Sonorizer ─────────────────────────────────────────────────────── */
-.sono__body { display: flex; flex-direction: column; gap: 6px; }
-.sono__row { display: grid; grid-template-columns: 32px 1fr 60px; gap: 8px; align-items: center; }
-.sono__row--top { grid-template-columns: 36px 1fr; }
-.sono__label { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11px; text-align: center; }
-.sono__slider { width: 100%; accent-color: #6dc4a4; }
-.sono__num { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); text-align: right; }
-.sono__play { width: 36px; height: 36px; padding: 0; font-size: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.sono__play--on { background: #6dc4a4; color: var(--bg); border-color: #6dc4a4; }
-.sono__play--on:hover { background: #87d9b8; color: var(--bg); }
-.sono__meta { color: var(--fg); font-size: 12px; font-family: ui-monospace, monospace; }
-.sono__hint { color: var(--muted); font-size: 10px; margin-top: 2px; }
 
 .qasm__editor { display: grid; grid-template-columns: 36px 1fr; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.5; }
 .qasm__lns { padding: 6px 0; user-select: none; border-right: 1px solid var(--border); background: var(--bg); }

@@ -9,7 +9,6 @@ import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
 import { BlochPanel } from "../panels/BlochPanel";
-import { SonorizerPanel } from "../panels/SonorizerPanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
@@ -53,8 +52,8 @@ export function CircuitEditor() {
       <header className="app__header">
         <div className="app__header-left">
           <h1>Quantiom</h1>
-          <span className="app__version">v{APP_VERSION} ({__GIT_SHA__})</span>
-          <span className="app__tagline">circuit editor · simulator · sonorizer · visualizer</span>
+          <span className="app__version">v{APP_VERSION}.{__GIT_COMMITS__} ({__GIT_SHA__})</span>
+          <span className="app__tagline">circuit editor · simulator · visualizer</span>
         </div>
         <div className="app__title">{circuit.name ?? "Untitled"}</div>
         <div className="app__header-right" />
@@ -113,7 +112,6 @@ export function CircuitEditor() {
         <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="sonorizer"><SonorizerPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>
