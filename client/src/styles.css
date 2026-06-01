@@ -277,6 +277,21 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .noise__preset { font-size: 10px; padding: 2px 6px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
 .noise__preset:hover { color: var(--text); border-color: #4a5568; }
 .noise__preset--on { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.noise__source { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: rgba(124, 196, 255, 0.05); border: 1px solid var(--accent); border-radius: 3px; font-size: 11px; }
+.noise__source-tag { color: var(--accent); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; }
+.noise__source-clear { background: none; color: var(--muted); border: none; cursor: pointer; margin-left: auto; padding: 0 2px; }
+.noise__source-clear:hover { color: var(--fg); }
+.noise__import { font-size: 11px; padding: 4px 8px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
+.noise__import:hover { border-color: var(--accent); color: var(--accent); }
+.noise__import-ok { color: #82c87a; font-size: 11px; margin-top: 4px; }
+.noise__import-err { color: var(--danger); font-size: 11px; margin-top: 4px; }
+.noise__pq-wrap { max-height: 240px; overflow: auto; }
+.noise__pq { width: 100%; border-collapse: collapse; font-size: 10px; font-family: ui-monospace, monospace; }
+.noise__pq th { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: normal; padding: 3px 4px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); }
+.noise__pq td { padding: 1px 2px; }
+.noise__pq-q { color: var(--muted); text-align: right; padding-right: 4px !important; }
+.noise__pq-cell input { width: 100%; font-size: 10px; padding: 1px 3px; font-family: ui-monospace, monospace; background: transparent; color: var(--fg); border: 1px solid transparent; }
+.noise__pq-cell input:focus { border-color: var(--accent); background: var(--bg-2); outline: none; }
 
 .statevector__ket { padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow-x: auto; font-size: 15px; }
 .statevector__ket .katex-display { margin: 0; }

@@ -4,7 +4,7 @@ import { applyKQubit } from "./apply";
 import { compileExpr } from "./expr";
 import { expandCustomGates, type CustomGate } from "../editor/customGates";
 import { paulis as evalPaulis, type Pauli } from "./expectation";
-import type { NoiseModel } from "./noise";
+import { rateFor, type NoiseModel } from "./noise";
 import {
   MAX_QUBITS,
   type Amplitude,
@@ -103,16 +103,26 @@ export function simulateNoisy(
       applyKQubit(state, n, m.qubits, m.U);
       for (const q of m.antiQubits) applyKQubit(state, n, [q], M_X);
 
-      // Inject noise. Single-qubit gates → 1q depolarising on target.
-      // Two-qubit gates → 2q depolarising on the pair. Larger → per-qubit
-      // 1q depolarising at the 2q rate (see noise.ts docstring).
+      // Inject noise. Single-qubit gates → 1q depolarising + damping on
+      // target. Two-qubit gates → 2q depolarising on the pair + damping
+      // per qubit. Larger → 1q depolarising at the 2q rate + damping per
+      // qubit (see noise.ts docstring). Depolarising uses per-qubit rates
+      // when available; damping always uses per-qubit (T1/T2 are physical).
       const involved = m.qubits;
       if (involved.length === 1) {
-        depolarise1(state, n, involved[0], noise.oneQubitDepolarising);
+        const q = involved[0];
+        depolarise1(state, n, q, rateFor(noise, "oneQubitDepolarising", q));
+        damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
       } else if (involved.length === 2) {
         depolarise2(state, n, involved[0], involved[1], noise.twoQubitDepolarising);
+        for (const q of involved) {
+          damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+        }
       } else {
-        for (const q of involved) depolarise1(state, n, q, noise.twoQubitDepolarising);
+        for (const q of involved) {
+          depolarise1(state, n, q, noise.twoQubitDepolarising);
+          damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+        }
       }
     }
 
@@ -208,6 +218,82 @@ function depolarise2(
 }
 
 const PAULI_M: ReadonlyArray<Matrix | null> = [null, M_X, M_Y, M_Z];
+
+/**
+ * Apply amplitude damping (T1) + phase damping (T2) channels via quantum
+ * trajectories. Both share the K_0 = diag(1, √(1-γ)) attenuation; they
+ * differ in the jump branch: AD K_1 = |0⟩⟨1| (decays to |0⟩); PD K_1 =
+ * |1⟩⟨1| (projects onto |1⟩, killing coherence). Applied sequentially —
+ * order is irrelevant to leading order in γ.
+ */
+function damp1(state: Float64Array, n: number, q: number, gammaAD: number, gammaPD: number): void {
+  if (gammaAD > 0) dampingChannel(state, n, q, gammaAD, /*jumpToOne*/ false);
+  if (gammaPD > 0) dampingChannel(state, n, q, gammaPD, /*jumpToOne*/ true);
+}
+
+function dampingChannel(
+  state: Float64Array,
+  n: number,
+  q: number,
+  gamma: number,
+  jumpToOne: boolean,
+): void {
+  const mask = 1 << (n - 1 - q);
+  const dim = 1 << n;
+  // p_excited = |⟨1|ψ_q⟩|² — needed for both branch probability and
+  // post-K_0 renormalisation.
+  let pExcited = 0;
+  for (let i = 0; i < dim; i++) {
+    if ((i & mask) !== 0) {
+      const re = state[2 * i];
+      const im = state[2 * i + 1];
+      pExcited += re * re + im * im;
+    }
+  }
+  const pJump = gamma * pExcited;
+  if (Math.random() < pJump) {
+    if (jumpToOne) {
+      // K_1 = |1⟩⟨1|: zero q=0 amplitudes.
+      for (let i = 0; i < dim; i++) {
+        if ((i & mask) === 0) {
+          state[2 * i] = 0;
+          state[2 * i + 1] = 0;
+        }
+      }
+    } else {
+      // K_1 = |0⟩⟨1|: move q=1 amplitudes to corresponding q=0 indices,
+      // zero the q=1 amplitudes.
+      for (let i = 0; i < dim; i++) {
+        if ((i & mask) === 0) {
+          const src = i | mask;
+          state[2 * i] = state[2 * src];
+          state[2 * i + 1] = state[2 * src + 1];
+          state[2 * src] = 0;
+          state[2 * src + 1] = 0;
+        }
+      }
+    }
+    const norm = Math.sqrt(pExcited);
+    if (norm > 1e-12) {
+      const inv = 1 / norm;
+      for (let k = 0; k < 2 * dim; k++) state[k] *= inv;
+    }
+  } else {
+    // K_0 branch: attenuate q=1 amplitudes by √(1-γ).
+    const s = Math.sqrt(1 - gamma);
+    for (let i = 0; i < dim; i++) {
+      if ((i & mask) !== 0) {
+        state[2 * i] *= s;
+        state[2 * i + 1] *= s;
+      }
+    }
+    const newNorm = Math.sqrt(1 - gamma * pExcited);
+    if (newNorm > 1e-12) {
+      const inv = 1 / newNorm;
+      for (let k = 0; k < 2 * dim; k++) state[k] *= inv;
+    }
+  }
+}
 // 15 (P_a, P_b) pairs with (a,b) != (0,0). 0=I, 1=X, 2=Y, 3=Z.
 const NONIDENT_PAIRS: ReadonlyArray<readonly [number, number]> = (() => {
   const out: [number, number][] = [];
@@ -358,9 +444,19 @@ export function noisyPauliExpectation(
       applyKQubit(state, n, s.qubits, s.U);
       for (const q of s.antiQubits) applyKQubit(state, n, [q], M_X);
       const involved = s.qubits;
-      if (involved.length === 1) depolarise1(state, n, involved[0], noise.oneQubitDepolarising);
-      else if (involved.length === 2) depolarise2(state, n, involved[0], involved[1], noise.twoQubitDepolarising);
-      else for (const q of involved) depolarise1(state, n, q, noise.twoQubitDepolarising);
+      if (involved.length === 1) {
+        const q = involved[0];
+        depolarise1(state, n, q, rateFor(noise, "oneQubitDepolarising", q));
+        damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+      } else if (involved.length === 2) {
+        depolarise2(state, n, involved[0], involved[1], noise.twoQubitDepolarising);
+        for (const q of involved) damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+      } else {
+        for (const q of involved) {
+          depolarise1(state, n, q, noise.twoQubitDepolarising);
+          damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+        }
+      }
     }
     sum += evalPaulis(state, n, paulis);
   }

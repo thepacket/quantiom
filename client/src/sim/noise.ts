@@ -4,7 +4,7 @@
  *
  * The implementation uses the **quantum trajectories** method (a.k.a.
  * Monte Carlo wave function): each trajectory is one pure-state run of
- * the circuit with stochastic Pauli channels inserted after each gate.
+ * the circuit with stochastic channels inserted after each gate.
  * Averaging derived quantities across T trajectories converges to the
  * true noisy expectation values. Memory stays at the statevector cap
  * (2 · 2ⁿ doubles) rather than blowing up to 2 · 4ⁿ for a density-matrix
@@ -14,37 +14,65 @@
  *   • single-qubit depolarising (p₁): I with prob 1-p, X/Y/Z each p/3
  *   • two-qubit depolarising  (p₂): I⊗I with prob 1-p, the other 15
  *     non-identity Pauli pairs each p/15
- *   • readout bit-flip (p_r): not active here — measurement is itself
- *     not simulated; the field is reserved for the measurement panel
+ *   • amplitude damping (γ_AD): the T1 channel. State-conditional —
+ *     with probability γ·|⟨1|ψ_q⟩|² the qubit jumps to |0⟩; else its
+ *     |1⟩ amplitude is attenuated by √(1-γ) and the state renormalised.
+ *   • phase damping (γ_PD): the pure-dephasing T2 channel. Same K_0 as
+ *     AD; the jump branch projects to |1⟩.
+ *   • readout bit-flip (p_r): bit flip applied at measurement time.
+ *     Inert until mid-circuit measurement lands; the field is reserved
+ *     so an IBM backend import populates it correctly today.
  *
  * Three-or-more-qubit unitaries (CCX, MCX, etc.) receive 1-qubit
- * depolarising at rate p₂ on every involved qubit. This is the standard
- * "local depolarising" simplification used in Qiskit/Cirq noise models;
- * a calibrated multi-qubit channel would be more accurate but requires
- * per-gate process tomography data that we don't have.
+ * depolarising at rate p₂ on every involved qubit and 1-qubit damping
+ * at the same per-qubit rates. This is the standard "local channel"
+ * simplification used in Qiskit/Cirq.
+ *
+ * Per-qubit overrides: `perQubit[q]` populates a partial channel record
+ * for qubit q; missing fields fall back to the global rates. IBM
+ * backend imports populate this array per device qubit.
  */
+
+export type PerQubitRates = {
+  oneQubitDepolarising?: number;
+  amplitudeDamping?: number;
+  phaseDamping?: number;
+  readoutBitFlip?: number;
+};
 
 export type NoiseModel = {
   enabled: boolean;
-  /** Single-qubit gate depolarising probability. */
-  oneQubitDepolarising: number;
-  /** Two-qubit gate depolarising probability. */
-  twoQubitDepolarising: number;
-  /** Readout bit-flip probability. Reserved; not currently applied. */
-  readoutBitFlip: number;
-  /** Number of trajectories to average. Higher = smoother averages, linear cost. */
+  /** Number of trajectories to average. Higher = smoother, linear cost. */
   trajectories: number;
+  /** Global single-qubit gate depolarising probability. */
+  oneQubitDepolarising: number;
+  /** Global two-qubit gate depolarising probability. */
+  twoQubitDepolarising: number;
+  /** Global per-gate amplitude damping (T1) probability. */
+  amplitudeDamping: number;
+  /** Global per-gate phase damping (T2) probability. */
+  phaseDamping: number;
+  /** Global measurement readout error probability. */
+  readoutBitFlip: number;
+  /** Per-qubit overrides. Length matches the circuit width when set by
+   *  the importer; out-of-range qubits fall back to the global rates. */
+  perQubit?: PerQubitRates[];
+  /** Free-form note populated by the importer (device name + snapshot
+   *  date) so the user can see which device the calibration came from. */
+  source?: string;
 };
 
 export const DEFAULT_NOISE: NoiseModel = {
   enabled: false,
+  trajectories: 256,
   oneQubitDepolarising: 0.001,
   twoQubitDepolarising: 0.01,
+  amplitudeDamping: 0,
+  phaseDamping: 0,
   readoutBitFlip: 0.02,
-  trajectories: 256,
 };
 
-const STORAGE_KEY = "quantiom:noise:v1";
+const STORAGE_KEY = "quantiom:noise:v2";
 
 export function loadNoise(): NoiseModel {
   try {
@@ -54,11 +82,13 @@ export function loadNoise(): NoiseModel {
     return {
       ...DEFAULT_NOISE,
       ...parsed,
-      // clamp to sensible ranges
       oneQubitDepolarising: clamp01(parsed.oneQubitDepolarising ?? DEFAULT_NOISE.oneQubitDepolarising),
       twoQubitDepolarising: clamp01(parsed.twoQubitDepolarising ?? DEFAULT_NOISE.twoQubitDepolarising),
+      amplitudeDamping: clamp01(parsed.amplitudeDamping ?? DEFAULT_NOISE.amplitudeDamping),
+      phaseDamping: clamp01(parsed.phaseDamping ?? DEFAULT_NOISE.phaseDamping),
       readoutBitFlip: clamp01(parsed.readoutBitFlip ?? DEFAULT_NOISE.readoutBitFlip),
       trajectories: Math.max(1, Math.min(8192, parsed.trajectories ?? DEFAULT_NOISE.trajectories)),
+      perQubit: Array.isArray(parsed.perQubit) ? parsed.perQubit.map(sanitisePerQubit) : undefined,
     };
   } catch {
     return { ...DEFAULT_NOISE };
@@ -73,7 +103,175 @@ export function saveNoise(n: NoiseModel): void {
   }
 }
 
+/** Resolve the rate for a given (kind, qubit), falling back to globals. */
+export function rateFor(
+  noise: NoiseModel,
+  kind: keyof PerQubitRates,
+  qubit: number,
+): number {
+  const pq = noise.perQubit?.[qubit];
+  const override = pq?.[kind];
+  if (typeof override === "number") return override;
+  switch (kind) {
+    case "oneQubitDepolarising": return noise.oneQubitDepolarising;
+    case "amplitudeDamping": return noise.amplitudeDamping;
+    case "phaseDamping": return noise.phaseDamping;
+    case "readoutBitFlip": return noise.readoutBitFlip;
+  }
+}
+
+function sanitisePerQubit(p: unknown): PerQubitRates {
+  if (typeof p !== "object" || p === null) return {};
+  const r: PerQubitRates = {};
+  const o = p as Record<string, unknown>;
+  if (typeof o.oneQubitDepolarising === "number") r.oneQubitDepolarising = clamp01(o.oneQubitDepolarising);
+  if (typeof o.amplitudeDamping === "number") r.amplitudeDamping = clamp01(o.amplitudeDamping);
+  if (typeof o.phaseDamping === "number") r.phaseDamping = clamp01(o.phaseDamping);
+  if (typeof o.readoutBitFlip === "number") r.readoutBitFlip = clamp01(o.readoutBitFlip);
+  return r;
+}
+
 function clamp01(v: number): number {
   if (!Number.isFinite(v)) return 0;
   return Math.max(0, Math.min(1, v));
+}
+
+// ─── IBM BackendProperties importer ────────────────────────────────────
+
+/**
+ * Parse an IBM Quantum `BackendProperties` JSON snapshot into a NoiseModel.
+ * These snapshots come from Qiskit's `backend.properties().to_dict()` and
+ * have the shape:
+ *
+ *   { backend_name, last_update_date,
+ *     qubits: [ [ {name:"T1", value:1.0e-4}, {name:"T2", ...}, {name:"readout_error", ...}, ... ], ... ],
+ *     gates:  [ { gate:"sx", qubits:[0], parameters:[{name:"gate_error", value:5e-4}, {name:"gate_length", value:35e-9}] }, ... ] }
+ *
+ * T1/T2 are converted into per-gate damping probabilities using a
+ * representative one-qubit gate time (median sx gate_length, defaulting
+ * to 35 ns when the field is absent). Single-qubit depolarising uses
+ * each qubit's median sx gate_error; two-qubit uses the median cx
+ * gate_error across the device. Readout error pulls directly from the
+ * qubit record.
+ */
+export function importIbmBackend(json: string): NoiseModel {
+  const parsed = JSON.parse(json);
+  if (!parsed || !Array.isArray(parsed.qubits)) {
+    throw new Error("not an IBM BackendProperties snapshot (missing qubits array)");
+  }
+  const numQubits = parsed.qubits.length;
+  const gates: unknown[] = Array.isArray(parsed.gates) ? parsed.gates : [];
+
+  // Median 1q gate time (sx or x) across the device.
+  const oneQubitTimes: number[] = [];
+  for (const g of gates) {
+    const e = g as Record<string, unknown>;
+    if (e.gate === "sx" || e.gate === "x" || e.gate === "rz") {
+      const t = paramValue(e.parameters, "gate_length");
+      if (typeof t === "number") oneQubitTimes.push(t);
+    }
+  }
+  const gateTime = oneQubitTimes.length > 0 ? median(oneQubitTimes) : 35e-9;
+
+  // Per-qubit T1, T2, readout, sx error.
+  const perQubit: PerQubitRates[] = new Array(numQubits);
+  for (let q = 0; q < numQubits; q++) {
+    const props = parsed.qubits[q] as unknown[];
+    const t1 = qubitProperty(props, "T1");
+    const t2 = qubitProperty(props, "T2");
+    const readout = qubitProperty(props, "readout_error");
+    const sxErr = findGateError(gates, ["sx", "x"], [q]);
+    const ad = typeof t1 === "number" && t1 > 0 ? 1 - Math.exp(-gateTime / t1) : 0;
+    // T2 in IBM convention includes T1 — pure dephasing rate uses
+    // 1/Tφ = 1/T2 - 1/(2·T1). We use T2 directly as the phase-damping
+    // time scale here; over-conservative but representative.
+    const pd = typeof t2 === "number" && t2 > 0 ? 1 - Math.exp(-gateTime / t2) : 0;
+    perQubit[q] = {
+      oneQubitDepolarising: typeof sxErr === "number" ? clamp01(sxErr) : undefined,
+      amplitudeDamping: clamp01(ad),
+      phaseDamping: clamp01(pd),
+      readoutBitFlip: typeof readout === "number" ? clamp01(readout) : undefined,
+    };
+  }
+
+  // Global 2q rate: median cx gate_error across all coupled pairs.
+  const cxErrors: number[] = [];
+  for (const g of gates) {
+    const e = g as Record<string, unknown>;
+    if (e.gate === "cx" || e.gate === "cz" || e.gate === "ecr") {
+      const err = paramValue(e.parameters, "gate_error");
+      if (typeof err === "number") cxErrors.push(err);
+    }
+  }
+  const twoQubitDepolarising = cxErrors.length > 0 ? clamp01(median(cxErrors)) : DEFAULT_NOISE.twoQubitDepolarising;
+
+  // Globals fall back to per-qubit averages.
+  const sxErrors = perQubit
+    .map((p) => p.oneQubitDepolarising)
+    .filter((v): v is number => typeof v === "number");
+  const oneQubitDepolarising = sxErrors.length > 0 ? mean(sxErrors) : DEFAULT_NOISE.oneQubitDepolarising;
+  const readouts = perQubit
+    .map((p) => p.readoutBitFlip)
+    .filter((v): v is number => typeof v === "number");
+  const readoutBitFlip = readouts.length > 0 ? mean(readouts) : DEFAULT_NOISE.readoutBitFlip;
+  const ads = perQubit.map((p) => p.amplitudeDamping ?? 0);
+  const pds = perQubit.map((p) => p.phaseDamping ?? 0);
+
+  const name = typeof parsed.backend_name === "string" ? parsed.backend_name : "imported";
+  const date = typeof parsed.last_update_date === "string" ? parsed.last_update_date : "";
+
+  return {
+    enabled: true,
+    trajectories: DEFAULT_NOISE.trajectories,
+    oneQubitDepolarising,
+    twoQubitDepolarising,
+    amplitudeDamping: ads.length > 0 ? mean(ads) : 0,
+    phaseDamping: pds.length > 0 ? mean(pds) : 0,
+    readoutBitFlip,
+    perQubit,
+    source: `${name}${date ? ` @ ${date.slice(0, 10)}` : ""}`,
+  };
+}
+
+function qubitProperty(props: unknown[], name: string): number | undefined {
+  if (!Array.isArray(props)) return undefined;
+  for (const p of props) {
+    const e = p as Record<string, unknown>;
+    if (e && e.name === name && typeof e.value === "number") return e.value;
+  }
+  return undefined;
+}
+
+function paramValue(params: unknown, name: string): number | undefined {
+  if (!Array.isArray(params)) return undefined;
+  for (const p of params) {
+    const e = p as Record<string, unknown>;
+    if (e && e.name === name && typeof e.value === "number") return e.value;
+  }
+  return undefined;
+}
+
+function findGateError(gates: unknown[], names: string[], qubits: number[]): number | undefined {
+  for (const g of gates) {
+    const e = g as Record<string, unknown>;
+    if (!names.includes(e.gate as string)) continue;
+    const gq = e.qubits;
+    if (!Array.isArray(gq) || gq.length !== qubits.length) continue;
+    if (qubits.every((q, i) => gq[i] === q)) {
+      return paramValue(e.parameters, "gate_error");
+    }
+  }
+  return undefined;
+}
+
+function median(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 === 0 ? (s[m - 1] + s[m]) / 2 : s[m];
+}
+function mean(xs: number[]): number {
+  if (xs.length === 0) return 0;
+  let s = 0;
+  for (const x of xs) s += x;
+  return s / xs.length;
 }
