@@ -42,9 +42,10 @@ Docker image.
 
 Since Quantiom is a personal project that does not accept pull requests (see
 [`CONTRIBUTING.md`](./CONTRIBUTING.md)), the most direct way to report a
-security issue is to open a GitHub [issue](../../issues) with the label
+non-sensitive security concern is to open a GitHub
+[discussion](../../discussions) or an [issue](../../issues) with the label
 "security". For anything sensitive (active exploit, credential exposure),
-please email the maintainer privately rather than filing publicly.
+please contact the maintainer privately rather than filing publicly.
 
 ## Known limitations
 

@@ -11,10 +11,13 @@ it, fork it, and modify your fork freely. The MIT license
 
 ## Welcome ways to engage
 
+- **Questions, ideas, or just saying hi** — [discussions](../../discussions)
+  are the way to reach the maintainer. They're the primary contact channel for
+  Quantiom.
 - **Bug reports** — open an [issue](../../issues) with steps to reproduce, the
   circuit you were building, and what you expected versus what happened.
-- **Feature requests** — open an [issue](../../issues). Concrete use cases
-  (what gates, what visualization, what workflow) are more useful than
+- **Feature requests** — open a [discussion](../../discussions). Concrete use
+  cases (what gates, what visualization, what workflow) are more useful than
   abstract suggestions.
 - **Fork it** — go ahead. That's what the license is for.
 
