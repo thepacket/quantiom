@@ -79,9 +79,7 @@ export function StatevectorPanel({ state }: Props) {
                       <Tex latex={`|${a.basis}\\rangle`} />
                     </td>
                     <td>
-                      {a.latex ? (
-                        <Tex latex={a.latex} />
-                      ) : a.re !== null && a.im !== null ? (
+                      {a.re !== null && a.im !== null ? (
                         <span className="statevector__numeric">{formatComplex(a.re, a.im)}</span>
                       ) : (
                         <span className="statevector__numeric">—</span>

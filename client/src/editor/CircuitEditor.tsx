@@ -8,7 +8,6 @@ import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
 import { BlochPanel } from "../panels/BlochPanel";
-import { FormalMathPanel } from "../panels/FormalMathPanel";
 import { SonorizerPanel } from "../panels/SonorizerPanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
@@ -105,7 +104,6 @@ export function CircuitEditor() {
         <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="sonorizer"><SonorizerPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="formal-math"><FormalMathPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>
