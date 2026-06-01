@@ -9,9 +9,9 @@ const MOVE_MIME = "application/x-quantiom-move";
 const REASSIGN_CONTROL_MIME = "application/x-quantiom-reassign-control";
 const REASSIGN_TARGET_MIME = "application/x-quantiom-reassign-target";
 
-const COL_W = 56;
-const ROW_H = 44;
-const LABEL_W = 56;
+const COL_W = 68;
+const ROW_H = 56;
+const LABEL_W = 60;
 const MIN_COLS = 16;
 
 type Props = {
@@ -355,7 +355,7 @@ function PlacedGateView({
       )}
       {/* controls */}
       {gate.controls.map((q) => (
-        <circle key={`ctrl-${q}`} cx={x} cy={rowY(q)} r={5} className="gate__control" />
+        <circle key={`ctrl-${q}`} cx={x} cy={rowY(q)} r={6} className="gate__control" />
       ))}
       {/* targets */}
       {gate.targets.map((q, i) => (
@@ -395,31 +395,31 @@ function TargetGlyph({
     case "x-target":
       return (
         <g>
-          <circle cx={x} cy={y} r={12} className="gate__box gate__box--target" />
-          <line x1={x - 12} y1={y} x2={x + 12} y2={y} className="gate__cross" />
-          <line x1={x} y1={y - 12} x2={x} y2={y + 12} className="gate__cross" />
+          <circle cx={x} cy={y} r={15} className="gate__box gate__box--target" />
+          <line x1={x - 15} y1={y} x2={x + 15} y2={y} className="gate__cross" />
+          <line x1={x} y1={y - 15} x2={x} y2={y + 15} className="gate__cross" />
         </g>
       );
     case "swap":
       return (
         <g>
-          <line x1={x - 8} y1={y - 8} x2={x + 8} y2={y + 8} className="gate__cross" />
-          <line x1={x - 8} y1={y + 8} x2={x + 8} y2={y - 8} className="gate__cross" />
+          <line x1={x - 11} y1={y - 11} x2={x + 11} y2={y + 11} className="gate__cross" />
+          <line x1={x - 11} y1={y + 11} x2={x + 11} y2={y - 11} className="gate__cross" />
         </g>
       );
     case "measure":
       return (
         <g>
-          <rect x={x - 16} y={y - 14} width={32} height={28} rx={4} className="gate__box gate__box--measure" />
-          <path d={`M${x - 8},${y + 4} A8,8 0 0 1 ${x + 8},${y + 4}`} className="gate__meter" />
-          <line x1={x} y1={y + 4} x2={x + 6} y2={y - 8} className="gate__meter" />
+          <rect x={x - 20} y={y - 18} width={40} height={36} rx={4} className="gate__box gate__box--measure" />
+          <path d={`M${x - 10},${y + 5} A10,10 0 0 1 ${x + 10},${y + 5}`} className="gate__meter" />
+          <line x1={x} y1={y + 5} x2={x + 8} y2={y - 10} className="gate__meter" />
         </g>
       );
     case "reset":
       return (
         <g>
-          <rect x={x - 14} y={y - 12} width={28} height={24} rx={3} className="gate__box gate__box--reset" />
-          <text x={x} y={y + 4} textAnchor="middle" className="gate__label">
+          <rect x={x - 18} y={y - 16} width={36} height={32} rx={4} className="gate__box gate__box--reset" />
+          <text x={x} y={y + 5} textAnchor="middle" className="gate__label">
             |0⟩
           </text>
         </g>
@@ -427,32 +427,32 @@ function TargetGlyph({
     case "state":
       return (
         <g>
-          <rect x={x - 18} y={y - 12} width={36} height={24} rx={3} className="gate__box gate__box--state" />
-          <text x={x} y={y + 4} textAnchor="middle" className="gate__label">
+          <rect x={x - 22} y={y - 16} width={44} height={32} rx={4} className="gate__box gate__box--state" />
+          <text x={x} y={y + 5} textAnchor="middle" className="gate__label">
             {def.symbol}
           </text>
         </g>
       );
     case "barrier":
       return (
-        <line x1={x} y1={y - 18} x2={x} y2={y + 18} className="gate__barrier" />
+        <line x1={x} y1={y - 22} x2={x} y2={y + 22} className="gate__barrier" />
       );
     case "delay":
       return (
         <g>
-          <rect x={x - 18} y={y - 12} width={36} height={24} rx={3} className="gate__box gate__box--delay" />
-          <text x={x} y={y + 4} textAnchor="middle" className="gate__label">
+          <rect x={x - 22} y={y - 16} width={44} height={32} rx={4} className="gate__box gate__box--delay" />
+          <text x={x} y={y + 5} textAnchor="middle" className="gate__label">
             τ
           </text>
         </g>
       );
     case "box":
     default: {
-      const w = Math.max(28, label.length * 7 + 10);
+      const w = Math.max(36, label.length * 8 + 12);
       return (
         <g>
-          <rect x={x - w / 2} y={y - 14} width={w} height={28} rx={4} className="gate__box" />
-          <text x={x} y={y + 4} textAnchor="middle" className="gate__label">
+          <rect x={x - w / 2} y={y - 18} width={w} height={36} rx={5} className="gate__box" />
+          <text x={x} y={y + 5} textAnchor="middle" className="gate__label">
             {label}
           </text>
         </g>

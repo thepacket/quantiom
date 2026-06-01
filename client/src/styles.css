@@ -142,7 +142,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .gate__cross { stroke: var(--cat-color); stroke-width: 1.5; }
 .gate__meter { stroke: var(--cat-color); stroke-width: 1.4; fill: none; }
 .gate__barrier { stroke: var(--cat-color); stroke-width: 1.5; stroke-dasharray: 3 3; }
-.gate__label { fill: var(--fg); font-family: ui-monospace, monospace; font-size: 11px; user-select: none; }
+.gate__label { fill: var(--fg); font-family: ui-monospace, monospace; font-size: 13px; user-select: none; }
 .gate__cl-link { stroke: var(--cl-wire); stroke-width: 1; }
 .gate--selected .gate__box,
 .gate--selected .gate__box--target,
