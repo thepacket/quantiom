@@ -1,0 +1,28 @@
+.git
+.gitignore
+.dockerignore
+Dockerfile
+fly.toml
+README.md
+CLAUDE.md
+docs/
+
+# Node
+**/node_modules
+**/dist
+**/.vite
+
+# Python
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache
+**/*.egg-info
+**/*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

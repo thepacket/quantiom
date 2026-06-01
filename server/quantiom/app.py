@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import sympy as sp
@@ -86,3 +89,13 @@ def statevector(circuit: Circuit) -> StatevectorResponse:
         ketLatex=ket_latex,
         skipped=[SkippedOut(id=s.id, gateId=s.gateId, reason=s.reason) for s in result.skipped],
     )
+
+
+# ─── Static client (production) ────────────────────────────────────────────
+# In production, the built Vite client is copied into quantiom/static. We mount
+# it at "/" so the server serves both the API and the SPA from a single origin.
+# Mounted last so /api routes win.
+
+_STATIC_DIR = Path(__file__).parent / "static"
+if _STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=_STATIC_DIR, html=True), name="static")

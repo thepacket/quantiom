@@ -1,0 +1,32 @@
+# ─── Stage 1: build client ──────────────────────────────────────────────
+FROM node:20-alpine AS client
+WORKDIR /app/client
+
+COPY client/package.json client/package-lock.json ./
+RUN npm ci
+
+COPY client/ ./
+RUN npm run build
+
+# ─── Stage 2: server runtime ────────────────────────────────────────────
+FROM python:3.13-slim AS server
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install server runtime deps (kept in sync with server/pyproject.toml).
+RUN pip install \
+    "fastapi>=0.115" \
+    "uvicorn[standard]>=0.32" \
+    "sympy>=1.13" \
+    "numpy>=2.1" \
+    "pydantic>=2.9"
+
+COPY server/quantiom/ ./quantiom/
+COPY --from=client /app/client/dist ./quantiom/static
+
+EXPOSE 8000
+CMD ["uvicorn", "quantiom.app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -20,3 +20,14 @@ For users already comfortable with quantum-computing concepts. IBM Quantum Compo
 ## Dev
 
 See [client/README.md](client/README.md) and [server/README.md](server/README.md).
+
+## Deploy (Fly.io)
+
+Single Fly app, **`quantiom`** — the server hosts both `/api/*` and the built client.
+
+```
+fly apps create quantiom        # one-time, if not already created
+fly deploy
+```
+
+The [Dockerfile](Dockerfile) builds the client in a node stage, copies the resulting `dist/` into `quantiom/static`, and the FastAPI app mounts that directory at `/` when present. [fly.toml](fly.toml) configures auto-stop / auto-start with a `/api/health` check.
