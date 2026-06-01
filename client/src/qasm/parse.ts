@@ -171,6 +171,7 @@ export function parseQasm3(text: string): ParseResult {
     clbits?: number[];
     params?: string[];
     nControls?: number;
+    controlStates?: boolean[];
   }) {
     const def = GATES_BY_ID[opts.gateId];
     if (!def) throw new Error(`unknown gate "${opts.gateId}"`);
@@ -191,7 +192,7 @@ export function parseQasm3(text: string): ParseResult {
       targets = opts.qubits.slice(def.numControls);
     }
     const col = schedule(opts.qubits, clbits);
-    gates.push({
+    const placed: PlacedGate = {
       id: newId(),
       gateId: opts.gateId,
       column: col,
@@ -199,7 +200,53 @@ export function parseQasm3(text: string): ParseResult {
       targets,
       clbits,
       params,
-    });
+    };
+    if (opts.controlStates && opts.controlStates.length === controls.length) {
+      placed.controlStates = [...opts.controlStates];
+    }
+    gates.push(placed);
+  }
+
+  /**
+   * Given a base stdgate name (lowercased) and the number of controls on a
+   * `ctrl/negctrl @ … @ base` chain, pick the IR gate id that represents the
+   * resulting controlled gate. Falls back to mcx/mcp/mcu for the x/p/U
+   * families when N is larger than the fixed-arity entries.
+   */
+  function resolveControlled(base: string, n: number): string | null {
+    const xFamily: Record<number, string> = { 1: "cx", 2: "ccx", 3: "c3x", 4: "c4x" };
+    const zFamily: Record<number, string> = { 1: "cz", 2: "ccz" };
+    switch (base) {
+      case "x":
+        return xFamily[n] ?? "mcx";
+      case "y":
+        return n === 1 ? "cy" : null;
+      case "z":
+        return zFamily[n] ?? null;
+      case "h":
+        return n === 1 ? "ch" : null;
+      case "sx":
+        return n === 1 ? "csx" : null;
+      case "sxdg":
+        return n === 1 ? "csxdg" : null;
+      case "rx":
+        return n === 1 ? "crx" : null;
+      case "ry":
+        return n === 1 ? "cry" : null;
+      case "rz":
+        return n === 1 ? "crz" : null;
+      case "p":
+        return n === 1 ? "cp" : "mcp";
+      case "u":
+      case "u3":
+        return n === 1 ? "cu3" : "mcu";
+      case "u1":
+        return n === 1 ? "cu1" : null;
+      case "swap":
+        return n === 1 ? "cswap" : null;
+      default:
+        return null;
+    }
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -307,35 +354,58 @@ export function parseQasm3(text: string): ParseResult {
         continue;
       }
 
-      // ctrl(n) @ name(params) q[a], q[b], q[c];
-      m = stmt.match(/^ctrl\s*\(\s*(\d+)\s*\)\s*@\s*([A-Za-z_]\w*)\s*(?:\(([^)]*)\))?\s+(.+)$/);
-      if (m) {
-        const n = parseInt(m[1], 10);
-        const baseRaw = m[2].toLowerCase();
-        const paramsStr = m[3] ?? "";
-        const argStr = m[4];
+      // Modifier chain: (ctrl|negctrl)[(n)] @ ... base(params) operands;
+      // Walks the chain from the front, accumulating per-control "fires on |1⟩"
+      // booleans. Each modifier consumes 1 or N controls from the front of
+      // the operand list. Maps the (base, totalControls) pair to an IR gate id.
+      if (/^(ctrl|negctrl)\b/i.test(stmt)) {
+        const chain: boolean[] = []; // true = ctrl, false = negctrl
+        let rest = stmt;
+        const modRe = /^(ctrl|negctrl)\s*(?:\(\s*(\d+)\s*\))?\s*@\s*/i;
+        for (;;) {
+          const mm = rest.match(modRe);
+          if (!mm) break;
+          const isCtrl = mm[1].toLowerCase() === "ctrl";
+          const count = mm[2] ? parseInt(mm[2], 10) : 1;
+          for (let k = 0; k < count; k++) chain.push(isCtrl);
+          rest = rest.slice(mm[0].length);
+        }
+        const baseM = rest.match(/^([A-Za-z_]\w*)\s*(?:\(([^)]*)\))?\s+(.+)$/);
+        if (!baseM) {
+          warnings.push({ line: lineNo, message: `modifier chain without base: "${stmt}"` });
+          continue;
+        }
+        const baseRaw = baseM[1].toLowerCase();
+        const paramsStr = baseM[2] ?? "";
+        const argStr = baseM[3];
         const params = paramsStr
           ? splitTopLevel(paramsStr).map((p) => greekify(p.trim()))
           : [];
         const qs = splitTopLevel(argStr).map(parseReg);
         for (const r of qs) {
-          if (r.kind !== "q") throw new Error("ctrl @ expects qubit operands");
+          if (r.kind !== "q") throw new Error("modifier chain expects qubit operands");
           ensureQubit(r.index);
         }
         const qubits = qs.map((r) => r.index);
-        // Map base gate to mcx/mcp/mcu when controlling x/p/u or fall through.
-        let gateId: string;
-        if (baseRaw === "x") gateId = "mcx";
-        else if (baseRaw === "p") gateId = "mcp";
-        else if (baseRaw === "u") gateId = "mcu";
-        else {
+        const nCtrl = chain.length;
+        // Pick the right IR gate id for (base, nCtrl).
+        const gateId = resolveControlled(baseRaw, nCtrl);
+        if (!gateId) {
           warnings.push({
             line: lineNo,
-            message: `ctrl @ ${baseRaw} not yet mapped; skipped`,
+            message: `ctrl/negctrl chain on "${baseRaw}" with ${nCtrl} control(s) — no IR mapping; skipped`,
           });
           continue;
         }
-        addGate({ gateId, qubits, params, nControls: n });
+        const variableControls = gateId === "mcx" || gateId === "mcp" || gateId === "mcu";
+        const hasAnti = chain.some((s) => !s);
+        addGate({
+          gateId,
+          qubits,
+          params,
+          nControls: variableControls ? nCtrl : undefined,
+          controlStates: hasAnti ? chain : undefined,
+        });
         continue;
       }
 

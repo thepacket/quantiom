@@ -3,15 +3,16 @@ import type { Circuit, PlacedGate } from "../editor/types";
 /**
  * Emit OpenQASM 3 text from a Circuit IR.
  *
- * Targets the `stdgates.inc` library plus the `ctrl @` modifier for the
- * variable-arity multi-controlled gates. Greek-letter symbolic parameters
- * (θ, φ, λ, …) are transliterated to ASCII identifiers and declared at the
- * top of the program as `input float`. Non-unitary state prep gates expand
- * into `reset` + a short basis-change sequence.
+ * Targets the `stdgates.inc` library plus the `ctrl @` / `negctrl @`
+ * modifiers for multi-controlled and anti-controlled gates. Greek-letter
+ * symbolic parameters (θ, φ, λ, …) are transliterated to ASCII identifiers
+ * and declared at the top of the program as `input float`. Non-unitary
+ * state prep gates expand into `reset` + a short basis-change sequence.
  *
  * Gates outside the QASM 3 stdgates surface (control flow, arbitrary
- * Initialize, basis-change measurements) emit as commented placeholders so
- * the structure of the circuit is still readable in the export.
+ * Initialize, arbitrary matrices, basis-change measurements) emit as
+ * commented placeholders so the structure of the circuit is still readable
+ * in the export.
  */
 
 // Map of IR gate id → QASM 3 gate name in stdgates.inc. Entries that need
@@ -69,6 +70,40 @@ const QASM_NAME: Record<string, string> = {
   c4x: "c4x",
 };
 
+/**
+ * For gates whose controls may carry anti-control state, this table tells the
+ * emitter what base stdgate name to wrap in `ctrl @` / `negctrl @` modifiers
+ * and, for fixed-arity entries, the corresponding number of controls. The
+ * variable-arity entries (mcx/mcp/mcu) use the gate's own controls.length.
+ *
+ * Where a gate has more params than its base (cu carries an extra global
+ * phase γ that U does not), the surplus is dropped at emission with a
+ * warning; the named form preserves it when no anti-controls are present.
+ */
+const MODIFIER_FORM: Record<string, { base: string; n: number; trimParams?: number }> = {
+  cx: { base: "x", n: 1 },
+  cy: { base: "y", n: 1 },
+  cz: { base: "z", n: 1 },
+  ch: { base: "h", n: 1 },
+  csx: { base: "sx", n: 1 },
+  csxdg: { base: "sxdg", n: 1 },
+  crx: { base: "rx", n: 1 },
+  cry: { base: "ry", n: 1 },
+  crz: { base: "rz", n: 1 },
+  cp: { base: "p", n: 1 },
+  cu: { base: "U", n: 1, trimParams: 3 }, // γ dropped
+  cu1: { base: "U1", n: 1 },
+  cu3: { base: "U3", n: 1 },
+  cswap: { base: "swap", n: 1 },
+  ccx: { base: "x", n: 2 },
+  ccz: { base: "z", n: 2 },
+  c3x: { base: "x", n: 3 },
+  c4x: { base: "x", n: 4 },
+  mcx: { base: "x", n: -1 },
+  mcp: { base: "p", n: -1 },
+  mcu: { base: "U", n: -1 },
+};
+
 // Greek glyph → ASCII identifier acceptable to OpenQASM 3.
 const GLYPH_TO_ASCII: Array<[string, string]> = [
   ["π", "pi"],
@@ -105,6 +140,33 @@ function asciify(expr: string): string {
 
 function qref(q: number): string {
   return `q[${q}]`;
+}
+
+function hasAntiControls(g: PlacedGate): boolean {
+  if (!g.controlStates) return false;
+  for (let i = 0; i < g.controls.length; i++) {
+    if (g.controlStates[i] === false) return true;
+  }
+  return false;
+}
+
+/**
+ * Emit a gate as a `ctrl @ / negctrl @` modifier chain. One modifier per
+ * control, in the same order as the gate's controls array. Returns null if
+ * the gate's id isn't in MODIFIER_FORM (caller falls back to a comment).
+ */
+function emitModifierChain(g: PlacedGate): string[] | null {
+  const form = MODIFIER_FORM[g.gateId];
+  if (!form) return null;
+  const states = g.controls.map((_, i) =>
+    g.controlStates ? g.controlStates[i] !== false : true,
+  );
+  const modifiers = states.map((s) => (s ? "ctrl @" : "negctrl @")).join(" ");
+  const trimmed =
+    form.trimParams !== undefined ? g.params.slice(0, form.trimParams) : g.params;
+  const params = trimmed.length > 0 ? `(${trimmed.map(asciify).join(", ")})` : "";
+  const args = [...g.controls, ...g.targets].map(qref).join(", ");
+  return [`${modifiers} ${form.base}${params} ${args};`];
 }
 
 function emitGate(g: PlacedGate): string[] {
@@ -163,13 +225,20 @@ function emitGate(g: PlacedGate): string[] {
     return [`// ${g.gateId} ${arg}: control flow not yet exported`];
   }
 
-  // ── Variable-arity multi-controlled via ctrl @ modifier ─────────────
-  if (g.gateId === "mcx" || g.gateId === "mcp" || g.gateId === "mcu") {
-    const base = g.gateId === "mcx" ? "x" : g.gateId === "mcp" ? "p" : "U";
-    const params = g.params.length > 0 ? `(${g.params.map(asciify).join(", ")})` : "";
-    const n = g.controls.length;
-    const args = [...g.controls, ...g.targets].map(qref).join(", ");
-    return [`ctrl(${n}) @ ${base}${params} ${args};`];
+  // ── Variable-arity multi-controlled (and any anti-controlled gate) ──
+  // mcx/mcp/mcu always use the modifier form; gates with any anti-control
+  // do too if their family has a modifier form. Fall through otherwise.
+  if (g.gateId === "mcx" || g.gateId === "mcp" || g.gateId === "mcu" || hasAntiControls(g)) {
+    const chain = emitModifierChain(g);
+    if (chain) return chain;
+    // Fallback for gates outside MODIFIER_FORM (rccx, rcccx) — anti-controls
+    // are silently lost on save with a warning comment.
+    if (hasAntiControls(g)) {
+      const out: string[] = [`// ${g.gateId}: anti-controls not round-tripped (not in modifier table)`];
+      const cleared: PlacedGate = { ...g, controlStates: undefined };
+      out.push(...emitGate(cleared));
+      return out;
+    }
   }
 
   // ── Arbitrary user-entered matrices (no stdgate form) ──────────────
