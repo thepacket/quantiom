@@ -23,7 +23,7 @@ export function StatevectorPanel({ state }: Props) {
             <input type="checkbox" checked={hideZeros} onChange={(e) => setHideZeros(e.target.checked)} />
             hide zeros
           </label>
-          {loading && <span className="panel__spinner">…</span>}
+          <span className="panel__spinner" style={{ visibility: loading ? "visible" : "hidden" }}>…</span>
         </>
       }
     >
