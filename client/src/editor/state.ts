@@ -107,32 +107,68 @@ function relocateIfCollision(existing: PlacedGate[], gate: PlacedGate): PlacedGa
 // ─── History wrapper ───────────────────────────────────────────────────────
 
 const MAX_HISTORY = 100;
+const COALESCE_MS = 500;
 
 type Versioned = {
   past: Circuit[];
   present: Circuit;
   future: Circuit[];
+  /** Last action's coalesce key and timestamp. New same-key actions within
+   * COALESCE_MS update `present` without pushing a new entry to `past`. */
+  coalesce: { key: string; at: number } | null;
 };
+
+/** Returns a stable key when an action should coalesce with its predecessor.
+ *
+ * Typing into a single inspector field shouldn't generate one history entry
+ * per keystroke; we group them by gate id. Replace-circuit from the QASM
+ * editor coalesces similarly so a multi-character text edit is one undo step.
+ */
+function coalesceKey(action: HistoryAction): string | null {
+  if (action.type === "update-gate") return `update-gate:${action.id}`;
+  if (action.type === "replace-circuit") return "replace-circuit";
+  return null;
+}
 
 function historyReducer(v: Versioned, action: HistoryAction): Versioned {
   if (action.type === "undo") {
     if (v.past.length === 0) return v;
     const prev = v.past[v.past.length - 1];
-    return { past: v.past.slice(0, -1), present: prev, future: [v.present, ...v.future] };
+    return {
+      past: v.past.slice(0, -1),
+      present: prev,
+      future: [v.present, ...v.future],
+      coalesce: null,
+    };
   }
   if (action.type === "redo") {
     if (v.future.length === 0) return v;
     const next = v.future[0];
-    return { past: [...v.past, v.present], present: next, future: v.future.slice(1) };
+    return {
+      past: [...v.past, v.present],
+      present: next,
+      future: v.future.slice(1),
+      coalesce: null,
+    };
   }
   const next = reducer(v.present, action);
   if (next === v.present) return v;
+
+  const key = coalesceKey(action);
+  const now = Date.now();
+  const shouldCoalesce =
+    key !== null && v.coalesce !== null && v.coalesce.key === key && now - v.coalesce.at < COALESCE_MS;
+
+  if (shouldCoalesce) {
+    // Replace present only — keep past unchanged so undo jumps to the pre-typing snapshot.
+    return { past: v.past, present: next, future: [], coalesce: { key, at: now } };
+  }
   const past = [...v.past, v.present];
   if (past.length > MAX_HISTORY) past.shift();
-  return { past, present: next, future: [] };
+  return { past, present: next, future: [], coalesce: key ? { key, at: now } : null };
 }
 
-const INITIAL_VERSIONED: Versioned = { past: [], present: INITIAL, future: [] };
+const INITIAL_VERSIONED: Versioned = { past: [], present: INITIAL, future: [], coalesce: null };
 
 export function useCircuit() {
   const [versioned, raw] = useReducer(historyReducer, INITIAL_VERSIONED);
