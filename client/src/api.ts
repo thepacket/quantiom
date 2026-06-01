@@ -38,6 +38,25 @@ export type UnitaryResponse = {
   skipped: SkippedGate[];
 };
 
+export type SymbolicResponse = {
+  ketLatex: string;
+  tooLarge: boolean;
+};
+
+export async function fetchSymbolic(circuit: Circuit, signal?: AbortSignal): Promise<SymbolicResponse> {
+  const res = await fetch("/api/simulate/symbolic", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ circuit, parameterValues: {} }),
+    signal,
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`symbolic ${res.status}: ${detail}`);
+  }
+  return res.json();
+}
+
 export async function fetchUnitary(
   circuit: Circuit,
   parameterValues: ParameterValues = {},

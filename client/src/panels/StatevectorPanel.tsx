@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
 import { Tex } from "./Tex";
 import { PanelShell } from "./PanelShell";
+import { fetchSymbolic } from "../api";
+import type { Circuit } from "../editor/types";
 
-type Props = { state: SimState };
+type Props = { state: SimState; circuit: Circuit };
 
 const EPS = 1e-6;
 
@@ -19,17 +21,45 @@ function formatComplex(re: number, im: number): string {
   return `${re.toFixed(4)} ${sign} ${Math.abs(im).toFixed(4)}i`;
 }
 
-export function StatevectorPanel({ state }: Props) {
+type SymState =
+  | { kind: "off" }
+  | { kind: "loading" }
+  | { kind: "ready"; latex: string }
+  | { kind: "too-large" }
+  | { kind: "error"; message: string };
+
+export function StatevectorPanel({ state, circuit }: Props) {
   const [hideZeros, setHideZeros] = useState(true);
+  const [sym, setSym] = useState<SymState>({ kind: "off" });
+  const lastCircuitRef = useRef<Circuit>(circuit);
+
+  // Clear the symbolic display whenever the circuit changes — the cached
+  // expression no longer matches what the user is looking at.
+  useEffect(() => {
+    if (lastCircuitRef.current !== circuit) {
+      lastCircuitRef.current = circuit;
+      if (sym.kind !== "off") setSym({ kind: "off" });
+    }
+  }, [circuit, sym.kind]);
+
+  const onSym = async () => {
+    setSym({ kind: "loading" });
+    try {
+      const res = await fetchSymbolic(circuit);
+      if (res.tooLarge) setSym({ kind: "too-large" });
+      else setSym({ kind: "ready", latex: res.ketLatex });
+    } catch (e) {
+      setSym({ kind: "error", message: e instanceof Error ? e.message : String(e) });
+    }
+  };
 
   const data = dataOf(state);
   const loading = state.kind === "loading";
   const error = state.kind === "error" ? state.message : null;
 
   const copy = () => {
+    if (sym.kind === "ready") return `|\\psi\\rangle = ${sym.latex}`;
     if (!data) return "";
-    if (data.ketLatex) return `|\\psi\\rangle = ${data.ketLatex}`;
-    // Large circuits: copy a numeric ket sum.
     const terms = data.amplitudes
       .filter((a) => !a.isZero && a.re !== null && a.im !== null)
       .map((a) => `(${formatComplex(a.re!, a.im!)}) |${a.basis}>`);
@@ -43,6 +73,14 @@ export function StatevectorPanel({ state }: Props) {
       getCopyText={copy}
       toolbar={
         <>
+          <button
+            className={"panel__small" + (sym.kind === "ready" ? " panel__small--on" : "")}
+            onClick={onSym}
+            disabled={sym.kind === "loading"}
+            title="Compute and show the symbolic |ψ⟩ once for the current circuit"
+          >
+            {sym.kind === "loading" ? "…" : "sym"}
+          </button>
           <label className="panel__toggle">
             <input type="checkbox" checked={hideZeros} onChange={(e) => setHideZeros(e.target.checked)} />
             hide zeros
@@ -52,17 +90,19 @@ export function StatevectorPanel({ state }: Props) {
       }
     >
       {error && <div className="panel__error">{error}</div>}
+      {sym.kind === "ready" && (
+        <div className="statevector__ket">
+          <Tex latex={`|\\psi\\rangle = ${sym.latex}`} display />
+        </div>
+      )}
+      {sym.kind === "too-large" && (
+        <div className="statevector__note">circuit too large for symbolic display (≤ 12 gates and ≤ 4 qubits)</div>
+      )}
+      {sym.kind === "error" && (
+        <div className="panel__error">{sym.message}</div>
+      )}
       {data && (
         <>
-          {data.ketLatex ? (
-            <div className="statevector__ket">
-              <Tex latex={`|\\psi\\rangle = ${data.ketLatex}`} display />
-            </div>
-          ) : (
-            <div className="statevector__note">
-              symbolic form skipped — too many gates or qubits; numeric values below
-            </div>
-          )}
           <table className="statevector__table">
             <thead>
               <tr>

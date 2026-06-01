@@ -125,13 +125,13 @@ _LARGE_STUB_AMP = ""
 
 
 def _cached_symbolic_state(circuit: Circuit) -> CachedSymbolicState:
-    """Compute the symbolic state and all derived strings for a circuit.
+    """Cache the raw symbolic amplitudes for a circuit. No LaTeX is generated.
 
-    For small circuits the amplitudes are run through sp.simplify and each
-    is converted to a string and to LaTeX. Past the threshold all of that
-    is skipped — the numeric panels (probabilities, Bloch, sonorizer) work
-    fine on the unsimplified expressions; the ket display falls back to a
-    stub. The threshold is chosen so animation playback never blocks.
+    The default fast path: every request to /api/simulate/statevector runs
+    only the symbolic simulation + numeric substitution, never any
+    sp.simplify or sp.latex. The on-demand /api/simulate/symbolic endpoint
+    is the only place that pays the LaTeX cost, and only when the user
+    explicitly asks for it via the "sym" button.
     """
     key = _circuit_key(circuit)
     hit = _STATE_CACHE.get(key)
@@ -141,37 +141,18 @@ def _cached_symbolic_state(circuit: Circuit) -> CachedSymbolicState:
         return hit
 
     result = simulate_statevector(circuit)
-    n = result.numQubits
-    is_large = len(circuit.gates) > _LATEX_MAX_GATES or n > _LATEX_MAX_QUBITS
-
-    if not is_large:
-        amps_sym = [sp.simplify(a) for a in result.amplitudes]
-        amp_exprs = [sp.sstr(a) for a in amps_sym]
-        amp_latexes = [latex_clean(sp.latex(a)) for a in amps_sym]
-        ket_terms: list[sp.Expr] = []
-        for i, simp in enumerate(amps_sym):
-            if simp != 0:
-                label = format(i, f"0{n}b")
-                ket_terms.append(simp * sp.Symbol(f"|{label}\\rangle"))
-        ket_latex = (
-            "0" if not ket_terms else latex_clean(sp.latex(sp.Add(*ket_terms, evaluate=False)))
-        )
-    else:
-        amps_sym = result.amplitudes
-        amp_exprs = [_LARGE_STUB_AMP] * len(amps_sym)
-        amp_latexes = [_LARGE_STUB_AMP] * len(amps_sym)
-        ket_latex = _LARGE_STUB_KET
-
+    amps_sym = result.amplitudes
+    n_amps = len(amps_sym)
     free_syms = free_symbol_names(amps_sym)
 
     value = CachedSymbolicState(
         amplitudes=amps_sym,
-        ampExprs=amp_exprs,
-        ampLatexes=amp_latexes,
-        ketLatex=ket_latex,
+        ampExprs=[""] * n_amps,
+        ampLatexes=[""] * n_amps,
+        ketLatex="",
         skipped=result.skipped,
         freeSymbols=free_syms,
-        isLarge=is_large,
+        isLarge=True,
     )
     _STATE_CACHE[key] = value
     _STATE_CACHE_LRU.append(key)
@@ -223,6 +204,39 @@ def statevector(req: SimulateRequest) -> StatevectorResponse:
         freeSymbols=cached.freeSymbols,
         isLarge=cached.isLarge,
     )
+
+
+class SymbolicResponse(BaseModel):
+    ketLatex: str   # the |ψ⟩ = … expression (empty if tooLarge)
+    tooLarge: bool  # circuit exceeded the symbolic-display thresholds
+
+
+@app.post("/api/simulate/symbolic", response_model=SymbolicResponse)
+def symbolic(req: SimulateRequest) -> SymbolicResponse:
+    """On-demand symbolic ket. The default statevector endpoint never builds
+    LaTeX; this is the one place where simplification and sp.latex run, and
+    only when the user clicks the "sym" button on the panel.
+    """
+    circuit = req.circuit
+    if len(circuit.gates) > _LATEX_MAX_GATES or circuit.numQubits > _LATEX_MAX_QUBITS:
+        return SymbolicResponse(ketLatex="", tooLarge=True)
+
+    try:
+        result = simulate_statevector(circuit)
+    except SimulationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    n = result.numQubits
+    simplified = [sp.simplify(a) for a in result.amplitudes]
+    ket_terms: list[sp.Expr] = []
+    for i, simp in enumerate(simplified):
+        if simp != 0:
+            label = format(i, f"0{n}b")
+            ket_terms.append(simp * sp.Symbol(f"|{label}\\rangle"))
+    ket_latex = (
+        "0" if not ket_terms else latex_clean(sp.latex(sp.Add(*ket_terms, evaluate=False)))
+    )
+    return SymbolicResponse(ketLatex=ket_latex, tooLarge=False)
 
 
 class UnitaryResponse(BaseModel):
