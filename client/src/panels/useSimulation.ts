@@ -13,22 +13,29 @@ export function dataOf(state: SimState): StatevectorResponse | null {
   return null;
 }
 
-// Lowered from 250ms so animation playback can stream updates at ~15fps;
-// the server's symbolic-state cache keeps this cheap.
+// Short debounce so playback streams updates; the single-flight queue below
+// keeps in-flight count to at most 1 regardless of how fast inputs change.
 const DEBOUNCE_MS = 60;
 
 export function useStatevector(circuit: Circuit, parameterValues: ParameterValues): SimState {
   const [state, setState] = useState<SimState>({ kind: "idle" });
   const lastDataRef = useRef<StatevectorResponse | null>(null);
   const aborterRef = useRef<AbortController | null>(null);
+  const inFlightRef = useRef(false);
+  const pendingRef = useRef<{ circuit: Circuit; params: ParameterValues } | null>(null);
 
   useEffect(() => {
-    const handle = setTimeout(() => {
-      aborterRef.current?.abort();
+    const fire = (c: Circuit, p: ParameterValues) => {
+      if (inFlightRef.current) {
+        // Replace the queued request so we always converge on the latest input.
+        pendingRef.current = { circuit: c, params: p };
+        return;
+      }
+      inFlightRef.current = true;
       const ac = new AbortController();
       aborterRef.current = ac;
       setState({ kind: "loading", data: lastDataRef.current });
-      fetchStatevector(circuit, parameterValues, ac.signal)
+      fetchStatevector(c, p, ac.signal)
         .then((data) => {
           lastDataRef.current = data;
           setState({ kind: "ready", data });
@@ -37,8 +44,18 @@ export function useStatevector(circuit: Circuit, parameterValues: ParameterValue
           if (err instanceof DOMException && err.name === "AbortError") return;
           const message = err instanceof Error ? err.message : String(err);
           setState({ kind: "error", message, data: lastDataRef.current });
+        })
+        .finally(() => {
+          inFlightRef.current = false;
+          const queued = pendingRef.current;
+          if (queued) {
+            pendingRef.current = null;
+            fire(queued.circuit, queued.params);
+          }
         });
-    }, DEBOUNCE_MS);
+    };
+
+    const handle = setTimeout(() => fire(circuit, parameterValues), DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [circuit, parameterValues]);
 

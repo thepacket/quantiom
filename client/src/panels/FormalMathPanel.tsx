@@ -18,7 +18,8 @@ const MAX_QUBITS_FOR_UNITARY = 3;
 export function FormalMathPanel({ circuit }: Props) {
   const [state, setState] = useState<State>({ kind: "idle" });
   const lastDataRef = useRef<UnitaryResponse | null>(null);
-  const aborterRef = useRef<AbortController | null>(null);
+  const inFlightRef = useRef(false);
+  const pendingRef = useRef<Circuit | null>(null);
   const tooLarge = circuit.numQubits > MAX_QUBITS_FOR_UNITARY;
 
   useEffect(() => {
@@ -27,12 +28,15 @@ export function FormalMathPanel({ circuit }: Props) {
       setState({ kind: "idle" });
       return;
     }
-    const handle = setTimeout(() => {
-      aborterRef.current?.abort();
+    const fire = (c: Circuit) => {
+      if (inFlightRef.current) {
+        pendingRef.current = c;
+        return;
+      }
+      inFlightRef.current = true;
       const ac = new AbortController();
-      aborterRef.current = ac;
       setState({ kind: "loading", data: lastDataRef.current });
-      fetchUnitary(circuit, {}, ac.signal)
+      fetchUnitary(c, {}, ac.signal)
         .then((data) => {
           lastDataRef.current = data;
           setState({ kind: "ready", data });
@@ -41,8 +45,17 @@ export function FormalMathPanel({ circuit }: Props) {
           if (err instanceof DOMException && err.name === "AbortError") return;
           const message = err instanceof Error ? err.message : String(err);
           setState({ kind: "error", message, data: lastDataRef.current });
+        })
+        .finally(() => {
+          inFlightRef.current = false;
+          const queued = pendingRef.current;
+          if (queued) {
+            pendingRef.current = null;
+            fire(queued);
+          }
         });
-    }, DEBOUNCE_MS);
+    };
+    const handle = setTimeout(() => fire(circuit), DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [circuit, tooLarge]);
 
