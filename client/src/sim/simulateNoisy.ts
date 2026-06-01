@@ -3,6 +3,7 @@ import { buildMatrix, M_X, M_Y, M_Z, type Matrix } from "./matrices";
 import { applyKQubit } from "./apply";
 import { compileExpr } from "./expr";
 import { expandCustomGates, type CustomGate } from "../editor/customGates";
+import { paulis as evalPaulis, type Pauli } from "./expectation";
 import type { NoiseModel } from "./noise";
 import {
   MAX_QUBITS,
@@ -290,6 +291,80 @@ function accumulateBloch(state: Float64Array, n: number, sink: Float64Array): vo
     sink[3 * q + 1] += -2 * r01im;
     sink[3 * q + 2] += r00 - r11;
   }
+}
+
+/**
+ * Trajectory-averaged expectation value of an arbitrary n-qubit Pauli
+ * observable. Runs `noise.trajectories` independent noisy trajectories,
+ * evaluates ⟨ψ_t|P|ψ_t⟩ at the end of each, returns the mean. Used by the
+ * Expectation panel when noise mode is on — `simulateNoisy()` itself
+ * doesn't know which observable to track ahead of time, so we re-run
+ * trajectories per selection. Cost ≈ one noisy simulate() call.
+ *
+ * Memoise on (circuit, params, noise rates, paulis) at the call site;
+ * the result is stable for fixed inputs up to the Math.random() seed.
+ */
+export function noisyPauliExpectation(
+  circuit: Circuit,
+  paramValues: ParameterValues,
+  customGates: CustomGate[],
+  noise: NoiseModel,
+  paulis: Pauli[],
+): number {
+  const n = circuit.numQubits;
+  if (n <= 0) return 0;
+  if (n > MAX_QUBITS) throw new Error(`max ${MAX_QUBITS} qubits (got ${n})`);
+  const dim = 1 << n;
+  const T = Math.max(1, noise.trajectories | 0);
+
+  const expanded = expandCustomGates(circuit.gates, customGates);
+  const gates = [...expanded].sort((a, b) =>
+    a.column !== b.column ? a.column - b.column : a.id.localeCompare(b.id),
+  );
+
+  // Pre-evaluate gate matrices (the trajectory inner loop is the bottleneck).
+  type Step = { U: Matrix; qubits: number[]; antiQubits: number[] } | null;
+  const steps: Step[] = [];
+  for (const g of gates) {
+    if (MARKERS.has(g.gateId) || NON_UNITARY.has(g.gateId) || CONTROL_FLOW.has(g.gateId) || g.gateId in PREP_AMPS || g.gateId === "initialize") {
+      steps.push(null);
+      continue;
+    }
+    const params = g.params.map((p) => evalParam(p, paramValues));
+    const U = buildMatrix(g.gateId, params, g.controls.length);
+    if (!U) { steps.push(null); continue; }
+    const qubits = [...g.controls, ...g.targets];
+    const antiQubits: number[] = [];
+    if (g.controlStates) {
+      for (let i = 0; i < g.controls.length; i++) {
+        if (g.controlStates[i] === false) antiQubits.push(g.controls[i]);
+      }
+    }
+    steps.push({ U, qubits, antiQubits });
+  }
+
+  let sum = 0;
+  for (let t = 0; t < T; t++) {
+    const state = new Float64Array(2 * dim);
+    state[0] = 1;
+    for (let gi = 0; gi < gates.length; gi++) {
+      const s = steps[gi];
+      const g = gates[gi];
+      if (!s) {
+        if (g.gateId in PREP_AMPS) applyPrep(state, n, g.targets[0], PREP_AMPS[g.gateId]);
+        continue;
+      }
+      for (const q of s.antiQubits) applyKQubit(state, n, [q], M_X);
+      applyKQubit(state, n, s.qubits, s.U);
+      for (const q of s.antiQubits) applyKQubit(state, n, [q], M_X);
+      const involved = s.qubits;
+      if (involved.length === 1) depolarise1(state, n, involved[0], noise.oneQubitDepolarising);
+      else if (involved.length === 2) depolarise2(state, n, involved[0], involved[1], noise.twoQubitDepolarising);
+      else for (const q of involved) depolarise1(state, n, q, noise.twoQubitDepolarising);
+    }
+    sum += evalPaulis(state, n, paulis);
+  }
+  return sum / T;
 }
 
 function collectFreeSymbols(circuit: Circuit): string[] {

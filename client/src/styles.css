@@ -176,6 +176,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .exp__result { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; }
 .exp__op { color: var(--muted); font-family: ui-monospace, monospace; font-size: 13px; }
 .exp__value { color: var(--fg); font-family: ui-monospace, monospace; font-size: 16px; font-weight: 600; }
+.exp__noisy-tag { color: #c8b88a; font-size: 10px; margin-left: 8px; }
 
 /* ─── Density matrix panel ──────────────────────────────────────────── */
 .density__pick { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 8px; }

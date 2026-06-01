@@ -168,7 +168,12 @@ export function CircuitEditor() {
         <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="expectation"><ExpectationPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="expectation">
+          <ExpectationPanel
+            state={simState}
+            noisyContext={{ circuit: steppedCircuit, paramValues, customGates, noise }}
+          />
+        </ErrorBoundary>
         <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>

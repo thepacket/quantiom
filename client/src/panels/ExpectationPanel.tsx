@@ -3,22 +3,38 @@ import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { paulis as evalPaulis, type Pauli } from "../sim/expectation";
+import { noisyPauliExpectation } from "../sim/simulateNoisy";
+import type { NoiseModel } from "../sim/noise";
+import type { Circuit } from "../editor/types";
+import type { CustomGate } from "../editor/customGates";
+import type { ParameterValues } from "../sim/simulate";
 
-type Props = { state: SimState };
+type Props = {
+  state: SimState;
+  /** Optional handles for re-running the simulator. When provided, the panel
+   *  computes trajectory-averaged ⟨P⟩ in noise mode rather than displaying
+   *  a single biased trajectory. */
+  noisyContext?: {
+    circuit: Circuit;
+    paramValues: ParameterValues;
+    customGates: CustomGate[];
+    noise: NoiseModel;
+  };
+};
 
 const PAULIS: Pauli[] = ["I", "X", "Y", "Z"];
 
-export function ExpectationPanel({ state }: Props) {
+export function ExpectationPanel({ state, noisyContext }: Props) {
   // Compute the copy text outside the body so PanelShell's toolbar can use it.
   // Light cost; the body's heavy memo skips when collapsed.
   return (
     <PanelShell id="expectation" title="Expectation ⟨P⟩" getCopyText={() => "(open panel to compute)"}>
-      <ExpectationBody state={state} />
+      <ExpectationBody state={state} noisyContext={noisyContext} />
     </PanelShell>
   );
 }
 
-function ExpectationBody({ state }: Props) {
+function ExpectationBody({ state, noisyContext }: Props) {
   const collapsed = usePanelCollapsed();
   const data = dataOf(state);
   const n = data?.numQubits ?? 0;
@@ -35,12 +51,24 @@ function ExpectationBody({ state }: Props) {
   }, [n]);
 
   // O(n · 2^n) inner-product walk over the state. Skip while the panel
-  // is hidden — that's the whole point of this guard.
+  // is hidden — that's the whole point of this guard. In noise mode, run
+  // T trajectories and average rather than reading the biased single
+  // representative trajectory.
   const value = useMemo(() => {
     if (collapsed) return null;
     if (!data || selection.length !== n) return null;
+    if (data.isNoisy && noisyContext) {
+      return noisyPauliExpectation(
+        noisyContext.circuit,
+        noisyContext.paramValues,
+        noisyContext.customGates,
+        noisyContext.noise,
+        selection,
+      );
+    }
+    if (data.isStabilizer) return null;
     return evalPaulis(data.state, n, selection);
-  }, [data, selection, n, collapsed]);
+  }, [data, selection, n, collapsed, noisyContext]);
 
   const opLabel = useMemo(() => {
     const parts: string[] = [];
@@ -69,15 +97,6 @@ function ExpectationBody({ state }: Props) {
       </div>
     );
   }
-  if (data.isNoisy) {
-    return (
-      <div className="panel__notice">
-        Noise mode on — ⟨P⟩ from a single trajectory is biased. Use Bloch
-        for single-qubit Paulis (already trajectory-averaged), or wait for
-        the trajectory-averaged ⟨P⟩ follow-up.
-      </div>
-    );
-  }
 
   return (
     <div className="exp">
@@ -96,6 +115,9 @@ function ExpectationBody({ state }: Props) {
       <div className="exp__result">
         <span className="exp__op">⟨{opLabel}⟩</span>
         <span className="exp__value">{value === null ? "—" : value.toFixed(4)}</span>
+        {data.isNoisy && (
+          <span className="exp__noisy-tag">avg of {data.trajectories} trajectories</span>
+        )}
       </div>
     </div>
   );
