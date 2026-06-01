@@ -134,7 +134,7 @@ export function Inspector({ circuit, selectedGateId, dispatch, onSelect }: Props
 
       {def.params.length > 0 && (
         <fieldset className="inspector__group">
-          <legend>Parameters (symbolic)</legend>
+          <legend>Parameters</legend>
           {def.params.map((p, i) => (
             <div key={`p-${i}`} className="inspector__row">
               <label>{p.name}</label>

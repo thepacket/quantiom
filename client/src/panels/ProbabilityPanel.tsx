@@ -23,8 +23,6 @@ export function ProbabilityPanel({ state }: Props) {
     <PanelShell id="probabilities" title="Probabilities" getCopyText={copy}>
       {!data ? (
         <div className="panel__placeholder">building circuit…</div>
-      ) : data.probabilities.some((p) => p === null) ? (
-        <div className="panel__placeholder">set symbolic parameters to view probabilities</div>
       ) : (
         <ProbabilityChart data={data} />
       )}

@@ -15,11 +15,7 @@ export function BlochPanel({ state }: Props) {
   const copy = () => {
     if (!data) return "";
     return data.blochVectors
-      .map((b, i) =>
-        b
-          ? `q${i}: (${b.x.toFixed(4)}, ${b.y.toFixed(4)}, ${b.z.toFixed(4)})`
-          : `q${i}: symbolic`,
-      )
+      .map((b, i) => `q${i}: (${b.x.toFixed(4)}, ${b.y.toFixed(4)}, ${b.z.toFixed(4)})`)
       .join("\n");
   };
 
@@ -27,13 +23,11 @@ export function BlochPanel({ state }: Props) {
     <PanelShell id="bloch" title="Bloch spheres" getCopyText={copy}>
       {!data ? (
         <div className="panel__placeholder">building circuit…</div>
-      ) : data.blochVectors.some((b) => b === null) ? (
-        <div className="panel__placeholder">set symbolic parameters to view Bloch vectors</div>
       ) : (
         <div className="bloch__grid">
-          {data.blochVectors.map((b, i) =>
-            b ? <BlochSphere key={i} qubit={i} v={b} /> : null,
-          )}
+          {data.blochVectors.map((b, i) => (
+            <BlochSphere key={i} qubit={i} v={b} />
+          ))}
         </div>
       )}
     </PanelShell>

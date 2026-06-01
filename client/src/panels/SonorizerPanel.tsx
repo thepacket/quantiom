@@ -60,12 +60,10 @@ export function SonorizerPanel({ state }: Props) {
     return data.amplitudes.filter((a) => Math.hypot(a.re ?? 0, a.im ?? 0) > 1e-6).length;
   }, [data]);
 
-  const symbolic = data?.amplitudes.some((a) => a.re === null) ?? false;
-
   return (
     <PanelShell id="sonorizer" title="Sonorizer">
-      {symbolic ? (
-        <div className="panel__placeholder">set symbolic parameters to hear the state</div>
+      {!data ? (
+        <div className="panel__placeholder">building circuit…</div>
       ) : (
         <div className="sono__body">
           <div className="sono__row sono__row--top">

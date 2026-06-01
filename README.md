@@ -1,20 +1,21 @@
 # Quantiom
 
-Quantum-computing circuit editor, precise simulator, sonorizer, and visualizer
-— with numerical and symbolic math.
+Quantum-computing circuit editor, simulator, sonorizer, and visualizer.
+Runs entirely in the browser.
 
 For users already comfortable with quantum-computing concepts. IBM Quantum
 Composer is the floor, not the ceiling.
 
-Live: **<https://quantiom.fly.dev>** (or your own deploy).
+Live: **<https://quantiom.fly.dev>**.
 
 ## Shape
 
-- **client/** — install-free web UI (Vite + React + TS). Multi-device.
-- **server/** — bridges multi-language packages (Python sympy/numpy to start;
-  room for Julia, Rust, C++ simulators later). FastAPI.
-- **examples/** — 38 hand-written OpenQASM 3 example circuits.
-- **docs/** — design notes.
+- **client/** — Vite + React + TypeScript. The UI, the simulator, the
+  parameter expression evaluator, the OpenQASM 3 round-trip, the
+  sonorizer — all of it.
+- **server/** — minimal FastAPI app whose only job is `/api/health` for
+  Fly's checks and serving the built client as static files.
+- **examples/** — 33 hand-written OpenQASM 3 example circuits.
 
 ## Editor
 
@@ -33,60 +34,52 @@ Live: **<https://quantiom.fly.dev>** (or your own deploy).
   - Non-unitary (Measure Z/X/Y, Reset)
   - Control flow (if, switch, while, box)
   - Markers (barrier, delay)
-- **Canvas** — unbounded qubits, unbounded columns; SVG rendering. Qubit wires
-  with per-category–coloured gate visuals, classical-bit bus, vertical
-  connectors for multi-qubit gates, distinct glyphs (CNOT ⊕, SWAP ×, measure
-  meter, reset, state-prep, barrier, delay).
+- **Canvas** — unbounded qubits and columns; SVG rendering. Distinct
+  visuals for the CNOT ⊕, SWAP ×, measure meter, reset, state-prep,
+  barrier, delay; per-category coloured gate strokes.
 - **Drag and drop**
-  - Drag a tile from the palette onto a qubit cell to place a gate.
-  - Drag a placed gate to move it; column auto-bumps on collision.
-  - Drag the control dot or target glyph of a placed multi-qubit gate to
-    reassign its qubit independently (the "stretch" gesture).
-  - Custom drag-image ghost shows the gate symbol under the cursor.
-- **Inspector** — column, controls, targets, classical bits, symbolic
-  parameters as free-form expressions (e.g. `π/2`, `θ`, `2*t + π/4`).
-- **Add / remove qubits and classical bits** from the toolbar (no fixed
-  upper limit beyond the simulator's symbolic cap of 8 qubits).
-- **Undo / redo** — Cmd/Ctrl + Z, Cmd/Ctrl + Shift + Z (also Ctrl + Y); 100
-  entries deep. Consecutive parameter edits and consecutive QASM text edits
-  coalesce within 500ms so typing is a single undo step.
-- **Auto-save** to `localStorage`. The circuit restores on refresh.
-- **File menu** — open `.qasm` from disk, download the current circuit as
-  `.qasm`, or pick from the bundled **Examples** dropdown.
+  - Palette → cell: place a new gate.
+  - Placed gate → cell: move the whole gate; column auto-bumps on
+    collision.
+  - Control dot or target glyph → different qubit: stretch-gesture
+    reassigns just that role.
+- **Inspector** — column, controls, targets, classical bits, parameter
+  expressions (free-form: `π/2`, `θ`, `2*t + π/4`, `sin(t)`).
+- **Undo / redo** — Cmd/Ctrl + Z, Cmd/Ctrl + Shift + Z (or Ctrl + Y); 100
+  entries; consecutive parameter or QASM edits coalesce within 500 ms.
+- **Auto-save** to `localStorage`; circuit restores on refresh.
+- **File menu** — open `.qasm`, download `.qasm`, or pick from the
+  bundled **Examples** dropdown.
 - **Dark theme** throughout.
 
-## Simulator (server)
+## Simulator (in the browser)
 
-- **Symbolic-native** sympy backend. The internal statevector is a list of
-  sympy expressions; nothing is collapsed to floats unless asked.
-- Big-endian basis convention (qubit 0 is the MSB of the basis index).
-- **Capped at 8 qubits** for statevector simulation, **3 qubits** for the
-  full symbolic unitary matrix (2ⁿ × 2ⁿ sympy expressions get expensive
-  quickly).
-- **Greek-glyph parameter parsing** — `π`, `θ`, `φ`, `λ`, `γ`, `β`, `τ` are
-  recognized as standard symbols; arbitrary other identifiers become free
-  sympy `Symbol`s. `e^(iπ/4)` round-trips.
-- **Variable-arity** multi-controlled gates (MCX, MCP, MCU) — the simulator
-  reads the number of controls from the placed gate.
-- **State-prep** gates (Init |+⟩, etc.) apply when the targeted qubit is
-  unentangled with the rest; reported as skipped otherwise.
-- **Parameter substitution** — every request can carry `parameterValues`
-  for any free symbol; values are substituted just before numeric
-  evaluation. The symbolic display remains symbolic.
-- **LRU cache** (32 entries) keyed by circuit IR. Parameter sweeps —
-  including the animation Play button — only re-run the numeric path,
-  so each frame is ~milliseconds.
-- **OpenQASM 3** — both an emitter and a parser. Both target the
-  `stdgates.inc` library plus the `ctrl(n) @` modifier for variable-arity
-  multi-controlled gates. Verified round-trip on the bundled examples.
+The quantum state lives in a `Float64Array` with interleaved real / imaginary
+parts. Gate application is in-place. No server roundtrips, no GIL, no
+sympy.
 
-### Endpoints
+- **20-qubit cap** — `2^20 = 1 048 576` amplitudes × 16 bytes = 16 MB of
+  state. Plenty of headroom in any modern browser; raises if you go past.
+- **Unbounded gate count** — each gate is O(d · 2ⁿ) where d = 2ᵏ for a
+  k-qubit gate. A 12-qubit Hadamard-on-each finishes in milliseconds; a
+  6-qubit 35-gate circuit (the `anim_swirl_6q` example) animates at
+  full rate.
+- **Parameter expressions** — your gate params are JIT-compiled with a
+  tiny `new Function` based evaluator. Greek letters (π, θ, φ, λ, γ, β, τ,
+  α, δ, ω) and a small set of math functions (`sin`, `cos`, `tan`, `sqrt`,
+  `exp`, `ln`, `pow`) are recognised; everything else becomes a free
+  variable that you set via the Parameters panel.
+- **Gate coverage** — all 53 gates in the palette. State-prep gates
+  (`init0`, `init1`, `init+`, `init−`, `init+i`, `init−i`) apply when the
+  target qubit is unentangled with the rest; otherwise they're listed in
+  the panel's "skipped" section. Measure, reset, control flow, and
+  `initialize(state)` are intentionally skipped (the simulator is pure
+  state-vector).
 
-| Endpoint | Returns |
-|---|---|
-| `GET /api/health` | `{"status": "ok"}` |
-| `POST /api/simulate/statevector` | symbolic ket LaTeX, per-amplitude `(re, im, expr, latex)`, probabilities, per-qubit Bloch vectors, skipped gates, free symbol names |
-| `POST /api/simulate/unitary` | symbolic 2ⁿ × 2ⁿ matrix as LaTeX and stringified entries |
+The simulator code lives in [client/src/sim/](client/src/sim/):
+[complex.ts](client/src/sim/complex.ts), [expr.ts](client/src/sim/expr.ts),
+[matrices.ts](client/src/sim/matrices.ts), [apply.ts](client/src/sim/apply.ts),
+[simulate.ts](client/src/sim/simulate.ts).
 
 ## Visualizer panels
 
@@ -95,20 +88,17 @@ collapsed state per panel id in `localStorage`. Every panel has a
 **copy-to-clipboard** button in its header.
 
 - **Parameters** — sliders for every free symbol detected in the circuit
-  (e.g. `θ`, `φ`, `λ`, …). The literal symbol **`t`** is special: when it
+  (e.g. `θ`, `φ`, `λ`). The literal symbol **`t`** is special: when it
   appears anywhere, the panel sprouts a circular **▶** button and an Hz
-  slider (0.05–3 Hz). Playback runs an internal clock and pushes
-  substitutions at ~15fps; the Bloch vectors orbit, the probability bars
-  pulse, the sonorizer's harmonics rotate.
-- **Statevector** — KaTeX-rendered `|ψ⟩ = …` ket expression plus a
-  per-amplitude table (`|basis⟩` and amplitude in LaTeX). "hide zeros"
-  toggle.
+  slider (0.05–3 Hz). Playback runs an internal clock that pushes new t
+  values directly into the React state at ~15 fps — the Bloch vectors
+  orbit, the probability bars pulse, the sonorizer's harmonics rotate.
+- **Statevector** — basis-state table with numeric `Re + Im·i` per
+  amplitude, formatted to 4 decimals. "hide zeros" toggle.
 - **Probabilities** — horizontal SVG bar chart of `|amplitude|²`.
 - **Bloch spheres** — one axonometric sphere per qubit with axis labels
-  (`|0⟩, |1⟩, |+⟩, |−⟩, |±i⟩`), a state-vector arrow, and a `|r|` purity
+  (`|0⟩, |1⟩, |+⟩, |−⟩, |±i⟩`), state-vector arrow, and a `|r|` purity
   readout that quantifies how mixed the reduced state is.
-- **Formal math (U)** — the circuit's symbolic unitary as a KaTeX matrix.
-  Default-collapsed because matrices grow fast.
 - **Sonorizer** — Web Audio additive synthesis. A single `OscillatorNode`
   whose waveform is rebuilt every frame from the statevector via
   `createPeriodicWave(real, imag)`. Basis state |i⟩ becomes the (i+1)-th
@@ -125,7 +115,7 @@ crash in one panel does not break the others.
 
 ## Examples
 
-The Examples dropdown bundles 38 hand-written circuits grouped by topic:
+The Examples dropdown bundles 33 hand-written circuits grouped by topic:
 
 - **Intro** — coin flip, Walsh–Hadamard, magic state `|H⟩ = T|+⟩`
 - **Entanglement** — Bell, GHZ, W state, linear cluster, phased
@@ -148,7 +138,7 @@ The Examples dropdown bundles 38 hand-written circuits grouped by topic:
 
 ```
 cd server && python -m venv .venv && .venv/bin/pip install -e .
-.venv/bin/uvicorn quantiom.app:app --reload --port 8000
+.venv/bin/uvicorn quantiom.app:app --reload --port 8000   # health + static
 
 cd client && npm install
 npm run dev      # http://localhost:5173, proxies /api → :8000
@@ -156,13 +146,13 @@ npm run typecheck
 npm run build
 ```
 
-See [client/README.md](client/README.md) and [server/README.md](server/README.md)
-for more.
+(The server is optional during dev — the simulator runs in the browser,
+so `npm run dev` alone is enough unless you want to exercise the health
+check or the production static-serving path.)
 
 ## Deploy (Fly.io)
 
-Single Fly app **`quantiom`** — the server hosts both `/api/*` and the
-built client.
+Single Fly app **`quantiom`** — the server hosts the built client.
 
 ```
 fly apps create quantiom        # one-time

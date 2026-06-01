@@ -164,7 +164,7 @@ export function ParameterPanel({ state, values, onChange }: Props) {
         })}
       </div>
       {otherSymbols.length > 0 && (
-        <div className="params__hint">drag a slider to substitute; ket display stays symbolic</div>
+        <div className="params__hint">drag a slider to set this parameter's value</div>
       )}
     </PanelShell>
   );
