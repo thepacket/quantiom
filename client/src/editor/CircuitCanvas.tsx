@@ -343,6 +343,7 @@ function PlacedGateView({
   return (
     <g
       className={"gate" + (selected ? " gate--selected" : "")}
+      data-cat={def.category}
       onClick={(e) => {
         e.stopPropagation();
         onClick();

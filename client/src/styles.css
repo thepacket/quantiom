@@ -115,18 +115,33 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 }
 
 /* ─── Gates ─────────────────────────────────────────────────────────── */
-.gate { cursor: pointer; }
-.gate__connector { stroke: var(--fg); stroke-width: 1.4; }
-.gate__control { fill: var(--fg); stroke: none; }
-.gate__box { fill: var(--panel-2); stroke: var(--border-strong); stroke-width: 1; }
-.gate__box--target { fill: transparent; stroke: var(--fg); stroke-width: 1.4; }
-.gate__box--measure { fill: #2a2138; stroke: #8a6dff; }
-.gate__box--reset { fill: #2a1f1f; stroke: #c47878; }
-.gate__box--state { fill: #1f2a26; stroke: #6dc4a4; }
-.gate__box--delay { fill: #2a2820; stroke: #c4a96d; }
-.gate__cross { stroke: var(--fg); stroke-width: 1.5; }
-.gate__meter { stroke: #c8b8ff; stroke-width: 1.4; fill: none; }
-.gate__barrier { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.gate { cursor: pointer; --cat-color: var(--border-strong); }
+/* Category colors mirror the palette tile borders. */
+.gate[data-cat="identity-pauli"]      { --cat-color: #7a8fa8; }
+.gate[data-cat="clifford-t"]          { --cat-color: #5fa8c5; }
+.gate[data-cat="phase-rotation"]      { --cat-color: #9fa3ff; }
+.gate[data-cat="general-u"]           { --cat-color: #c98aff; }
+.gate[data-cat="two-qubit-clifford"]  { --cat-color: #c4a96d; }
+.gate[data-cat="controlled-rotation"] { --cat-color: #d99a55; }
+.gate[data-cat="ising-native"]        { --cat-color: #d97560; }
+.gate[data-cat="three-qubit"]         { --cat-color: #d97fb8; }
+.gate[data-cat="multi-controlled"]    { --cat-color: #b85ec7; }
+.gate[data-cat="state-prep"]          { --cat-color: #6dc4a4; }
+.gate[data-cat="non-unitary"]         { --cat-color: #c47878; }
+.gate[data-cat="control-flow"]        { --cat-color: #d4c267; }
+.gate[data-cat="marker"]              { --cat-color: #6e7888; }
+
+.gate__connector { stroke: var(--cat-color); stroke-width: 1.4; }
+.gate__control { fill: var(--cat-color); stroke: none; }
+.gate__box { fill: var(--panel-2); stroke: var(--cat-color); stroke-width: 1.4; }
+.gate__box--target { fill: transparent; stroke: var(--cat-color); stroke-width: 1.4; }
+.gate__box--measure { fill: var(--panel-2); stroke: var(--cat-color); }
+.gate__box--reset { fill: var(--panel-2); stroke: var(--cat-color); }
+.gate__box--state { fill: var(--panel-2); stroke: var(--cat-color); }
+.gate__box--delay { fill: var(--panel-2); stroke: var(--cat-color); }
+.gate__cross { stroke: var(--cat-color); stroke-width: 1.5; }
+.gate__meter { stroke: var(--cat-color); stroke-width: 1.4; fill: none; }
+.gate__barrier { stroke: var(--cat-color); stroke-width: 1.5; stroke-dasharray: 3 3; }
 .gate__label { fill: var(--fg); font-family: ui-monospace, monospace; font-size: 11px; user-select: none; }
 .gate__cl-link { stroke: var(--cl-wire); stroke-width: 1; }
 .gate--selected .gate__box,
@@ -134,7 +149,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .gate--selected .gate__box--measure,
 .gate--selected .gate__box--reset,
 .gate--selected .gate__box--state,
-.gate--selected .gate__box--delay { stroke: var(--accent); stroke-width: 1.6; }
+.gate--selected .gate__box--delay { stroke: var(--accent); stroke-width: 2; }
 
 /* ─── Inspector ─────────────────────────────────────────────────────── */
 .inspector { border-top: 1px solid var(--border); background: var(--panel); padding: 10px 12px; max-height: 38vh; overflow: auto; }
