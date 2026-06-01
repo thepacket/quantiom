@@ -124,14 +124,30 @@ export function simulate(
     for (const q of antiQubits) applyKQubit(state, n, [q], M_X);
   }
 
+  // Lazy fields. The gate-application work above is the only mandatory cost
+  // per simulate() call; everything below is computed on first access and
+  // memoised, so panels that are collapsed (or that simply don't read a
+  // given field) pay nothing for it.
+  let _amps: Amplitude[] | null = null;
+  let _probs: number[] | null = null;
+  let _blochs: BlochVector[] | null = null;
   return {
     numQubits: n,
-    amplitudes: extractAmplitudes(state, n),
     state,
-    probabilities: computeProbabilities(state, dim),
-    blochVectors: computeBloch(state, n),
     freeSymbols: collectFreeSymbols(circuit),
     skipped,
+    get amplitudes() {
+      if (!_amps) _amps = extractAmplitudes(state, n);
+      return _amps;
+    },
+    get probabilities() {
+      if (!_probs) _probs = computeProbabilities(state, dim);
+      return _probs;
+    },
+    get blochVectors() {
+      if (!_blochs) _blochs = computeBloch(state, n);
+      return _blochs;
+    },
   };
 }
 

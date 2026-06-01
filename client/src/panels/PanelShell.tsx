@@ -1,4 +1,19 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+
+/**
+ * Collapsed-state context. PanelShell publishes its current collapsed
+ * value through this context so children can short-circuit expensive
+ * computations (useMemo bodies, derived sims) when they're hidden.
+ *
+ * Children stay mounted across collapse cycles so their local UI state
+ * (toggle positions, dropdown selections, the like) survives — we only
+ * hide them with display:none.
+ */
+const CollapsedContext = createContext<boolean>(false);
+
+export function usePanelCollapsed(): boolean {
+  return useContext(CollapsedContext);
+}
 
 type Props = {
   id: string;
@@ -81,7 +96,15 @@ export function PanelShell({ id, title, children, toolbar, getCopyText, defaultC
           )}
         </div>
       </header>
-      {!collapsed && <div className="panel__body">{children}</div>}
+      <CollapsedContext.Provider value={collapsed}>
+        <div
+          className="panel__body"
+          style={collapsed ? { display: "none" } : undefined}
+          aria-hidden={collapsed}
+        >
+          {children}
+        </div>
+      </CollapsedContext.Provider>
     </section>
   );
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
-import { PanelShell } from "./PanelShell";
+import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { sampleShots } from "../sim/sample";
 
 type Props = { state: SimState };
@@ -30,6 +30,7 @@ function loadInitialShots(): number {
 }
 
 export function ProbabilityPanel({ state }: Props) {
+  const collapsed = usePanelCollapsed();
   const data = dataOf(state);
   const [mode, setMode] = useState<Mode>(loadInitialMode);
   const [shots, setShots] = useState<number>(loadInitialShots);
@@ -37,10 +38,10 @@ export function ProbabilityPanel({ state }: Props) {
   const [sampleNonce, setSampleNonce] = useState(0);
 
   const counts = useMemo<number[] | null>(() => {
-    if (mode !== "shots" || !data) return null;
+    if (collapsed || mode !== "shots" || !data) return null;
     return sampleShots(data.probabilities, shots);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, data, shots, sampleNonce]);
+  }, [mode, data, shots, sampleNonce, collapsed]);
 
   const updateMode = (m: Mode) => {
     setMode(m);

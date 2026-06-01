@@ -3,7 +3,7 @@ import type { Circuit } from "../editor/types";
 import type { HistoryAction } from "../editor/state";
 import { emitQasm3 } from "../qasm/emit";
 import { parseQasm3 } from "../qasm/parse";
-import { PanelShell } from "./PanelShell";
+import { PanelShell, usePanelCollapsed } from "./PanelShell";
 
 type Props = {
   circuit: Circuit;
@@ -13,6 +13,27 @@ type Props = {
 const PARSE_DEBOUNCE_MS = 350;
 
 export function QasmPanel({ circuit, dispatch }: Props) {
+  // Shared ref so the outer panel's copy button can read whatever text the
+  // editable body is showing right now without forcing a state hoist.
+  const textRef = useRef<string>("");
+  return (
+    <PanelShell
+      id="qasm"
+      title="OpenQASM 3"
+      className="panel--qasm"
+      getCopyText={() => textRef.current}
+    >
+      <QasmBody circuit={circuit} dispatch={dispatch} textRef={textRef} />
+    </PanelShell>
+  );
+}
+
+function QasmBody({
+  circuit,
+  dispatch,
+  textRef,
+}: Props & { textRef: React.MutableRefObject<string> }) {
+  const collapsed = usePanelCollapsed();
   const [text, setText] = useState<string>(() => emitQasm3(circuit));
   const [editing, setEditing] = useState(false);
   const [parseError, setParseError] = useState<{ line: number; message: string } | null>(null);
@@ -20,15 +41,21 @@ export function QasmPanel({ circuit, dispatch }: Props) {
   const parseTimer = useRef<number | null>(null);
   const lastDispatchedRef = useRef<string>("");
 
-  // External circuit changes overwrite the textarea ONLY when the user isn't editing.
   useEffect(() => {
-    if (editing) return;
+    textRef.current = text;
+  }, [text, textRef]);
+
+  // External circuit changes overwrite the textarea ONLY when the user isn't
+  // editing and the panel is visible. Skipping emitQasm3 while collapsed
+  // avoids the O(g) walk on every state update.
+  useEffect(() => {
+    if (editing || collapsed) return;
     const emitted = emitQasm3(circuit);
     setText(emitted);
     lastDispatchedRef.current = emitted;
     setParseError(null);
     setWarnings([]);
-  }, [circuit, editing]);
+  }, [circuit, editing, collapsed]);
 
   const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const next = e.target.value;
@@ -46,8 +73,6 @@ export function QasmPanel({ circuit, dispatch }: Props) {
     }
     setParseError(null);
     setWarnings(result.warnings);
-    // Avoid dispatching if the resulting circuit emits the same QASM we already
-    // dispatched — prevents pointless undo entries when the user types whitespace.
     const reemitted = emitQasm3(result.circuit);
     if (reemitted === lastDispatchedRef.current) return;
     lastDispatchedRef.current = reemitted;
@@ -57,12 +82,7 @@ export function QasmPanel({ circuit, dispatch }: Props) {
   const lineCount = text.split("\n").length;
 
   return (
-    <PanelShell
-      id="qasm"
-      title="OpenQASM 3"
-      className="panel--qasm"
-      getCopyText={() => text}
-    >
+    <>
       <div className="qasm__editor">
         <div className="qasm__lns" aria-hidden>
           {Array.from({ length: lineCount }, (_, i) => (
@@ -95,6 +115,6 @@ export function QasmPanel({ circuit, dispatch }: Props) {
           ))}
         </ul>
       )}
-    </PanelShell>
+    </>
   );
 }
