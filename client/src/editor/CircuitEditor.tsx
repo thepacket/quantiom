@@ -4,6 +4,7 @@ import { CircuitCanvas } from "./CircuitCanvas";
 import { GatePalette } from "./GatePalette";
 import { Inspector } from "./Inspector";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
+import { QasmPanel } from "../panels/QasmPanel";
 
 export function CircuitEditor() {
   const [circuit, dispatch] = useCircuit();
@@ -57,6 +58,7 @@ export function CircuitEditor() {
       </div>
       <div className="editor__right">
         <StatevectorPanel circuit={circuit} />
+        <QasmPanel circuit={circuit} />
       </div>
     </div>
   );
