@@ -4,6 +4,7 @@ import type { HistoryAction } from "./state";
 import { emitQasm3 } from "../qasm/emit";
 import { parseQasm3 } from "../qasm/parse";
 import { EXAMPLE_CATEGORIES, EXAMPLES } from "../examples";
+import { downloadCanvasSvg } from "./exportSvg";
 
 type Props = {
   circuit: Circuit;
@@ -72,6 +73,7 @@ export function FileMenu({ circuit, dispatch }: Props) {
       />
       <button onClick={onOpen} title="Open a .qasm file">Open</button>
       <button onClick={onDownload} title="Download as .qasm">Download</button>
+      <button onClick={() => downloadCanvasSvg(circuit.name)} title="Export the canvas as SVG">SVG</button>
       <select className="file-menu__examples" onChange={onExampleChange} defaultValue="" title="Load an example">
         <option value="">Examples…</option>
         {EXAMPLE_CATEGORIES.map((cat) => (
