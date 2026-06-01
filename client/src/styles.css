@@ -135,8 +135,14 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .inspector__desc { color: var(--muted); font-size: 11px; margin: 8px 0 0; line-height: 1.5; }
 
 /* ─── Panels ────────────────────────────────────────────────────────── */
-.panel { padding: 10px 12px; border-bottom: 1px solid var(--border); }
-.panel__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.panel { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.panel__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.panel__collapse { display: flex; align-items: center; gap: 6px; background: transparent; border: none; padding: 0; cursor: pointer; flex: 1; min-width: 0; }
+.panel__collapse:hover { background: transparent; }
+.panel__collapse h2 { font-size: 11px; margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 1.2px; }
+.panel__chevron { color: var(--border-strong); font-size: 9px; min-width: 10px; text-align: center; }
+.panel__body { margin-top: 8px; }
+.panel--error { background: rgba(255, 122, 122, 0.05); }
 .panel__head h2 { font-size: 11px; margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 1.2px; }
 .panel__toolbar { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 11px; }
 .panel__toggle { display: flex; gap: 4px; align-items: center; cursor: pointer; user-select: none; }
@@ -189,6 +195,12 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .qsphere__legend { display: flex; align-items: center; gap: 6px; padding: 6px 4px 0; color: var(--muted); font-size: 10px; font-family: ui-monospace, monospace; }
 .qsphere__legend-bar { flex: 1; height: 6px; border-radius: 2px; }
 .qsphere__legend-label { margin-left: 4px; }
+.qsphere__phase-tick { stroke-width: 2; }
+
+/* ─── Formal math (unitary) ─────────────────────────────────────────── */
+.formal-math__matrix { overflow-x: auto; }
+.formal-math__matrix .katex-display { margin: 0; }
+.formal-math__skipped { margin-top: 6px; color: #c4a96d; font-size: 11px; }
 
 .qasm__editor { display: grid; grid-template-columns: 36px 1fr; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.5; }
 .qasm__lns { padding: 6px 0; user-select: none; border-right: 1px solid var(--border); background: var(--bg); }

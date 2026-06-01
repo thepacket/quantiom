@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
 import { Tex } from "./Tex";
+import { PanelShell } from "./PanelShell";
 
 type Props = { state: SimState };
 
@@ -13,24 +14,20 @@ export function StatevectorPanel({ state }: Props) {
   const error = state.kind === "error" ? state.message : null;
 
   return (
-    <section className="panel panel--statevector">
-      <header className="panel__head">
-        <h2>Statevector</h2>
-        <div className="panel__toolbar">
+    <PanelShell
+      id="statevector"
+      title="Statevector"
+      toolbar={
+        <>
           <label className="panel__toggle">
-            <input
-              type="checkbox"
-              checked={hideZeros}
-              onChange={(e) => setHideZeros(e.target.checked)}
-            />
+            <input type="checkbox" checked={hideZeros} onChange={(e) => setHideZeros(e.target.checked)} />
             hide zeros
           </label>
           {loading && <span className="panel__spinner">…</span>}
-        </div>
-      </header>
-
+        </>
+      }
+    >
       {error && <div className="panel__error">{error}</div>}
-
       {data && (
         <>
           <div className="statevector__ket">
@@ -58,7 +55,6 @@ export function StatevectorPanel({ state }: Props) {
                 ))}
             </tbody>
           </table>
-
           {data.skipped.length > 0 && (
             <div className="statevector__skipped">
               <div className="statevector__skipped-head">Skipped</div>
@@ -73,8 +69,7 @@ export function StatevectorPanel({ state }: Props) {
           )}
         </>
       )}
-
       {!data && !error && <div className="panel__placeholder">building circuit…</div>}
-    </section>
+    </PanelShell>
   );
 }

@@ -15,6 +15,7 @@ from .simulator import (
     numeric_amplitudes,
     probabilities,
     simulate_statevector,
+    simulate_unitary,
 )
 
 app = FastAPI(title="Quantiom", version="0.0.0")
@@ -113,6 +114,31 @@ def statevector(circuit: Circuit) -> StatevectorResponse:
         skipped=[SkippedOut(id=s.id, gateId=s.gateId, reason=s.reason) for s in result.skipped],
         probabilities=probs,
         blochVectors=[None if b is None else BlochVector(x=b[0], y=b[1], z=b[2]) for b in blochs],
+    )
+
+
+class UnitaryResponse(BaseModel):
+    numQubits: int
+    latex: str
+    entries: list[list[str]]
+    skipped: list[SkippedOut]
+
+
+@app.post("/api/simulate/unitary", response_model=UnitaryResponse)
+def unitary(circuit: Circuit) -> UnitaryResponse:
+    try:
+        result = simulate_unitary(circuit)
+    except SimulationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    U = result.matrix
+    dim = U.shape[0]
+    entries = [[sp.sstr(U[i, j]) for j in range(dim)] for i in range(dim)]
+    return UnitaryResponse(
+        numQubits=result.numQubits,
+        latex=latex_clean(sp.latex(U)),
+        entries=entries,
+        skipped=[SkippedOut(id=s.id, gateId=s.gateId, reason=s.reason) for s in result.skipped],
     )
 
 

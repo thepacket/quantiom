@@ -27,6 +27,27 @@ export type StatevectorResponse = {
   blochVectors: (BlochVector | null)[];
 };
 
+export type UnitaryResponse = {
+  numQubits: number;
+  latex: string;
+  entries: string[][];
+  skipped: SkippedGate[];
+};
+
+export async function fetchUnitary(circuit: Circuit, signal?: AbortSignal): Promise<UnitaryResponse> {
+  const res = await fetch("/api/simulate/unitary", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(circuit),
+    signal,
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`unitary ${res.status}: ${detail}`);
+  }
+  return res.json();
+}
+
 export async function fetchStatevector(circuit: Circuit, signal?: AbortSignal): Promise<StatevectorResponse> {
   const res = await fetch("/api/simulate/statevector", {
     method: "POST",

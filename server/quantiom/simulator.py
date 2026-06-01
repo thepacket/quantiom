@@ -217,23 +217,13 @@ CONTROL_FLOW = {"if", "switch", "while", "box"}
 MARKERS = {"barrier", "delay"}
 
 
-def simulate_statevector(circuit: Circuit) -> StatevectorResult:
-    n = circuit.numQubits
-    if n <= 0:
-        raise SimulationError("numQubits must be ≥ 1")
-    if n > MAX_QUBITS:
-        raise SimulationError(
-            f"symbolic simulation is capped at {MAX_QUBITS} qubits (got {n})"
-        )
-
-    # Initial state |0…0⟩.
-    state: list[sp.Expr] = [sp.Integer(0)] * (1 << n)
-    state[0] = sp.Integer(1)
-
+def _apply_gates(
+    state: list[sp.Expr],
+    n: int,
+    gates_in: list[PlacedGate],
+) -> tuple[list[sp.Expr], list[SkippedGate]]:
     skipped: list[SkippedGate] = []
-
-    # Order gates by column, then by id for determinism within a column.
-    gates = sorted(circuit.gates, key=lambda g: (g.column, g.id))
+    gates = sorted(gates_in, key=lambda g: (g.column, g.id))
 
     for g in gates:
         if g.gateId in MARKERS:
@@ -287,4 +277,66 @@ def simulate_statevector(circuit: Circuit) -> StatevectorResult:
 
         state = _apply_unitary(state, n, U, gate_qubits)
 
+    return state, skipped
+
+
+def simulate_statevector(circuit: Circuit) -> StatevectorResult:
+    n = circuit.numQubits
+    if n <= 0:
+        raise SimulationError("numQubits must be ≥ 1")
+    if n > MAX_QUBITS:
+        raise SimulationError(
+            f"symbolic simulation is capped at {MAX_QUBITS} qubits (got {n})"
+        )
+
+    state: list[sp.Expr] = [sp.Integer(0)] * (1 << n)
+    state[0] = sp.Integer(1)
+    state, skipped = _apply_gates(state, n, circuit.gates)
     return StatevectorResult(numQubits=n, amplitudes=state, skipped=skipped)
+
+
+# ─── Full unitary by column-wise simulation ───────────────────────────────
+
+UNITARY_MAX_QUBITS = 4
+
+
+@dataclass
+class UnitaryResult:
+    numQubits: int
+    matrix: sp.Matrix
+    skipped: list[SkippedGate]
+
+
+def simulate_unitary(circuit: Circuit) -> UnitaryResult:
+    """Build the symbolic unitary U of the circuit by simulating each basis
+    state |i⟩ as the initial condition. Column i of U is the resulting state.
+
+    Capped at UNITARY_MAX_QUBITS because the matrix is 2^n × 2^n symbolic.
+    """
+    n = circuit.numQubits
+    if n <= 0:
+        raise SimulationError("numQubits must be ≥ 1")
+    if n > UNITARY_MAX_QUBITS:
+        raise SimulationError(
+            f"symbolic unitary is capped at {UNITARY_MAX_QUBITS} qubits (got {n}) — "
+            f"the matrix is 2^n × 2^n"
+        )
+
+    dim = 1 << n
+    U = sp.zeros(dim, dim)
+    skipped: list[SkippedGate] = []
+    seen_skip_ids: set[str] = set()
+
+    for i in range(dim):
+        state: list[sp.Expr] = [sp.Integer(0)] * dim
+        state[i] = sp.Integer(1)
+        state, col_skipped = _apply_gates(state, n, circuit.gates)
+        for k in range(dim):
+            U[k, i] = sp.simplify(state[k])
+        # Skipped gates are the same for every column; dedupe.
+        for s in col_skipped:
+            if s.id not in seen_skip_ids:
+                skipped.append(s)
+                seen_skip_ids.add(s.id)
+
+    return UnitaryResult(numQubits=n, matrix=U, skipped=skipped)

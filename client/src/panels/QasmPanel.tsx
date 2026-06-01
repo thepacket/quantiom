@@ -3,6 +3,7 @@ import type { Circuit } from "../editor/types";
 import type { HistoryAction } from "../editor/state";
 import { emitQasm3 } from "../qasm/emit";
 import { parseQasm3 } from "../qasm/parse";
+import { PanelShell } from "./PanelShell";
 
 type Props = {
   circuit: Circuit;
@@ -67,13 +68,12 @@ export function QasmPanel({ circuit, dispatch }: Props) {
   const lineCount = text.split("\n").length;
 
   return (
-    <section className="panel panel--qasm">
-      <header className="panel__head">
-        <h2>OpenQASM 3</h2>
-        <div className="panel__toolbar">
-          <button onClick={onCopy}>{copied ? "copied" : "copy"}</button>
-        </div>
-      </header>
+    <PanelShell
+      id="qasm"
+      title="OpenQASM 3"
+      className="panel--qasm"
+      toolbar={<button onClick={onCopy}>{copied ? "copied" : "copy"}</button>}
+    >
       <div className="qasm__editor">
         <div className="qasm__lns" aria-hidden>
           {Array.from({ length: lineCount }, (_, i) => (
@@ -106,6 +106,6 @@ export function QasmPanel({ circuit, dispatch }: Props) {
           ))}
         </ul>
       )}
-    </section>
+    </PanelShell>
   );
 }
