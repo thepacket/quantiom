@@ -13,8 +13,6 @@ export function dataOf(state: SimState): StatevectorResponse | null {
   return null;
 }
 
-// Short debounce so playback streams updates; the single-flight queue below
-// keeps in-flight count to at most 1 regardless of how fast inputs change.
 const DEBOUNCE_MS = 60;
 
 export function useStatevector(circuit: Circuit, parameterValues: ParameterValues): SimState {
@@ -23,13 +21,24 @@ export function useStatevector(circuit: Circuit, parameterValues: ParameterValue
   const aborterRef = useRef<AbortController | null>(null);
   const inFlightRef = useRef(false);
   const pendingRef = useRef<{ circuit: Circuit; params: ParameterValues } | null>(null);
+  const prevCircuitRef = useRef<Circuit>(circuit);
 
   useEffect(() => {
+    const circuitChanged = prevCircuitRef.current !== circuit;
+    prevCircuitRef.current = circuit;
+
     const fire = (c: Circuit, p: ParameterValues) => {
       if (inFlightRef.current) {
-        // Replace the queued request so we always converge on the latest input.
-        pendingRef.current = { circuit: c, params: p };
-        return;
+        // Param-only change (animation tick): queue and let the in-flight finish.
+        // Circuit change: abort and start fresh so we don't make the user wait
+        // for the previous circuit's slow simulation.
+        if (!circuitChanged) {
+          pendingRef.current = { circuit: c, params: p };
+          return;
+        }
+        aborterRef.current?.abort();
+        inFlightRef.current = false;
+        pendingRef.current = null;
       }
       inFlightRef.current = true;
       const ac = new AbortController();
