@@ -208,7 +208,15 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .prob__basis { fill: var(--muted); font-family: ui-monospace, monospace; font-size: 10px; }
 .prob__bar { fill: var(--accent-2); opacity: 0.8; }
 .prob__bar--zero { fill: var(--border); opacity: 0.5; }
+.prob__exact-shadow { fill: none; stroke: var(--accent); stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.45; }
 .prob__pct { fill: var(--muted); font-size: 10px; }
+.prob__mode { display: flex; gap: 2px; }
+.prob__mode-btn { font-size: 10px; padding: 2px 6px; border-radius: 3px; }
+.prob__mode-btn--on { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.prob__shots-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.prob__shots-label { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; }
+.prob__shots-select { font-size: 11px; padding: 2px 6px; }
+.prob__resample { font-size: 12px; padding: 2px 8px; }
 
 /* ─── Bloch sphere grid ─────────────────────────────────────────────── */
 .bloch__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }

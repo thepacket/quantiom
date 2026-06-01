@@ -25,6 +25,6 @@ primary_region = "yyz"
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "1gb"
+  memory = "256M"
   cpu_kind = "shared"
   cpus = 1
