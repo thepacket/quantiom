@@ -46,22 +46,44 @@ class StatevectorResult:
     skipped: list[SkippedGate]
 
 
-def numeric_amplitudes(amps: list[sp.Expr]) -> list[tuple[float, float] | None]:
+def numeric_amplitudes(
+    amps: list[sp.Expr],
+    parameter_values: dict[str, float] | None = None,
+) -> list[tuple[float, float] | None]:
     """Try to evaluate each amplitude to (re, im). Returns None per slot if the
-    amplitude still has free symbols (parameters like θ left unset).
+    amplitude still has free symbols after parameter_values substitution.
+
+    parameter_values maps symbol-name → numeric value, e.g. {"theta": 0.5}.
     """
+    subs = _build_subs(parameter_values)
     out: list[tuple[float, float] | None] = []
     for a in amps:
-        simp = sp.nsimplify(a) if a == 0 else a
-        if simp.free_symbols:
+        expr = a.xreplace(subs) if subs else a
+        if expr.free_symbols:
             out.append(None)
             continue
         try:
-            v = complex(sp.N(simp))
+            v = complex(sp.N(expr))
             out.append((float(v.real), float(v.imag)))
         except (TypeError, ValueError):
             out.append(None)
     return out
+
+
+def _build_subs(parameter_values: dict[str, float] | None) -> dict[sp.Symbol, sp.Expr]:
+    if not parameter_values:
+        return {}
+    return {sp.Symbol(name): sp.Float(value) for name, value in parameter_values.items()}
+
+
+def free_symbol_names(amps: list[sp.Expr]) -> list[str]:
+    """Return sorted unique free-symbol names across all amplitudes."""
+    names: set[str] = set()
+    for a in amps:
+        for s in a.free_symbols:
+            if isinstance(s, sp.Symbol):
+                names.add(s.name)
+    return sorted(names)
 
 
 def probabilities(numeric: list[tuple[float, float] | None]) -> list[float | None]:

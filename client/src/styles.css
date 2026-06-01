@@ -202,6 +202,14 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .formal-math__matrix .katex-display { margin: 0; }
 .formal-math__skipped { margin-top: 6px; color: #c4a96d; font-size: 11px; }
 
+/* ─── Parameter sliders ─────────────────────────────────────────────── */
+.params__list { display: flex; flex-direction: column; gap: 6px; }
+.params__row { display: grid; grid-template-columns: 32px 1fr 60px; gap: 8px; align-items: center; }
+.params__label { color: var(--fg); font-family: ui-monospace, monospace; font-size: 13px; text-align: center; }
+.params__slider { width: 100%; accent-color: var(--accent); }
+.params__num { font-family: ui-monospace, monospace; font-size: 11px; width: 60px; padding: 2px 4px; }
+.params__hint { color: var(--muted); font-size: 10px; margin-top: 4px; }
+
 .qasm__editor { display: grid; grid-template-columns: 36px 1fr; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.5; }
 .qasm__lns { padding: 6px 0; user-select: none; border-right: 1px solid var(--border); background: var(--bg); }
 .qasm__ln { color: var(--border-strong); text-align: right; padding: 0 8px; font-variant-numeric: tabular-nums; }

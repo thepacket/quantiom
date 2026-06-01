@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Circuit } from "../editor/types";
-import { fetchStatevector, type StatevectorResponse } from "../api";
+import { fetchStatevector, type ParameterValues, type StatevectorResponse } from "../api";
 
 export type SimState =
   | { kind: "idle" }
@@ -15,7 +15,7 @@ export function dataOf(state: SimState): StatevectorResponse | null {
 
 const DEBOUNCE_MS = 250;
 
-export function useStatevector(circuit: Circuit): SimState {
+export function useStatevector(circuit: Circuit, parameterValues: ParameterValues): SimState {
   const [state, setState] = useState<SimState>({ kind: "idle" });
   const lastDataRef = useRef<StatevectorResponse | null>(null);
   const aborterRef = useRef<AbortController | null>(null);
@@ -26,7 +26,7 @@ export function useStatevector(circuit: Circuit): SimState {
       const ac = new AbortController();
       aborterRef.current = ac;
       setState({ kind: "loading", data: lastDataRef.current });
-      fetchStatevector(circuit, ac.signal)
+      fetchStatevector(circuit, parameterValues, ac.signal)
         .then((data) => {
           lastDataRef.current = data;
           setState({ kind: "ready", data });
@@ -38,7 +38,7 @@ export function useStatevector(circuit: Circuit): SimState {
         });
     }, DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [circuit]);
+  }, [circuit, parameterValues]);
 
   return state;
 }

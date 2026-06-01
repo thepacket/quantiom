@@ -10,13 +10,16 @@ import { ProbabilityPanel } from "../panels/ProbabilityPanel";
 import { BlochPanel } from "../panels/BlochPanel";
 import { QSpherePanel } from "../panels/QSpherePanel";
 import { FormalMathPanel } from "../panels/FormalMathPanel";
+import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
+import type { ParameterValues } from "../api";
 
 export function CircuitEditor() {
   const [circuit, dispatch, history] = useCircuit();
   const [selectedGateId, setSelectedGateId] = useState<string | null>(null);
-  const simState = useStatevector(circuit);
+  const [paramValues, setParamValues] = useState<ParameterValues>({});
+  const simState = useStatevector(circuit, paramValues);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -95,6 +98,9 @@ export function CircuitEditor() {
         />
       </div>
       <div className="editor__right">
+        <ErrorBoundary label="parameters">
+          <ParameterPanel state={simState} values={paramValues} onChange={setParamValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="q-sphere"><QSpherePanel state={simState} /></ErrorBoundary>

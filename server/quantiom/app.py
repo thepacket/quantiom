@@ -12,6 +12,7 @@ from .parsing import latex_clean
 from .simulator import (
     SimulationError,
     bloch_vectors,
+    free_symbol_names,
     numeric_amplitudes,
     probabilities,
     simulate_statevector,
@@ -62,6 +63,12 @@ class StatevectorResponse(BaseModel):
     skipped: list[SkippedOut]
     probabilities: list[float | None]   # |amplitude|² per basis state (None if symbolic)
     blochVectors: list[BlochVector | None]  # one per qubit (None if any amp symbolic)
+    freeSymbols: list[str]               # symbol names appearing in any amplitude
+
+
+class SimulateRequest(BaseModel):
+    circuit: Circuit
+    parameterValues: dict[str, float] = {}
 
 
 def _basis_label(index: int, n: int) -> str:
@@ -69,17 +76,18 @@ def _basis_label(index: int, n: int) -> str:
 
 
 @app.post("/api/simulate/statevector", response_model=StatevectorResponse)
-def statevector(circuit: Circuit) -> StatevectorResponse:
+def statevector(req: SimulateRequest) -> StatevectorResponse:
     try:
-        result = simulate_statevector(circuit)
+        result = simulate_statevector(req.circuit)
     except SimulationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     n = result.numQubits
     simplified = [sp.simplify(a) for a in result.amplitudes]
-    numeric = numeric_amplitudes(simplified)
+    numeric = numeric_amplitudes(simplified, req.parameterValues)
     probs = probabilities(numeric)
     blochs = bloch_vectors(numeric, n)
+    free_syms = free_symbol_names(simplified)
 
     amps: list[Amplitude] = []
     ket_terms: list[sp.Expr] = []
@@ -114,6 +122,7 @@ def statevector(circuit: Circuit) -> StatevectorResponse:
         skipped=[SkippedOut(id=s.id, gateId=s.gateId, reason=s.reason) for s in result.skipped],
         probabilities=probs,
         blochVectors=[None if b is None else BlochVector(x=b[0], y=b[1], z=b[2]) for b in blochs],
+        freeSymbols=free_syms,
     )
 
 
@@ -125,9 +134,9 @@ class UnitaryResponse(BaseModel):
 
 
 @app.post("/api/simulate/unitary", response_model=UnitaryResponse)
-def unitary(circuit: Circuit) -> UnitaryResponse:
+def unitary(req: SimulateRequest) -> UnitaryResponse:
     try:
-        result = simulate_unitary(circuit)
+        result = simulate_unitary(req.circuit)
     except SimulationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

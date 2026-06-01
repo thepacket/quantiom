@@ -25,7 +25,7 @@ export function FormalMathPanel({ circuit }: Props) {
       const ac = new AbortController();
       aborterRef.current = ac;
       setState({ kind: "loading", data: lastDataRef.current });
-      fetchUnitary(circuit, ac.signal)
+      fetchUnitary(circuit, {}, ac.signal)
         .then((data) => {
           lastDataRef.current = data;
           setState({ kind: "ready", data });

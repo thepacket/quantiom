@@ -25,7 +25,10 @@ export type StatevectorResponse = {
   skipped: SkippedGate[];
   probabilities: (number | null)[];
   blochVectors: (BlochVector | null)[];
+  freeSymbols: string[];
 };
+
+export type ParameterValues = Record<string, number>;
 
 export type UnitaryResponse = {
   numQubits: number;
@@ -34,11 +37,15 @@ export type UnitaryResponse = {
   skipped: SkippedGate[];
 };
 
-export async function fetchUnitary(circuit: Circuit, signal?: AbortSignal): Promise<UnitaryResponse> {
+export async function fetchUnitary(
+  circuit: Circuit,
+  parameterValues: ParameterValues = {},
+  signal?: AbortSignal,
+): Promise<UnitaryResponse> {
   const res = await fetch("/api/simulate/unitary", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(circuit),
+    body: JSON.stringify({ circuit, parameterValues }),
     signal,
   });
   if (!res.ok) {
@@ -48,11 +55,15 @@ export async function fetchUnitary(circuit: Circuit, signal?: AbortSignal): Prom
   return res.json();
 }
 
-export async function fetchStatevector(circuit: Circuit, signal?: AbortSignal): Promise<StatevectorResponse> {
+export async function fetchStatevector(
+  circuit: Circuit,
+  parameterValues: ParameterValues = {},
+  signal?: AbortSignal,
+): Promise<StatevectorResponse> {
   const res = await fetch("/api/simulate/statevector", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(circuit),
+    body: JSON.stringify({ circuit, parameterValues }),
     signal,
   });
   if (!res.ok) {
