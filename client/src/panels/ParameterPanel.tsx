@@ -54,6 +54,17 @@ export function ParameterPanel({ state, values, onChange }: Props) {
     if (!tInSymbols && playing) setPlaying(false);
   }, [tInSymbols, playing]);
 
+  // Seed any newly-detected free symbol to 0 so the numeric panels light up
+  // immediately without requiring the user to drag every slider once.
+  useEffect(() => {
+    const missing = symbols.filter((s) => !(s in values));
+    if (missing.length === 0) return;
+    const additions: ParameterValues = {};
+    for (const m of missing) additions[m] = 0;
+    onChange({ ...values, ...additions });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbols.join("|")]);
+
   useEffect(() => {
     if (!playing) return;
     startTimeRef.current = performance.now();
