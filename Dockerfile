@@ -22,21 +22,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install server runtime deps (kept in sync with server/pyproject.toml).
+# Server is just a static host now — the quantum simulator runs in the
+# browser. Drop sympy, numpy, pydantic; FastAPI + uvicorn is enough.
 RUN pip install \
     "fastapi>=0.115" \
-    "uvicorn[standard]>=0.32" \
-    "sympy>=1.13" \
-    "numpy>=2.1" \
-    "pydantic>=2.9"
+    "uvicorn[standard]>=0.32"
 
 COPY server/quantiom/ ./quantiom/
 COPY --from=client /app/client/dist ./quantiom/static
 
 EXPOSE 8000
-# Multiple worker processes so one stuck on a slow symbolic simulation
-# doesn't starve the rest. Each worker is its own Python process with its
-# own GIL — a CPU-bound sympy job in worker A doesn't block worker B from
-# answering a fresh request. Memory cost is ~100 MB per worker (sympy
-# import), well within the 1 GB Fly VM.
-CMD ["uvicorn", "quantiom.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "quantiom.app:app", "--host", "0.0.0.0", "--port", "8000"]

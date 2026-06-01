@@ -100,7 +100,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="parameters">
           <ParameterPanel state={simState} values={paramValues} onChange={setParamValues} />
         </ErrorBoundary>
-        <ErrorBoundary label="statevector"><StatevectorPanel state={simState} circuit={circuit} /></ErrorBoundary>
+        <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="sonorizer"><SonorizerPanel state={simState} /></ErrorBoundary>

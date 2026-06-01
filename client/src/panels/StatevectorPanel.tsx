@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
 import { Tex } from "./Tex";
 import { PanelShell } from "./PanelShell";
-import { fetchSymbolic } from "../api";
-import type { Circuit } from "../editor/types";
 
-type Props = { state: SimState; circuit: Circuit };
+type Props = { state: SimState };
 
 const EPS = 1e-6;
 
@@ -21,46 +19,17 @@ function formatComplex(re: number, im: number): string {
   return `${re.toFixed(4)} ${sign} ${Math.abs(im).toFixed(4)}i`;
 }
 
-type SymState =
-  | { kind: "off" }
-  | { kind: "loading" }
-  | { kind: "ready"; latex: string }
-  | { kind: "error"; message: string };
-
-export function StatevectorPanel({ state, circuit }: Props) {
+export function StatevectorPanel({ state }: Props) {
   const [hideZeros, setHideZeros] = useState(true);
-  const [sym, setSym] = useState<SymState>({ kind: "off" });
-  const lastCircuitRef = useRef<Circuit>(circuit);
-
-  // Clear the symbolic display whenever the circuit changes — the cached
-  // expression no longer matches what the user is looking at.
-  useEffect(() => {
-    if (lastCircuitRef.current !== circuit) {
-      lastCircuitRef.current = circuit;
-      if (sym.kind !== "off") setSym({ kind: "off" });
-    }
-  }, [circuit, sym.kind]);
-
-  const onSym = async () => {
-    setSym({ kind: "loading" });
-    try {
-      const res = await fetchSymbolic(circuit);
-      setSym({ kind: "ready", latex: res.ketLatex });
-    } catch (e) {
-      setSym({ kind: "error", message: e instanceof Error ? e.message : String(e) });
-    }
-  };
 
   const data = dataOf(state);
-  const loading = state.kind === "loading";
   const error = state.kind === "error" ? state.message : null;
 
   const copy = () => {
-    if (sym.kind === "ready") return `|\\psi\\rangle = ${sym.latex}`;
     if (!data) return "";
     const terms = data.amplitudes
-      .filter((a) => !a.isZero && a.re !== null && a.im !== null)
-      .map((a) => `(${formatComplex(a.re!, a.im!)}) |${a.basis}>`);
+      .filter((a) => !a.isZero)
+      .map((a) => `(${formatComplex(a.re, a.im)}) |${a.basis}>`);
     return terms.length ? "|psi> = " + terms.join(" + ") : "|psi> = 0";
   };
 
@@ -70,32 +39,13 @@ export function StatevectorPanel({ state, circuit }: Props) {
       title="Statevector"
       getCopyText={copy}
       toolbar={
-        <>
-          <button
-            className={"panel__small" + (sym.kind === "ready" ? " panel__small--on" : "")}
-            onClick={onSym}
-            disabled={sym.kind === "loading"}
-            title="Compute and show the symbolic |ψ⟩ once for the current circuit"
-          >
-            {sym.kind === "loading" ? "…" : "sym"}
-          </button>
-          <label className="panel__toggle">
-            <input type="checkbox" checked={hideZeros} onChange={(e) => setHideZeros(e.target.checked)} />
-            hide zeros
-          </label>
-          <span className="panel__spinner" style={{ visibility: loading ? "visible" : "hidden" }}>…</span>
-        </>
+        <label className="panel__toggle">
+          <input type="checkbox" checked={hideZeros} onChange={(e) => setHideZeros(e.target.checked)} />
+          hide zeros
+        </label>
       }
     >
       {error && <div className="panel__error">{error}</div>}
-      {sym.kind === "ready" && (
-        <div className="statevector__ket">
-          <Tex latex={`|\\psi\\rangle = ${sym.latex}`} display />
-        </div>
-      )}
-      {sym.kind === "error" && (
-        <div className="panel__error">{sym.message}</div>
-      )}
       {data && (
         <>
           <table className="statevector__table">
@@ -114,11 +64,7 @@ export function StatevectorPanel({ state, circuit }: Props) {
                       <Tex latex={`|${a.basis}\\rangle`} />
                     </td>
                     <td>
-                      {a.re !== null && a.im !== null ? (
-                        <span className="statevector__numeric">{formatComplex(a.re, a.im)}</span>
-                      ) : (
-                        <span className="statevector__numeric">—</span>
-                      )}
+                      <span className="statevector__numeric">{formatComplex(a.re, a.im)}</span>
                     </td>
                   </tr>
                 ))}
@@ -138,7 +84,6 @@ export function StatevectorPanel({ state, circuit }: Props) {
           )}
         </>
       )}
-      {!data && !error && <div className="panel__placeholder">building circuit…</div>}
     </PanelShell>
   );
 }
