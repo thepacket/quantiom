@@ -28,3 +28,10 @@ Composer) or read them as a worked-example reference.
 | [bit_flip_code.qasm](bit_flip_code.qasm) | 3 | 3-qubit repetition code + majority-vote decoder |
 | [qaoa_maxcut_triangle.qasm](qaoa_maxcut_triangle.qasm) | 3 | QAOA on K₃ with γ, β parameters |
 | [cluster_state_4q.qasm](cluster_state_4q.qasm) | 4 | Linear cluster — the MBQC resource |
+| [magic_state.qasm](magic_state.qasm) | 1 | T|+⟩ — the resource for fault-tolerant non-Clifford gates |
+| [grover_3q.qasm](grover_3q.qasm) | 3 | Grover with 2 iterations, peak success ≈ 94.5% |
+| [toffoli_decomposition.qasm](toffoli_decomposition.qasm) | 3 | CCX → CNOTs + T/T† + H |
+| [entanglement_swap.qasm](entanglement_swap.qasm) | 4 | Bell measurement entangles two pairs that never interacted |
+| [bb84_round.qasm](bb84_round.qasm) | 1 | One round of BB84 with parameterized basis angles |
+| [draper_adder.qasm](draper_adder.qasm) | 2 | Fourier-basis addition of a classical constant |
+| [quantum_walk_step.qasm](quantum_walk_step.qasm) | 3 | One step of a coined walk on the 4-cycle |

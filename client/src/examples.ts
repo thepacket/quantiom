@@ -23,6 +23,13 @@ import qaoa from "../../examples/qaoa_maxcut_triangle.qasm?raw";
 import cluster from "../../examples/cluster_state_4q.qasm?raw";
 import coinFlip from "../../examples/quantum_coin_flip.qasm?raw";
 import hadamard3 from "../../examples/hadamard_transform_3q.qasm?raw";
+import grover3 from "../../examples/grover_3q.qasm?raw";
+import toffoliDecomp from "../../examples/toffoli_decomposition.qasm?raw";
+import entSwap from "../../examples/entanglement_swap.qasm?raw";
+import bb84 from "../../examples/bb84_round.qasm?raw";
+import draperAdder from "../../examples/draper_adder.qasm?raw";
+import qWalk from "../../examples/quantum_walk_step.qasm?raw";
+import magicState from "../../examples/magic_state.qasm?raw";
 
 export type Example = { id: string; label: string; qasm: string };
 
@@ -34,6 +41,7 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
     items: [
       { id: "coin-flip", label: "Quantum coin flip (1q)", qasm: coinFlip },
       { id: "hadamard-3", label: "Walsh–Hadamard transform (3q)", qasm: hadamard3 },
+      { id: "magic-state", label: "Magic state |H⟩ = T|+⟩ (1q)", qasm: magicState },
     ],
   },
   {
@@ -49,9 +57,11 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
     label: "Protocols",
     items: [
       { id: "teleport", label: "Quantum teleportation (3q)", qasm: teleport },
+      { id: "ent-swap", label: "Entanglement swapping (4q)", qasm: entSwap },
       { id: "superdense", label: "Superdense coding (2q)", qasm: superdense },
       { id: "kickback", label: "Phase kickback (2q)", qasm: kickback },
       { id: "chsh", label: "CHSH inequality test (2q)", qasm: chsh },
+      { id: "bb84", label: "BB84 round (1q)", qasm: bb84 },
     ],
   },
   {
@@ -60,9 +70,12 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
       { id: "bv", label: "Bernstein–Vazirani (4q)", qasm: bv },
       { id: "dj", label: "Deutsch–Jozsa (4q)", qasm: dj },
       { id: "grover", label: "Grover, 1 iter (2q)", qasm: grover },
+      { id: "grover-3q", label: "Grover, 2 iters (3q)", qasm: grover3 },
       { id: "qft", label: "QFT (3q)", qasm: qft },
       { id: "iqft", label: "Inverse QFT (3q)", qasm: iqft },
       { id: "qpe", label: "Quantum phase estimation (4q)", qasm: qpe },
+      { id: "draper", label: "Draper adder, +1 (2q)", qasm: draperAdder },
+      { id: "qwalk", label: "Quantum walk step (3q)", qasm: qWalk },
     ],
   },
   {
@@ -70,6 +83,12 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
     items: [
       { id: "half-adder", label: "Half adder (4q)", qasm: halfAdder },
       { id: "bit-flip", label: "Bit-flip code (3q)", qasm: bitFlip },
+    ],
+  },
+  {
+    label: "Decompositions",
+    items: [
+      { id: "toffoli-decomp", label: "Toffoli → 1- and 2-qubit gates (3q)", qasm: toffoliDecomp },
     ],
   },
   {
