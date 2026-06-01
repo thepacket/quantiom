@@ -3,6 +3,7 @@ import { useCircuit } from "./state";
 import { CircuitCanvas } from "./CircuitCanvas";
 import { GatePalette } from "./GatePalette";
 import { Inspector } from "./Inspector";
+import { StatevectorPanel } from "../panels/StatevectorPanel";
 
 export function CircuitEditor() {
   const [circuit, dispatch] = useCircuit();
@@ -53,6 +54,9 @@ export function CircuitEditor() {
           selectedGateId={selectedGateId}
           onSelect={setSelectedGateId}
         />
+      </div>
+      <div className="editor__right">
+        <StatevectorPanel circuit={circuit} />
       </div>
     </div>
   );
