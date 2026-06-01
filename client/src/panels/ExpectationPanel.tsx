@@ -60,6 +60,16 @@ function ExpectationBody({ state }: Props) {
 
   if (!data) return <div className="panel__placeholder">building circuit…</div>;
   if (n === 0) return null;
+  if (data.isNoisy) {
+    return (
+      <div className="panel__notice">
+        Noise mode on — ⟨P⟩ from a single trajectory is biased. Trajectory-
+        averaged expectation values are on the follow-up list; for now, the
+        Bloch panel (which is trajectory-averaged) gives single-qubit Pauli
+        expectations.
+      </div>
+    );
+  }
 
   return (
     <div className="exp">

@@ -27,12 +27,22 @@ export type SimResult = {
   amplitudes: Amplitude[];
   /** Raw state vector: Float64Array of length 2·2^n with re at even
    *  indices and im at odd. Exposed for panels that want to run their
-   *  own derived computations (Pauli expectations, density matrix). */
+   *  own derived computations (Pauli expectations, density matrix).
+   *
+   *  In noise mode this is one representative trajectory, not the true
+   *  mixed state. Panels that depend on a pure state should check
+   *  `isNoisy` and show a notice instead. */
   state: Float64Array;
   probabilities: number[];
   blochVectors: BlochVector[];
   freeSymbols: string[];
   skipped: SkippedGate[];
+  /** True when the result was produced under a noise model — the
+   *  Probabilities and Bloch fields are trajectory-averaged; the
+   *  amplitudes/state are a single representative sample. */
+  isNoisy?: boolean;
+  /** Number of trajectories averaged. Only set when `isNoisy`. */
+  trajectories?: number;
 };
 
 export type ParameterValues = Record<string, number>;

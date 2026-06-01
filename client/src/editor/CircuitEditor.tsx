@@ -13,9 +13,11 @@ import { ProbabilityPanel } from "../panels/ProbabilityPanel";
 import { BlochPanel } from "../panels/BlochPanel";
 import { ExpectationPanel } from "../panels/ExpectationPanel";
 import { DensityPanel } from "../panels/DensityPanel";
+import { NoisePanel } from "../panels/NoisePanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
+import { loadNoise, saveNoise, type NoiseModel } from "../sim/noise";
 import type { ParameterValues } from "../api";
 
 export function CircuitEditor() {
@@ -23,10 +25,15 @@ export function CircuitEditor() {
   const [selectedGateId, setSelectedGateId] = useState<string | null>(null);
   const [paramValues, setParamValues] = useState<ParameterValues>({});
   const [customGates, setCustomGates] = useState<CustomGate[]>(() => loadCustomGates());
+  const [noise, setNoise] = useState<NoiseModel>(() => loadNoise());
 
   useEffect(() => {
     saveCustomGates(customGates);
   }, [customGates]);
+
+  useEffect(() => {
+    saveNoise(noise);
+  }, [noise]);
 
   const onSaveAsGate = () => {
     const name = window.prompt("Name for this gate?", circuit.name ?? "myblock");
@@ -63,7 +70,7 @@ export function CircuitEditor() {
     return { ...circuit, gates: circuit.gates.filter((g) => g.column <= effectiveStep) };
   }, [circuit, pickedStep, effectiveStep]);
 
-  const simState = useStatevector(steppedCircuit, paramValues, customGates);
+  const simState = useStatevector(steppedCircuit, paramValues, customGates, noise);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -163,6 +170,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="expectation"><ExpectationPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>

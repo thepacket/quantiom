@@ -46,7 +46,14 @@ export function StatevectorPanel({ state }: Props) {
       }
     >
       {error && <div className="panel__error">{error}</div>}
-      {data && (
+      {data?.isNoisy && (
+        <div className="panel__notice">
+          Noise mode on — the state is mixed, no single ket represents it.
+          See the Probabilities and Bloch panels for averaged readouts
+          ({data.trajectories} trajectories).
+        </div>
+      )}
+      {data && !data.isNoisy && (
         <>
           <table className="statevector__table">
             <thead>

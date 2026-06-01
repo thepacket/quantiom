@@ -64,6 +64,15 @@ function DensityBody({ state }: Props) {
 
   if (!data) return <div className="panel__placeholder">building circuit…</div>;
   if (n === 0) return null;
+  if (data.isNoisy) {
+    return (
+      <div className="panel__notice">
+        Noise mode on — the reduced density matrix from a single trajectory
+        is not the true mixed state. Density panel will support trajectory-
+        averaged ρ in a follow-up.
+      </div>
+    );
+  }
 
   return (
     <>

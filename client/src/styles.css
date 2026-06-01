@@ -235,6 +235,23 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .panel__spinner { color: var(--accent); }
 .panel__placeholder { color: var(--muted); font-size: 11px; }
 .panel__error { color: var(--danger); font-size: 11px; padding: 6px 8px; background: #2a1818; border: 1px solid #4a2828; border-radius: 4px; margin-bottom: 8px; }
+.panel__notice { color: #c8b88a; font-size: 11px; line-height: 1.4; padding: 6px 8px; background: #2a2418; border: 1px solid #4a3f24; border-radius: 4px; }
+
+.noise { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.noise__enable { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); }
+.noise__hint { color: var(--muted); font-size: 11px; line-height: 1.4; margin: 0; }
+.noise__group { border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; margin: 0; }
+.noise__group[disabled] { opacity: 0.5; }
+.noise__group legend { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 4px; }
+.noise__row { display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 6px; margin: 4px 0; }
+.noise__row label { color: var(--muted); font-size: 11px; }
+.noise__row input[type="range"] { width: 100%; }
+.noise__row input[type="number"] { width: 80px; }
+.noise__value { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; color: var(--text); min-width: 56px; text-align: right; }
+.noise__presets { display: flex; gap: 4px; grid-column: 2 / -1; }
+.noise__preset { font-size: 10px; padding: 2px 6px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
+.noise__preset:hover { color: var(--text); border-color: #4a5568; }
+.noise__preset--on { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 
 .statevector__ket { padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow-x: auto; font-size: 15px; }
 .statevector__ket .katex-display { margin: 0; }
