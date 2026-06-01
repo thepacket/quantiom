@@ -106,7 +106,7 @@ function greekify(s: string): string {
 // ─── Tokenization helpers ──────────────────────────────────────────────────
 
 /** Split a comma-separated argument list, respecting nested parens/brackets. */
-function splitTopLevel(s: string): string[] {
+function splitTopLevel(s: string, sep = ","): string[] {
   const out: string[] = [];
   let depth = 0;
   let start = 0;
@@ -114,7 +114,7 @@ function splitTopLevel(s: string): string[] {
     const ch = s[i];
     if (ch === "(" || ch === "[") depth++;
     else if (ch === ")" || ch === "]") depth--;
-    else if (ch === "," && depth === 0) {
+    else if (ch === sep && depth === 0) {
       out.push(s.slice(start, i).trim());
       start = i + 1;
     }
@@ -208,8 +208,13 @@ export function parseQasm3(text: string): ParseResult {
     // Strip line comments.
     const code = raw.split("//")[0].trim();
     if (!code) continue;
-    const stmt = code.endsWith(";") ? code.slice(0, -1).trim() : code;
-    if (!stmt) continue;
+
+    // Multiple statements per line are valid QASM 3 — split on top-level `;`.
+    const lineStatements = splitTopLevel(code, ";");
+    for (const stmt of lineStatements) {
+      if (!stmt) continue;
+      // Stray trailing `;` already consumed by splitTopLevel; leftover after
+      // a final `;` becomes an empty string and is skipped above.
 
     try {
       // Boilerplate / declarations to ignore.
@@ -363,6 +368,7 @@ export function parseQasm3(text: string): ParseResult {
       const message = e instanceof Error ? e.message : String(e);
       return { ok: false, error: message, line: lineNo };
     }
+    } // end statement loop
   }
 
   return { ok: true, circuit: { numQubits, numClbits, gates }, warnings };
