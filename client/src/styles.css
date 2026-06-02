@@ -242,6 +242,12 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .tomo__chi { border-collapse: collapse; font-size: 10px; font-family: ui-monospace, monospace; }
 .tomo__chi th { color: var(--muted); padding: 2px 4px; font-weight: normal; font-size: 9px; }
 .tomo__cell { width: 28px; height: 22px; text-align: center; border: 1px solid var(--border); color: var(--fg); }
+.tomo__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tomo__noise { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; cursor: pointer; }
+.tomo__view { display: flex; gap: 2px; margin-left: auto; }
+.tomo__view-btn { font-size: 10px; padding: 2px 8px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
+.tomo__view-btn--on { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.tomo__hinton { display: block; margin: 4px 0; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; }
 
 /* ─── Hamiltonian panel ──────────────────────────────────────────── */
 .hamil { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }

@@ -31,6 +31,7 @@ export function simulateNoisy(
   paramValues: ParameterValues,
   customGates: CustomGate[],
   noise: NoiseModel,
+  options?: { startIndex?: number },
 ): SimResult {
   const n = circuit.numQubits;
   if (n <= 0) throw new Error("numQubits must be ≥ 1");
@@ -79,10 +80,14 @@ export function simulateNoisy(
   // Per-trajectory classical register for mid-circuit measurement + condition.
   const numClbits = Math.max(1, circuit.numClbits);
   const cReg = new Uint8Array(numClbits);
+  const startIndex = options?.startIndex ?? 0;
+  if (startIndex < 0 || startIndex >= dim) {
+    throw new Error(`startIndex ${startIndex} out of range [0, ${dim})`);
+  }
 
   for (let t = 0; t < T; t++) {
     const state = new Float64Array(2 * dim);
-    state[0] = 1;
+    state[2 * startIndex] = 1;
     cReg.fill(0);
 
     for (let gi = 0; gi < gates.length; gi++) {

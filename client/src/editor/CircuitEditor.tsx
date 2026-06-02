@@ -374,7 +374,7 @@ export function CircuitEditor() {
           <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
         <ErrorBoundary label="tomography">
-          <TomographyPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+          <TomographyPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
         </ErrorBoundary>
         <ErrorBoundary label="hamiltonian">
           <HamiltonianPanel onLoadInNewTab={(c, n) => t.newTab(c, n)} />

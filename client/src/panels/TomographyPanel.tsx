@@ -4,11 +4,13 @@ import { processTomography, MAX_TOMOGRAPHY_QUBITS, type ProcessResult } from "..
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 import type { ParameterValues } from "../sim/simulate";
+import type { NoiseModel } from "../sim/noise";
 
 type Props = {
   circuit: Circuit;
   customGates: CustomGate[];
   paramValues: ParameterValues;
+  noise?: NoiseModel;
 };
 
 /**
@@ -24,17 +26,19 @@ export function TomographyPanel(props: Props) {
   );
 }
 
-function Body({ circuit, customGates, paramValues }: Props) {
+function Body({ circuit, customGates, paramValues, noise }: Props) {
   const [result, setResult] = useState<ProcessResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<"heatmap" | "hinton">("heatmap");
+  const [useNoise, setUseNoise] = useState(false);
 
   const run = () => {
     setBusy(true);
     setErr(null);
     setTimeout(() => {
       try {
-        setResult(processTomography(circuit, paramValues, customGates));
+        setResult(processTomography(circuit, paramValues, customGates, useNoise && noise?.enabled ? noise : undefined));
       } catch (e) {
         setErr(e instanceof Error ? e.message : String(e));
       } finally {
@@ -54,11 +58,82 @@ function Body({ circuit, customGates, paramValues }: Props) {
 
   return (
     <div className="tomo">
-      <button className="tomo__run" onClick={run} disabled={busy}>
-        {busy ? "Computing…" : "Compute χ"}
-      </button>
+      <div className="tomo__bar">
+        <button className="tomo__run" onClick={run} disabled={busy}>
+          {busy ? "Computing…" : "Compute χ"}
+        </button>
+        {noise?.enabled && (
+          <label className="tomo__noise" title="Run trajectories through the active noise model">
+            <input type="checkbox" checked={useNoise} onChange={(e) => setUseNoise(e.target.checked)} />
+            noise
+          </label>
+        )}
+        <div className="tomo__view">
+          <button
+            className={"tomo__view-btn" + (view === "heatmap" ? " tomo__view-btn--on" : "")}
+            onClick={() => setView("heatmap")}
+          >
+            heatmap
+          </button>
+          <button
+            className={"tomo__view-btn" + (view === "hinton" ? " tomo__view-btn--on" : "")}
+            onClick={() => setView("hinton")}
+          >
+            Hinton
+          </button>
+        </div>
+      </div>
       {err && <div className="panel__error">{err}</div>}
-      {result && <ChiTable result={result} />}
+      {result && (view === "heatmap" ? <ChiTable result={result} /> : <HintonView result={result} />)}
+    </div>
+  );
+}
+
+function HintonView({ result }: { result: ProcessResult }) {
+  // Hinton: each cell is a square scaled by sqrt(magnitude). Positive
+  // (real part > 0) draws light; negative draws dark. For χ matrices
+  // entries are complex; use Re(χ) sign and |χ| magnitude.
+  const N = result.chi.length;
+  const cellSize = 18;
+  const totalSize = N * cellSize;
+  let maxMag = 0;
+  for (const row of result.chi) {
+    for (const c of row) {
+      const m = Math.hypot(c.re, c.im);
+      if (m > maxMag) maxMag = m;
+    }
+  }
+  if (maxMag === 0) maxMag = 1;
+  return (
+    <div className="tomo__result">
+      <div className="tomo__hint">
+        Hinton diagram. Each square's side ∝ √|χ|; light squares = Re(χ)≥0, dark = Re(χ)&lt;0.
+      </div>
+      <svg width={totalSize + 8} height={totalSize + 8} className="tomo__hinton">
+        <rect width={totalSize + 8} height={totalSize + 8} fill="#1a1f27" />
+        {result.chi.map((row, m) =>
+          row.map((c, k) => {
+            const mag = Math.hypot(c.re, c.im) / maxMag;
+            const side = Math.max(1, Math.sqrt(mag) * (cellSize - 1));
+            const cx = 4 + k * cellSize + cellSize / 2;
+            const cy = 4 + m * cellSize + cellSize / 2;
+            const fill = c.re >= 0 ? "#e8edf2" : "#3c4856";
+            return (
+              <rect
+                key={`${m}-${k}`}
+                x={cx - side / 2}
+                y={cy - side / 2}
+                width={side}
+                height={side}
+                fill={fill}
+              />
+            );
+          }),
+        )}
+      </svg>
+      <div className="tomo__hint" style={{ fontFamily: "ui-monospace, monospace" }}>
+        Pauli order: {result.labels.join(", ")}
+      </div>
     </div>
   );
 }

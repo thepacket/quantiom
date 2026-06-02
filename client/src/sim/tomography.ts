@@ -2,6 +2,8 @@ import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 import type { ParameterValues } from "./simulate";
 import { simulate } from "./simulate";
+import { simulateNoisy } from "./simulateNoisy";
+import type { NoiseModel } from "./noise";
 
 /**
  * Process tomography for small-n circuits.
@@ -91,6 +93,7 @@ export function processTomography(
   circuit: Circuit,
   paramValues: ParameterValues,
   customGates: CustomGate[],
+  noise?: NoiseModel,
 ): ProcessResult {
   const n = circuit.numQubits;
   if (n > MAX_TOMOGRAPHY_QUBITS) {
@@ -98,12 +101,20 @@ export function processTomography(
   }
   const dim = 1 << n;
 
-  // Build U as a 2ⁿ × 2ⁿ matrix.
+  // Build the effective unitary U column by column. In noise mode each
+  // column comes out of the trajectory simulator's representative-state
+  // slot — it's already averaged across `noise.trajectories` runs by the
+  // simulator. The reconstructed χ is then the "average unitary"
+  // approximation of the noisy process. (Strictly noisy processes
+  // produce rank > 1 χ matrices; that requires a different reconstruction
+  // and is its own follow-up.)
   const U: Complex[][] = Array.from({ length: dim }, () =>
     new Array<Complex>(dim).fill({ re: 0, im: 0 } as Complex),
   );
   for (let j = 0; j < dim; j++) {
-    const r = simulate(circuit, paramValues, customGates, { startIndex: j });
+    const r = noise?.enabled
+      ? simulateNoisy(circuit, paramValues, customGates, noise, { startIndex: j })
+      : simulate(circuit, paramValues, customGates, { startIndex: j });
     for (let i = 0; i < dim; i++) {
       U[i][j] = { re: r.state[2 * i], im: r.state[2 * i + 1] };
     }
