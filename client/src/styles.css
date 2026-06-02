@@ -272,6 +272,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .examples-picker__item { width: 100%; text-align: left; background: transparent; color: var(--fg); border: none; padding: 4px 10px; font-size: 12px; cursor: pointer; }
 .examples-picker__item:hover { background: var(--bg-2); color: var(--accent); }
 .examples-picker__none { color: var(--muted); font-size: 11px; padding: 12px; text-align: center; font-style: italic; }
+.export-picker__hint { color: var(--muted); font-size: 10px; margin-left: 6px; }
 
 /* ─── Syndromes panel ──────────────────────────────────────────────── */
 .syndromes { display: flex; flex-direction: column; gap: 8px; }

@@ -3,6 +3,9 @@ import type { Circuit } from "./types";
 import type { HistoryAction } from "./state";
 import { emitQasm3 } from "../qasm/emit";
 import { emitQiskit } from "../qasm/emitQiskit";
+import { emitCirq } from "../qasm/emitCirq";
+import { emitBraket } from "../qasm/emitBraket";
+import { emitQSharp } from "../qasm/emitQSharp";
 import { parseQasm3 } from "../qasm/parse";
 import { EXAMPLE_CATEGORIES, type Example } from "../examples";
 import { downloadCanvasSvg } from "./exportSvg";
@@ -63,18 +66,21 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
     setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
-  const onDownloadQiskit = () => {
-    const text = emitQiskit(circuit);
-    const blob = new Blob([text], { type: "text/x-python;charset=utf-8" });
+  const downloadText = (text: string, ext: string, mime: string) => {
+    const blob = new Blob([text], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = (toFilename(circuit.name).replace(/\.qasm$/, "") || "circuit") + ".py";
+    a.download = (toFilename(circuit.name).replace(/\.qasm$/, "") || "circuit") + ext;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 100);
   };
+  const onDownloadQiskit = () => downloadText(emitQiskit(circuit), ".py", "text/x-python;charset=utf-8");
+  const onDownloadCirq = () => downloadText(emitCirq(circuit), "_cirq.py", "text/x-python;charset=utf-8");
+  const onDownloadBraket = () => downloadText(emitBraket(circuit), "_braket.py", "text/x-python;charset=utf-8");
+  const onDownloadQSharp = () => downloadText(emitQSharp(circuit), ".qs", "text/plain;charset=utf-8");
 
   const onShare = async () => {
     try {
@@ -107,8 +113,13 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
       />
       <button onClick={onOpen} title="Open a .qasm file">Open</button>
       <button onClick={onDownload} title="Download as .qasm">.qasm</button>
-      <button onClick={onDownloadQiskit} title="Download as a Qiskit Python script">.py</button>
-      <button onClick={() => downloadCanvasSvg(circuit.name)} title="Export the canvas as SVG">SVG</button>
+      <ExportPicker
+        onQiskit={onDownloadQiskit}
+        onCirq={onDownloadCirq}
+        onBraket={onDownloadBraket}
+        onQSharp={onDownloadQSharp}
+        onSvg={() => downloadCanvasSvg(circuit.name)}
+      />
       <button
         onClick={onShare}
         title="Copy a shareable URL that encodes the entire circuit in the link's hash"
@@ -116,6 +127,59 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
         {shareStatus === "copied" ? "✓ link" : shareStatus === "failed" ? "fail" : "Share"}
       </button>
       <ExamplesPicker open={examplesOpen} onToggle={() => setExamplesOpen((o) => !o)} onPick={onExamplePick} />
+    </div>
+  );
+}
+
+function ExportPicker({
+  onQiskit,
+  onCirq,
+  onBraket,
+  onQSharp,
+  onSvg,
+}: {
+  onQiskit: () => void;
+  onCirq: () => void;
+  onBraket: () => void;
+  onQSharp: () => void;
+  onSvg: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  const item = (label: string, hint: string, fn: () => void) => (
+    <button
+      className="examples-picker__item"
+      onClick={() => { setOpen(false); fn(); }}
+      title={hint}
+    >
+      <span>{label}</span>
+      <span className="export-picker__hint">{hint}</span>
+    </button>
+  );
+  return (
+    <div className="examples-picker" ref={wrapRef}>
+      <button className="examples-picker__btn" onClick={() => setOpen((o) => !o)} title="Export to SDK code">
+        Export…
+      </button>
+      {open && (
+        <div className="examples-picker__pop" style={{ width: 240 }}>
+          <div className="examples-picker__list">
+            {item("Qiskit", ".py — IBM", onQiskit)}
+            {item("Cirq", "_cirq.py — Google", onCirq)}
+            {item("Braket SDK", "_braket.py — AWS", onBraket)}
+            {item("Q#", ".qs — Microsoft", onQSharp)}
+            {item("SVG", "vector canvas image", onSvg)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
