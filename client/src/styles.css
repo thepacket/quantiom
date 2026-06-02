@@ -21,7 +21,7 @@
 html, body, #root { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--fg); }
 button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
-button:hover { background: var(--panel); border-color: var(--border-strong); }
+button:hover { border-color: var(--border-strong); }
 input, select { font: inherit; color: var(--fg); background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; }
 input:focus, select:focus { outline: none; border-color: var(--accent); }
 fieldset { border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; margin: 8px 0 0; }
