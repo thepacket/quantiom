@@ -5,6 +5,7 @@ import { expandCustomGates } from "../editor/customGates";
 import { evaluateObservable, type Observable } from "./expectation";
 import { applyKQubit } from "./apply";
 import { buildMatrix, M_X, M_Y, M_Z, type Matrix } from "./matrices";
+import { reset as resetTo0 } from "./measure";
 import type { NoiseModel } from "./noise";
 
 /**
@@ -15,12 +16,13 @@ import type { NoiseModel } from "./noise";
  *   • Phase damping, treated as a Z-only Pauli channel
  *     PD(ρ) = (1 − λ/2) ρ + (λ/2) Z ρ Z. λ ≡ noise.phaseDamping per gate.
  *   • Two-qubit depolarising (rate p₂), applied after every 2-qubit gate.
+ *   • Amplitude damping (rate λ) — non-Pauli quasiprobability per
+ *     Endo-Benjamin-Li 2018. Decomposition uses Paulis plus the two reset
+ *     channels Reset_0 (ρ ↦ Tr(ρ) |0⟩⟨0|) and Reset_1 (ρ ↦ Tr(ρ) |1⟩⟨1|).
+ *     Reset_k is implemented per-trajectory as "measure Z, flip to |k⟩ if
+ *     needed" — averaging over measurement outcomes reproduces the channel.
  *
  * NOT inverted yet (caller's responsibility to know the limitation):
- *   • Amplitude damping — requires non-Pauli quasiprobability decomposition
- *     (Endo-Benjamin-Li 2018). The trajectory simulation would need to
- *     handle non-unitary projector branches; left as a TODO so we don't
- *     ship a silently-broken inverse.
  *   • Readout bit-flip — applies only at measurement time; PEC for it
  *     factors orthogonally and would belong in the measurement sampler.
  *   • Crosstalk — depends on coupling map; could be inverted analogously
@@ -63,6 +65,8 @@ export type PecResult = {
     phaseDamping: number;
     /** Number of 2q gate locations where 2q-depolarising inverse fires. */
     twoQDepol: number;
+    /** Number of locations (1q + 2q) where amplitude-damping inverse fires. */
+    amplitudeDamping: number;
   };
   /** Channels NOT inverted that the noise model has enabled — surfaced so
    *  the UI can warn the user the PEC estimate is only partial. */
@@ -140,6 +144,85 @@ function phaseDampingInverse(lambda: number): InverseSampler1q {
     pX: Math.abs(gammaI) / gammaTotal,   // X never sampled (degenerate cum bound)
     pY: Math.abs(gammaI) / gammaTotal,   // Y never sampled
   };
+}
+
+// ─── Amplitude damping inverse (non-Pauli) ──────────────────────────────
+
+/**
+ * Inverse of the amplitude-damping channel AD_λ.
+ *
+ * Pauli-transfer matrix of AD_λ has the columns:
+ *   I → I + λ Z,  X → √(1−λ) X,  Y → √(1−λ) Y,  Z → (1−λ) Z.
+ *
+ * Inverting gives an off-diagonal [I → −λ/(1−λ) Z] component that no
+ * Pauli channel can reproduce, so we extend the basis with the two
+ * reset channels Reset_k(ρ) = Tr(ρ) |k⟩⟨k|. Decomposition:
+ *
+ *   γ_I = 1/√(1−λ)
+ *   γ_X = γ_Y = (1/√(1−λ) − 1/(1−λ)) / 2          (negative)
+ *   γ_Z = 0
+ *   γ_R0 = ((1/√(1−λ) − 1)² − λ/(1−λ)) / 2        (negative for λ > 0)
+ *   γ_R1 = ((1/√(1−λ) − 1)² + λ/(1−λ)) / 2        (positive)
+ *
+ * Reset_k is implemented in the trajectory as "measure Z, flip if the
+ * outcome isn't k". Averaging over measurement outcomes is the channel
+ * Reset_k = Tr(ρ) |k⟩⟨k|. Coupled to the PEC weight tracking this gives
+ * an unbiased estimator of the amplitude-damping-corrected expectation.
+ */
+type InverseSamplerAD = {
+  gammaI: number;
+  gammaX: number; // = gammaY
+  gammaR0: number;
+  gammaR1: number;
+  gammaTotal: number;
+  /** Cumulative probability boundaries, in order I, X, Y, R0, R1. */
+  pI: number;
+  pX: number;
+  pY: number;
+  pR0: number;
+};
+
+function amplitudeDampingInverse(lambda: number): InverseSamplerAD {
+  const l = clamp(lambda, 0, 0.999);
+  if (l === 0) {
+    return { gammaI: 1, gammaX: 0, gammaR0: 0, gammaR1: 0, gammaTotal: 1, pI: 1, pX: 1, pY: 1, pR0: 1 };
+  }
+  const s = 1 / Math.sqrt(1 - l);
+  const t = 1 / (1 - l);
+  const gammaI = s;
+  const gammaX = (s - t) / 2;            // negative
+  const lt = l / (1 - l);
+  const sum = (s - 1) * (s - 1);
+  const gammaR0 = (sum - lt) / 2;
+  const gammaR1 = (sum + lt) / 2;
+  const total = Math.abs(gammaI) + 2 * Math.abs(gammaX) + Math.abs(gammaR0) + Math.abs(gammaR1);
+  const pI = Math.abs(gammaI) / total;
+  const pX = pI + Math.abs(gammaX) / total;
+  const pY = pX + Math.abs(gammaX) / total;
+  const pR0 = pY + Math.abs(gammaR0) / total;
+  return { gammaI, gammaX, gammaR0, gammaR1, gammaTotal: total, pI, pX, pY, pR0 };
+}
+
+type ADAction = "I" | "X" | "Y" | "R0" | "R1";
+
+function sampleAD(s: InverseSamplerAD): { action: ADAction; sign: 1 | -1 } {
+  if (s.gammaTotal <= 1) return { action: "I", sign: 1 };
+  const r = Math.random();
+  let action: ADAction;
+  let gamma: number;
+  if (r < s.pI) { action = "I"; gamma = s.gammaI; }
+  else if (r < s.pX) { action = "X"; gamma = s.gammaX; }
+  else if (r < s.pY) { action = "Y"; gamma = s.gammaX; }
+  else if (r < s.pR0) { action = "R0"; gamma = s.gammaR0; }
+  else { action = "R1"; gamma = s.gammaR1; }
+  return { action, sign: gamma >= 0 ? 1 : -1 };
+}
+
+/** Apply Reset_k on qubit q via measure-then-flip. Averaging over the
+ *  RNG outcomes is exactly the channel ρ ↦ Tr(ρ) |k⟩⟨k|. */
+function applyResetK(state: Float64Array, n: number, q: number, k: 0 | 1, rng: () => number): void {
+  resetTo0(state, n, q, rng); // → |0⟩
+  if (k === 1) applyKQubit(state, n, [q], M_X);
 }
 
 /** Sample which Pauli to apply from a 1q inverse-channel distribution. Returns
@@ -221,7 +304,7 @@ export function pecExpectation(
   if (n === 0) {
     return {
       value: 0, trajectories, varianceOverhead: 1,
-      channels: { oneQDepol: 0, phaseDamping: 0, twoQDepol: 0 },
+      channels: { oneQDepol: 0, phaseDamping: 0, twoQDepol: 0, amplitudeDamping: 0 },
       uninverted: [],
     };
   }
@@ -231,11 +314,11 @@ export function pecExpectation(
   const samp1qDepol = depolarising1qInverse(noise.oneQubitDepolarising);
   const sampPhaseDamp = phaseDampingInverse(noise.phaseDamping);
   const samp2qDepol = depolarising2qInverse(noise.twoQubitDepolarising);
+  const sampAmp = amplitudeDampingInverse(noise.amplitudeDamping);
 
   // Catalogue channels the user has enabled but we don't yet invert, so
   // the UI can warn that the estimate is only partial.
   const uninverted: string[] = [];
-  if (noise.amplitudeDamping > 0) uninverted.push("amplitude damping");
   if (noise.readoutBitFlip > 0 && hasMeasurements(circuit.gates)) uninverted.push("readout bit-flip");
   if (noise.crosstalk > 0 && noise.coupling) uninverted.push("crosstalk");
   if (noise.customKraus?.enabled) uninverted.push("custom 1q Kraus");
@@ -284,10 +367,12 @@ export function pecExpectation(
   // Phase damping fires per qubit involved in any gate; count locations
   // (i.e. one location per gate-application of damping).
   const nPhase = n1q + 2 * n2q;
+  const nAmp = n1q + 2 * n2q;
   const varianceOverhead =
     Math.pow(samp1qDepol.gammaTotal, 2 * n1q) *
     Math.pow(sampPhaseDamp.gammaTotal, 2 * nPhase) *
-    Math.pow(samp2qDepol.gammaTotal, 2 * n2q);
+    Math.pow(samp2qDepol.gammaTotal, 2 * n2q) *
+    Math.pow(sampAmp.gammaTotal, 2 * nAmp);
 
   // Trajectory loop.
   const dim = 1 << n;
@@ -314,6 +399,8 @@ export function pecExpectation(
         const sp = sample1q(sampPhaseDamp);
         applyPauli1q(state, n, step.q, sp.pauli);
         weight *= sp.sign * sampPhaseDamp.gammaTotal;
+        // Amplitude damping inverse (non-Pauli) on the gate's qubit.
+        weight *= applyAD(state, n, step.q, sampAmp);
         continue;
       }
       // step.kind === "2q"
@@ -324,11 +411,12 @@ export function pecExpectation(
       const s2 = sample2q(samp2qDepol);
       applyPauli2q(state, n, step.involvedPair[0], step.involvedPair[1], s2.pA, s2.pB);
       weight *= s2.sign * samp2qDepol.gammaTotal;
-      // Phase damping inverse on each of the two qubits independently.
+      // Phase + amplitude damping inverse on each qubit independently.
       for (const q of step.involvedPair) {
         const sp = sample1q(sampPhaseDamp);
         applyPauli1q(state, n, q, sp.pauli);
         weight *= sp.sign * sampPhaseDamp.gammaTotal;
+        weight *= applyAD(state, n, q, sampAmp);
       }
     }
     sum += weight * evaluateObservable(state, n, observable);
@@ -337,9 +425,27 @@ export function pecExpectation(
     value: sum / trajectories,
     trajectories,
     varianceOverhead,
-    channels: { oneQDepol: n1q, phaseDamping: nPhase, twoQDepol: n2q },
+    channels: { oneQDepol: n1q, phaseDamping: nPhase, twoQDepol: n2q, amplitudeDamping: nAmp },
     uninverted,
   };
+}
+
+/**
+ * Apply one AD-inverse trajectory sample to qubit q. Returns the weight
+ * contribution sign · γ_total. Uses Math.random for both the basis-op
+ * sampling and the measurement RNG (for Reset_k branches).
+ */
+function applyAD(state: Float64Array, n: number, q: number, s: InverseSamplerAD): number {
+  if (s.gammaTotal <= 1) return 1; // identity-only when AD rate is 0
+  const samp = sampleAD(s);
+  switch (samp.action) {
+    case "I": break;
+    case "X": applyKQubit(state, n, [q], M_X); break;
+    case "Y": applyKQubit(state, n, [q], M_Y); break;
+    case "R0": applyResetK(state, n, q, 0, Math.random); break;
+    case "R1": applyResetK(state, n, q, 1, Math.random); break;
+  }
+  return samp.sign * s.gammaTotal;
 }
 
 function hasMeasurements(gates: ReadonlyArray<{ gateId: string }>): boolean {

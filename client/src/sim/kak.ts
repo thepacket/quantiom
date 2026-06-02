@@ -5,18 +5,21 @@ import { cmul, neg } from "./complex";
  * ⚠️ WORK IN PROGRESS — NOT WIRED INTO THE UI.
  *
  * Status: passes identity, SWAP, pure single-axis interactions (exp(iα XX)).
- * Still fails on CNOT and most Haar-random unitaries — the simultaneous-
- * diagonalisation path can't pin down eigenvectors inside degenerate
- * eigenvalue blocks (e.g. CNOT's Weyl coords (π/4, 0, 0) produce a doubled
- * spectrum), and the brute-force perm × sign mask doesn't reach into the
- * extra SO(k) freedom that lives there. Sign-mask now correctly encodes
- * the √(e^{2iθ}) = ±e^{iθ} ambiguity (was wrongly doing θ → -θ before).
- * Polar-projection of the candidate O_L onto O(4) added as a soft repair.
+ * Still fails on CNOT and most Haar-random unitaries. Root cause: the
+ * simultaneous-diagonalisation path can't pin down eigenvectors inside
+ * degenerate eigenvalue blocks of Σ = u_m^T u_m (e.g. CNOT's Weyl coords
+ * (π/4, 0, 0) produce two doubled phases ⇒ both Re(Σ) and Im(Σ) share a
+ * 2-dim eigenspace), and the brute-force perm × sign-mask doesn't search
+ * the extra SO(k) freedom inside those blocks. The sign-mask now correctly
+ * encodes the √(e^{2iθ}) = ±e^{iθ} ambiguity, and the Jacobi inner loop
+ * handles the degenerate-diagonal case (app == aqq → θ = π/4) that was
+ * silently leaving off-diagonals unrotated.
  *
- * Next-session move: handle degenerate blocks explicitly by extracting all
- * candidate orthonormal bases within the block (e.g. Givens-rotation sweep
- * inside each degenerate sub-block) before the perm/sign search, or pivot
- * to a Tucci-style algorithm that doesn't require Autonne-Takagi.
+ * Next-session move: handle degenerate Σ-blocks by parametrising R's
+ * intra-block rotation and solving |Im(u_m · R · F^{-1})| = 0 within
+ * each block (closed-form for 2-dim blocks). Or pivot to a Tucci-style
+ * algorithm that doesn't need Autonne-Takagi (e.g. clone Cirq's
+ * `kak_decomposition`).
  * Tests live in `client/scripts/test-kak.ts` (run with
  * `npx tsx scripts/test-kak.ts`).
  *
@@ -170,10 +173,20 @@ function jacobiEigen(Ain: number[][], tol = 1e-12): { D: number[]; V: number[][]
     }
     if (maxOff < tol) break;
     const app = A[p][p], aqq = A[q][q], apq = A[p][q];
-    const theta = (aqq - app) / (2 * apq);
-    const t = Math.sign(theta) / (Math.abs(theta) + Math.sqrt(1 + theta * theta));
-    const cs = 1 / Math.sqrt(1 + t * t);
-    const sn = t * cs;
+    // Degenerate-diagonal fix: when app == aqq the τ formula gives t = 0
+    // because Math.sign(0) = 0, leaving the off-diagonal unrotated and
+    // stalling convergence. The correct angle there is π/4 (cs = sn = 1/√2).
+    let cs: number, sn: number;
+    if (Math.abs(aqq - app) < 1e-30) {
+      cs = Math.SQRT1_2;
+      sn = (apq >= 0 ? 1 : -1) * Math.SQRT1_2;
+    } else {
+      const theta = (aqq - app) / (2 * apq);
+      const tsign = theta >= 0 ? 1 : -1;
+      const t = tsign / (Math.abs(theta) + Math.sqrt(1 + theta * theta));
+      cs = 1 / Math.sqrt(1 + t * t);
+      sn = t * cs;
+    }
     for (let i = 0; i < n; i++) {
       const aip = A[i][p], aiq = A[i][q];
       A[i][p] = cs * aip - sn * aiq;

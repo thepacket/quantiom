@@ -4,6 +4,8 @@ import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { paulis as evalPaulis, pauliSumExpectation, type Pauli, type Observable } from "../sim/expectation";
 import { noisyExpectationObservable } from "../sim/simulateNoisy";
+import { useGPUNoisyPauli } from "./useGPUNoisyPauli";
+import type { GPUPauli } from "../sim/webgpuTraj";
 import { optimizeExpectation, zneFit, computeLandscape, barrenPlateauDiagnostic, type OptimizerKind } from "../sim/optimize";
 import { parsePauliSum, pauliSumQubitCount } from "../sim/trotter";
 import type { NoiseModel } from "../sim/noise";
@@ -87,6 +89,26 @@ function ExpectationBody({ state, noisyContext }: Props) {
     return { kind: "sum", terms: hParsed.terms };
   }, [mode, selection, n, hParsed]);
 
+  // GPU-accelerated trajectory-averaged ⟨P⟩, when the circuit + noise +
+  // observable all fit the WebGPU subset (1q-only, depolarising-only,
+  // single Pauli string mode — no Hamiltonian sums on the GPU side yet).
+  // Returns null otherwise; the CPU path below remains the source of truth.
+  const gpuPauliString = useMemo<GPUPauli[] | null>(() => {
+    if (collapsed) return null;
+    if (mode !== "single") return null;
+    if (!data?.isNoisy || !noisyContext) return null;
+    if (selection.length !== n) return null;
+    return selection.map((p) => (p === "X" || p === "Y" || p === "Z" ? p : "I"));
+  }, [collapsed, mode, data?.isNoisy, noisyContext, selection, n]);
+  const gpuValue = useGPUNoisyPauli(
+    noisyContext?.circuit ?? ({ numQubits: 0, gates: [], numClbits: 0 } as Circuit),
+    noisyContext?.paramValues ?? {},
+    noisyContext?.customGates ?? [],
+    noisyContext?.noise,
+    !collapsed && !!gpuPauliString,
+    gpuPauliString,
+  );
+
   // O(n · 2^n) inner-product walk over the state. Skip while the panel
   // is hidden — that's the whole point of this guard. In noise mode, run
   // T trajectories and average rather than reading the biased single
@@ -96,6 +118,12 @@ function ExpectationBody({ state, noisyContext }: Props) {
     if (!data || !observable) return null;
     if (mode === "hamiltonian" && hParsed.ok && hParsed.nH !== n) return null;
     if (data.isNoisy && noisyContext) {
+      // Prefer the GPU trajectory-averaged value when it's available —
+      // same trajectories, just dispatched on the GPU when the subset is
+      // eligible. Falls back to the CPU sampler in every other case.
+      if (gpuValue !== null && observable.kind === "pauli" && !postSelectOn) {
+        return gpuValue;
+      }
       const ps = postSelectOn && hasMeasurements && postClbit < numClbits
         ? { clbit: postClbit, value: postValue }
         : undefined;
@@ -111,7 +139,7 @@ function ExpectationBody({ state, noisyContext }: Props) {
     if (data.isStabilizer) return null;
     if (observable.kind === "pauli") return evalPaulis(data.state, n, observable.paulis);
     return pauliSumExpectation(data.state, n, observable.terms);
-  }, [data, observable, n, mode, hParsed, collapsed, noisyContext, postSelectOn, postClbit, postValue, hasMeasurements, numClbits]);
+  }, [data, observable, n, mode, hParsed, collapsed, noisyContext, postSelectOn, postClbit, postValue, hasMeasurements, numClbits, gpuValue]);
 
   const opLabel = useMemo(() => {
     const parts: string[] = [];
@@ -381,7 +409,7 @@ function DiagnosticTools({
   const [plateau, setPlateau] = useState<{ varPerSym: number[]; symbols: string[] } | null>(null);
   const [pec, setPec] = useState<{
     value: number; trajectories: number; varianceOverhead: number;
-    channels: { oneQDepol: number; phaseDamping: number; twoQDepol: number };
+    channels: { oneQDepol: number; phaseDamping: number; twoQDepol: number; amplitudeDamping: number };
     uninverted: string[];
   } | null>(null);
 
@@ -514,7 +542,7 @@ function DiagnosticTools({
       {pec && (
         <div className="exp__tools-result">
           PEC ⟨P⟩ ≈ {pec.value.toFixed(4)} ({pec.trajectories} shots ·
-          {" "}1q-depol: {pec.channels.oneQDepol}, phase-damp: {pec.channels.phaseDamping}, 2q-depol: {pec.channels.twoQDepol})
+          {" "}1q-depol: {pec.channels.oneQDepol}, phase-damp: {pec.channels.phaseDamping}, amp-damp: {pec.channels.amplitudeDamping}, 2q-depol: {pec.channels.twoQDepol})
           <div className="exp__tools-extrap">
             variance overhead ≈ {pec.varianceOverhead.toExponential(2)}×
             {pec.varianceOverhead > 1e6 && " — consider lowering noise rates"}
