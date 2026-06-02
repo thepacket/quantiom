@@ -11,27 +11,35 @@ import {
 
 /**
  * Off-main-thread WebGPU trajectory-averaged ⟨P⟩ for arbitrary multi-qubit
- * Pauli strings on the noise path.
+ * Pauli strings (and weighted Pauli-sum Hamiltonians) on the noise path.
  *
  * Scope mirrors `useGPUNoisyProbabilities`: only the 1-qubit-gate +
  * depolarising subset triggers the GPU run, so the CPU
  * `noisyExpectationObservable` stays the source of truth for everything
  * else (any 2q gate, amplitude/phase damping, custom Kraus, measurements,
  * conditions). Returns null until a GPU run completes for the current
- * parameter / circuit / noise tuple; the panel then prefers the GPU value
- * when it's present and falls back to CPU otherwise.
+ * parameter / circuit / noise tuple; the panel prefers the GPU value when
+ * present and falls back to CPU otherwise.
  *
- * The Pauli string is encoded as one entry per qubit ("I"/"X"/"Y"/"Z"
- * with big-endian indexing — qubit 0 is MSB) and is part of the cache key
- * so flipping a single Pauli doesn't thrash the rest of the dispatch.
+ * For Pauli sums H = Σ_k h_k P_k we fire one dispatch per term and sum
+ * the weighted results on the CPU. Each dispatch re-runs the trajectory
+ * loop on the GPU (a future optimisation would batch K Pauli strings
+ * into a single shader pass to amortise the gate sequence), but even K
+ * dispatches keep the main thread free for UI.
+ *
+ * Big-endian: qubit 0 is MSB, matching the rest of the codebase.
  */
+export type GPUObservable =
+  | { kind: "pauli"; paulis: GPUPauli[] }
+  | { kind: "sum"; terms: Array<{ coefficient: number; paulis: GPUPauli[] }> };
+
 export function useGPUNoisyPauli(
   circuit: Circuit,
   parameterValues: ParameterValues,
   customGates: CustomGate[],
   noise: NoiseModel | undefined,
   enabled: boolean,
-  paulis: GPUPauli[] | null,
+  observable: GPUObservable | null,
 ): number | null {
   const [value, setValue] = useState<number | null>(null);
 
@@ -45,22 +53,43 @@ export function useGPUNoisyPauli(
         .map((g) => `${g.gateId}@${g.column}:${g.targets.join(",")}`)
         .join(";")}`
     : null;
-  const pauliKey = paulis ? paulis.join("") : null;
+  const obsKey = observable
+    ? observable.kind === "pauli"
+      ? `P:${observable.paulis.join("")}`
+      : `S:${observable.terms.map((t) => `${t.coefficient}|${t.paulis.join("")}`).join(";")}`
+    : null;
 
   useEffect(() => {
-    if (!noiseEnabled || !noise || !paulis) { setValue(null); return; }
-    if (paulis.every((p) => p === "I")) { setValue(1); return; }
+    if (!noiseEnabled || !noise || !observable) { setValue(null); return; }
     if (!isWebGPUAvailable()) { setValue(null); return; }
     let cancelled = false;
-    tryRunWebGPUTrajectories(circuit, parameterValues, customGates, noise, noise.trajectories, paulis)
-      .then((r) => {
-        if (cancelled) return;
-        setValue(r && typeof r.pauliExpectation === "number" ? r.pauliExpectation : null);
-      })
+    const run = async (): Promise<number | null> => {
+      if (observable.kind === "pauli") {
+        if (observable.paulis.every((p) => p === "I")) return 1;
+        const r = await tryRunWebGPUTrajectories(
+          circuit, parameterValues, customGates, noise, noise.trajectories, observable.paulis,
+        );
+        return r && typeof r.pauliExpectation === "number" ? r.pauliExpectation : null;
+      }
+      // Sum: weighted sum over per-term GPU dispatches.
+      let total = 0;
+      for (const term of observable.terms) {
+        if (term.coefficient === 0) continue;
+        if (term.paulis.every((p) => p === "I")) { total += term.coefficient; continue; }
+        const r = await tryRunWebGPUTrajectories(
+          circuit, parameterValues, customGates, noise, noise.trajectories, term.paulis,
+        );
+        if (!r || typeof r.pauliExpectation !== "number") return null;
+        total += term.coefficient * r.pauliExpectation;
+      }
+      return total;
+    };
+    run()
+      .then((v) => { if (!cancelled) setValue(v); })
       .catch(() => { if (!cancelled) setValue(null); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noiseEnabled, noiseKey, paramKey, circuitKey, pauliKey]);
+  }, [noiseEnabled, noiseKey, paramKey, circuitKey, obsKey]);
 
   return value;
 }

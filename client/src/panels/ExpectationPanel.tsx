@@ -4,7 +4,7 @@ import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { paulis as evalPaulis, pauliSumExpectation, type Pauli, type Observable } from "../sim/expectation";
 import { noisyExpectationObservable } from "../sim/simulateNoisy";
-import { useGPUNoisyPauli } from "./useGPUNoisyPauli";
+import { useGPUNoisyPauli, type GPUObservable } from "./useGPUNoisyPauli";
 import type { GPUPauli } from "../sim/webgpuTraj";
 import { optimizeExpectation, zneFit, computeLandscape, barrenPlateauDiagnostic, type OptimizerKind } from "../sim/optimize";
 import { parsePauliSum, pauliSumQubitCount } from "../sim/trotter";
@@ -90,23 +90,42 @@ function ExpectationBody({ state, noisyContext }: Props) {
   }, [mode, selection, n, hParsed]);
 
   // GPU-accelerated trajectory-averaged ⟨P⟩, when the circuit + noise +
-  // observable all fit the WebGPU subset (1q-only, depolarising-only,
-  // single Pauli string mode — no Hamiltonian sums on the GPU side yet).
+  // observable all fit the WebGPU subset (1q-only, depolarising-only).
   // Returns null otherwise; the CPU path below remains the source of truth.
-  const gpuPauliString = useMemo<GPUPauli[] | null>(() => {
+  // Single Pauli strings and weighted Pauli-sum Hamiltonians both route
+  // to the GPU; the hook fires one shader dispatch per sum term and
+  // accumulates on the CPU.
+  const gpuObservable = useMemo<GPUObservable | null>(() => {
     if (collapsed) return null;
-    if (mode !== "single") return null;
     if (!data?.isNoisy || !noisyContext) return null;
-    if (selection.length !== n) return null;
-    return selection.map((p) => (p === "X" || p === "Y" || p === "Z" ? p : "I"));
-  }, [collapsed, mode, data?.isNoisy, noisyContext, selection, n]);
+    if (mode === "single") {
+      if (selection.length !== n) return null;
+      return {
+        kind: "pauli",
+        paulis: selection.map((p) => (p === "X" || p === "Y" || p === "Z" ? p : "I")),
+      };
+    }
+    // Hamiltonian sum mode.
+    if (!hParsed.ok || hParsed.nH !== n) return null;
+    return {
+      kind: "sum",
+      terms: hParsed.terms.map((t) => {
+        const paulis: GPUPauli[] = new Array(n);
+        for (let q = 0; q < n; q++) {
+          const ch = t.paulis[q] ?? "I";
+          paulis[q] = ch === "X" || ch === "Y" || ch === "Z" ? ch : "I";
+        }
+        return { coefficient: t.coefficient, paulis };
+      }),
+    };
+  }, [collapsed, mode, data?.isNoisy, noisyContext, selection, n, hParsed]);
   const gpuValue = useGPUNoisyPauli(
     noisyContext?.circuit ?? ({ numQubits: 0, gates: [], numClbits: 0 } as Circuit),
     noisyContext?.paramValues ?? {},
     noisyContext?.customGates ?? [],
     noisyContext?.noise,
-    !collapsed && !!gpuPauliString,
-    gpuPauliString,
+    !collapsed && !!gpuObservable,
+    gpuObservable,
   );
 
   // O(n · 2^n) inner-product walk over the state. Skip while the panel
@@ -121,7 +140,7 @@ function ExpectationBody({ state, noisyContext }: Props) {
       // Prefer the GPU trajectory-averaged value when it's available —
       // same trajectories, just dispatched on the GPU when the subset is
       // eligible. Falls back to the CPU sampler in every other case.
-      if (gpuValue !== null && observable.kind === "pauli" && !postSelectOn) {
+      if (gpuValue !== null && !postSelectOn) {
         return gpuValue;
       }
       const ps = postSelectOn && hasMeasurements && postClbit < numClbits
