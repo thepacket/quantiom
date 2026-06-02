@@ -109,25 +109,33 @@ function HistoryButton({
   );
 }
 
+/** localStorage key for the cross-tab gate clipboard. */
+const CLIPBOARD_KEY = "quantiom:clipboard:v1";
+
 function SelectionButton({
   maxColumn,
   onDelete,
   onDuplicate,
+  onCopy,
+  onPaste,
 }: {
   maxColumn: number;
   onDelete: (lo: number, hi: number) => void;
   onDuplicate: (lo: number, hi: number) => void;
+  onCopy: (lo: number, hi: number) => void;
+  onPaste: (atColumn: number) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [from, setFrom] = useState(0);
   const [to, setTo] = useState(0);
+  const clipboardHas = typeof window !== "undefined" && !!localStorage.getItem(CLIPBOARD_KEY);
   return (
     <span style={{ position: "relative" }}>
       <button onClick={() => setOpen((o) => !o)} title="Operate on a column range">Select…</button>
       {open && (
         <div
           className="examples-picker__pop"
-          style={{ width: 220, top: "100%", marginTop: 4, padding: 8 }}
+          style={{ width: 240, top: "100%", marginTop: 4, padding: 8 }}
           onMouseLeave={() => setOpen(false)}
         >
           <div style={{ display: "flex", gap: 4, alignItems: "center", fontSize: 11, marginBottom: 6 }}>
@@ -150,8 +158,16 @@ function SelectionButton({
               style={{ width: 56, fontSize: 11 }}
             />
           </div>
-          <div style={{ display: "flex", gap: 4 }}>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             <button onClick={() => { onDuplicate(from, to); setOpen(false); }}>Duplicate</button>
+            <button onClick={() => { onCopy(from, to); setOpen(false); }} title="Copy gates in range to the cross-tab clipboard">Copy</button>
+            <button
+              onClick={() => { onPaste(maxColumn + 1); setOpen(false); }}
+              disabled={!clipboardHas}
+              title={clipboardHas ? "Paste clipboard gates at the end of the circuit" : "Clipboard is empty"}
+            >
+              Paste
+            </button>
             <button onClick={() => { if (window.confirm(`Delete gates in columns ${from}–${to}?`)) { onDelete(from, to); setOpen(false); } }}>Delete</button>
           </div>
         </div>
@@ -361,6 +377,7 @@ export function CircuitEditor() {
   const [customGates, setCustomGates] = useState<CustomGate[]>(() => loadCustomGates());
   const [noise, setNoise] = useState<NoiseModel>(() => loadNoise());
   const [findQuery, setFindQuery] = useState<string>("");
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   useEffect(() => {
     saveCustomGates(customGates);
@@ -509,6 +526,14 @@ export function CircuitEditor() {
         dispatch({ type: "remove-gate", id: selectedGateId });
         setSelectedGateId(null);
       }
+      // "?" pops the shortcuts dialog. Don't fire while typing in a field
+      // (otherwise it eats a literal ? in a Find query or QASM).
+      if (e.key === "?" && !inField && !e.metaKey && !e.ctrlKey) {
+        setShowShortcuts(true);
+      }
+      if (e.key === "Escape") {
+        setShowShortcuts(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -568,6 +593,43 @@ export function CircuitEditor() {
 
   return (
     <div className="editor">
+      {showShortcuts && (
+        <div
+          onClick={() => setShowShortcuts(false)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+            zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "var(--panel)", border: "1px solid var(--border)",
+              borderRadius: 6, padding: 18, minWidth: 360, maxWidth: 520,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+            }}
+          >
+            <h2 style={{ marginTop: 0, fontSize: 14 }}>Keyboard shortcuts</h2>
+            <table style={{ fontSize: 12, borderCollapse: "collapse" }}>
+              <tbody>
+                <tr><td style={{ padding: "3px 12px 3px 0", color: "var(--muted)" }}>Cmd/Ctrl + Z</td><td>Undo</td></tr>
+                <tr><td style={{ padding: "3px 12px 3px 0", color: "var(--muted)" }}>Shift + Cmd/Ctrl + Z</td><td>Redo</td></tr>
+                <tr><td style={{ padding: "3px 12px 3px 0", color: "var(--muted)" }}>Cmd/Ctrl + Y</td><td>Redo</td></tr>
+                <tr><td style={{ padding: "3px 12px 3px 0", color: "var(--muted)" }}>Cmd/Ctrl + T</td><td>New tab</td></tr>
+                <tr><td style={{ padding: "3px 12px 3px 0", color: "var(--muted)" }}>Cmd/Ctrl + 1..9</td><td>Switch to tab N</td></tr>
+                <tr><td style={{ padding: "3px 12px 3px 0", color: "var(--muted)" }}>Delete / Backspace</td><td>Remove selected gate</td></tr>
+                <tr><td style={{ padding: "3px 12px 3px 0", color: "var(--muted)" }}>?</td><td>Open this dialog</td></tr>
+                <tr><td style={{ padding: "3px 12px 3px 0", color: "var(--muted)" }}>Esc</td><td>Close this dialog</td></tr>
+                <tr><td style={{ padding: "3px 12px 3px 0", color: "var(--muted)" }}>drag-drop</td><td>Open .qasm or .json IR files</td></tr>
+                <tr><td style={{ padding: "3px 12px 3px 0", color: "var(--muted)" }}>Enter (chat)</td><td>Send prompt; Shift+Enter newline</td></tr>
+              </tbody>
+            </table>
+            <div style={{ marginTop: 14, textAlign: "right" }}>
+              <button onClick={() => setShowShortcuts(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="app__header">
         <div className="app__header-left">
           <h1>Quantiom</h1>
@@ -775,6 +837,51 @@ export function CircuitEditor() {
               maxColumn={maxColumn}
               onDelete={(lo, hi) => dispatch({ type: "delete-range", fromColumn: lo, toColumn: hi })}
               onDuplicate={(lo, hi) => dispatch({ type: "duplicate-range", fromColumn: lo, toColumn: hi })}
+              onCopy={(lo, hi) => {
+                // Normalise the column range so paste at any target column
+                // works. Stash gate skeletons (no ids — paste generates fresh
+                // ones) in localStorage so the clipboard survives reloads
+                // and crosses tabs / browser windows.
+                const a = Math.min(lo, hi), b = Math.max(lo, hi);
+                const slice = circuit.gates
+                  .filter((g) => g.column >= a && g.column <= b)
+                  .map((g) => ({
+                    gateId: g.gateId,
+                    controls: g.controls,
+                    targets: g.targets,
+                    clbits: g.clbits,
+                    params: g.params,
+                    column: g.column - a, // normalise so leftmost = 0
+                    controlStates: g.controlStates,
+                    condition: g.condition,
+                    annotation: g.annotation,
+                  }));
+                try {
+                  localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(slice));
+                } catch { /* quota — give up silently */ }
+              }}
+              onPaste={(atColumn) => {
+                try {
+                  const raw = localStorage.getItem(CLIPBOARD_KEY);
+                  if (!raw) return;
+                  const slice = JSON.parse(raw) as Array<Omit<import("./types").PlacedGate, "id"> & { column: number }>;
+                  // Skip gates whose qubit indices don't fit in the current
+                  // tab; the user can resize qubits manually before pasting.
+                  for (const s of slice) {
+                    const allQs = [...(s.controls ?? []), ...(s.targets ?? [])];
+                    if (allQs.some((q) => q < 0 || q >= circuit.numQubits)) continue;
+                    if ((s.clbits ?? []).some((c) => c < 0 || c >= circuit.numClbits)) continue;
+                    dispatch({
+                      type: "place-gate",
+                      gate: {
+                        ...s,
+                        id: `paste_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                        column: atColumn + s.column,
+                      },
+                    });
+                  }
+                } catch { /* ignore malformed clipboard */ }
+              }}
             />
             <button onClick={() => dispatch({ type: "clear" })} title="Clear circuit">Clear</button>
           </div>
