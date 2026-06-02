@@ -6,6 +6,8 @@ import { emitQiskit } from "../qasm/emitQiskit";
 import { emitCirq } from "../qasm/emitCirq";
 import { emitBraket } from "../qasm/emitBraket";
 import { emitQSharp } from "../qasm/emitQSharp";
+import { emitPyQuil } from "../qasm/emitPyQuil";
+import { emitPytket } from "../qasm/emitPytket";
 import { parseQasm3 } from "../qasm/parse";
 import { EXAMPLE_CATEGORIES, type Example } from "../examples";
 import { downloadCanvasSvg } from "./exportSvg";
@@ -81,6 +83,8 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
   const onDownloadCirq = () => downloadText(emitCirq(circuit), "_cirq.py", "text/x-python;charset=utf-8");
   const onDownloadBraket = () => downloadText(emitBraket(circuit), "_braket.py", "text/x-python;charset=utf-8");
   const onDownloadQSharp = () => downloadText(emitQSharp(circuit), ".qs", "text/plain;charset=utf-8");
+  const onDownloadPyQuil = () => downloadText(emitPyQuil(circuit), "_pyquil.py", "text/x-python;charset=utf-8");
+  const onDownloadPytket = () => downloadText(emitPytket(circuit), "_pytket.py", "text/x-python;charset=utf-8");
 
   const onShare = async () => {
     try {
@@ -118,6 +122,8 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
         onCirq={onDownloadCirq}
         onBraket={onDownloadBraket}
         onQSharp={onDownloadQSharp}
+        onPyQuil={onDownloadPyQuil}
+        onPytket={onDownloadPytket}
         onSvg={() => downloadCanvasSvg(circuit.name)}
       />
       <button
@@ -136,12 +142,16 @@ function ExportPicker({
   onCirq,
   onBraket,
   onQSharp,
+  onPyQuil,
+  onPytket,
   onSvg,
 }: {
   onQiskit: () => void;
   onCirq: () => void;
   onBraket: () => void;
   onQSharp: () => void;
+  onPyQuil: () => void;
+  onPytket: () => void;
   onSvg: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -176,6 +186,8 @@ function ExportPicker({
             {item("Cirq", "_cirq.py — Google", onCirq)}
             {item("Braket SDK", "_braket.py — AWS", onBraket)}
             {item("Q#", ".qs — Microsoft", onQSharp)}
+            {item("PyQuil", "_pyquil.py — Rigetti", onPyQuil)}
+            {item("pytket", "_pytket.py — Quantinuum", onPytket)}
             {item("SVG", "vector canvas image", onSvg)}
           </div>
         </div>
