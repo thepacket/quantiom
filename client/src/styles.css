@@ -349,7 +349,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 
 /* ─── Examples picker popover ──────────────────────────────────────── */
 .examples-picker { position: relative; display: inline-block; }
-.examples-picker__btn { font-size: 11px; padding: 3px 10px; cursor: pointer; }
+.examples-picker__btn { padding: 3px 10px; cursor: pointer; }
 .examples-picker__pop { position: absolute; top: 100%; right: 0; margin-top: 4px; width: 320px; max-height: 420px; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); z-index: 100; overflow: hidden; }
 .examples-picker__search { background: var(--bg-2); border: none; border-bottom: 1px solid var(--border); padding: 8px 10px; color: var(--fg); font-size: 12px; outline: none; }
 .examples-picker__search:focus { border-bottom-color: var(--accent); }
