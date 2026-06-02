@@ -230,7 +230,7 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
           <button className="chat__send" onClick={stop} title="Stop streaming">stop</button>
         ) : (
           <button className="chat__send" onClick={send} disabled={!input.trim()} title="Send (⌘/Ctrl+Enter)">
-            send
+            ASK
           </button>
         )}
       </div>
