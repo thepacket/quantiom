@@ -54,6 +54,10 @@ export function ProbabilityPanel({ state, gpuProbabilities, sampledProbabilities
   const data = dataOf(state);
   const [mode, setMode] = useState<Mode>(loadInitialMode);
   const [shots, setShots] = useState<number>(loadInitialShots);
+  const [sortDesc, setSortDesc] = useState<boolean>(() => {
+    try { return localStorage.getItem("quantiom:probabilities-sort") === "desc"; } catch { return false; }
+  });
+  const [showAll, setShowAll] = useState<boolean>(false);
   const dim = data?.probabilities.length ?? 0;
   const effectiveProbs =
     sampledProbabilities && sampledProbabilities.length === dim
@@ -131,6 +135,17 @@ export function ProbabilityPanel({ state, gpuProbabilities, sampledProbabilities
           >
             shots
           </button>
+          <button
+            className={"prob__mode-btn" + (sortDesc ? " prob__mode-btn--on" : "")}
+            onClick={() => {
+              const next = !sortDesc;
+              setSortDesc(next);
+              try { localStorage.setItem("quantiom:probabilities-sort", next ? "desc" : "basis"); } catch { /* ignore */ }
+            }}
+            title="Sort rows by descending probability"
+          >
+            sort
+          </button>
         </div>
       }
     >
@@ -169,7 +184,17 @@ export function ProbabilityPanel({ state, gpuProbabilities, sampledProbabilities
               </button>
             </div>
           )}
-          <ProbabilityChart data={data} probs={effectiveProbs ?? data.probabilities} mode={mode} counts={counts} shots={shots} />
+          <ProbabilityChart
+            data={data}
+            probs={effectiveProbs ?? data.probabilities}
+            mode={mode}
+            counts={counts}
+            shots={shots}
+            sortDesc={sortDesc}
+            limit={showAll ? Infinity : 64}
+            onToggleShowAll={() => setShowAll((v) => !v)}
+            showAll={showAll}
+          />
           {probSource === "sampled" && (
             <div className="prob__note">
               Averaged across {sampledShots ?? "?"} trajectory shots (circuit has measurements — single-shot |amp|² would be pinned to one collapse branch).
@@ -190,61 +215,89 @@ function ProbabilityChart({
   mode,
   counts,
   shots,
+  sortDesc,
+  limit,
+  onToggleShowAll,
+  showAll,
 }: {
   data: NonNullable<ReturnType<typeof dataOf>>;
   probs: number[];
   mode: Mode;
   counts: number[] | null;
   shots: number;
+  sortDesc: boolean;
+  limit: number;
+  onToggleShowAll: () => void;
+  showAll: boolean;
 }) {
   const exactProbs = probs.map((p) => p ?? 0);
   const empirical = mode === "shots" && counts
     ? counts.map((c) => c / Math.max(1, shots))
     : exactProbs;
-  const maxBar = Math.max(0.01, ...empirical, ...exactProbs);
+  // Build display ordering: by basis index (canonical) or by descending probability.
+  let order = data.amplitudes.map((_, i) => i);
+  if (sortDesc) {
+    order = order.slice().sort((a, b) => empirical[b] - empirical[a]);
+  }
+  const total = order.length;
+  const overflow = total > limit;
+  const visibleOrder = overflow ? order.slice(0, limit) : order;
+  const maxBar = Math.max(0.01, ...visibleOrder.map((i) => Math.max(empirical[i], exactProbs[i])));
   const width = 280;
   const labelW = 50;
   return (
-    <svg width={width} height={data.amplitudes.length * (BAR_H + 4) + 8} className="prob__svg">
-      {data.amplitudes.map((a, i) => {
-        const p = empirical[i];
-        const exactP = exactProbs[i];
-        const barW = (width - labelW - 60) * (p / maxBar);
-        const exactW = (width - labelW - 60) * (exactP / maxBar);
-        const y = i * (BAR_H + 4) + 4;
-        const isZero = p < 1e-9 && exactP < 1e-9;
-        return (
-          <g key={a.index}>
-            <text x={labelW - 6} y={y + BAR_H / 2 + 4} className="prob__basis" textAnchor="end">
-              |{a.basis}⟩
-            </text>
-            {/* In shots mode, show the exact distribution as a faint outline behind the sampled bar. */}
-            {mode === "shots" && (
+    <>
+      <svg width={width} height={visibleOrder.length * (BAR_H + 4) + 8} className="prob__svg">
+        {visibleOrder.map((i, row) => {
+          const a = data.amplitudes[i];
+          const p = empirical[i];
+          const exactP = exactProbs[i];
+          const barW = (width - labelW - 60) * (p / maxBar);
+          const exactW = (width - labelW - 60) * (exactP / maxBar);
+          const y = row * (BAR_H + 4) + 4;
+          const isZero = p < 1e-9 && exactP < 1e-9;
+          return (
+            <g key={a.index}>
+              <text x={labelW - 6} y={y + BAR_H / 2 + 4} className="prob__basis" textAnchor="end">
+                |{a.basis}⟩
+              </text>
+              {mode === "shots" && (
+                <rect
+                  x={labelW}
+                  y={y}
+                  width={Math.max(0, exactW)}
+                  height={BAR_H}
+                  className="prob__exact-shadow"
+                  rx={2}
+                />
+              )}
               <rect
                 x={labelW}
                 y={y}
-                width={Math.max(0, exactW)}
+                width={Math.max(0, barW)}
                 height={BAR_H}
-                className="prob__exact-shadow"
+                className={isZero ? "prob__bar prob__bar--zero" : "prob__bar"}
                 rx={2}
               />
-            )}
-            <rect
-              x={labelW}
-              y={y}
-              width={Math.max(0, barW)}
-              height={BAR_H}
-              className={isZero ? "prob__bar prob__bar--zero" : "prob__bar"}
-              rx={2}
-            />
-            <text x={labelW + Math.max(barW, exactW) + 4} y={y + BAR_H / 2 + 4} className="prob__pct">
-              {mode === "shots" && counts
-                ? `${counts[i]}`
-                : `${(p * 100).toFixed(1)}%`}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+              <text x={labelW + Math.max(barW, exactW) + 4} y={y + BAR_H / 2 + 4} className="prob__pct">
+                {mode === "shots" && counts
+                  ? `${counts[i]}`
+                  : `${(p * 100).toFixed(1)}%`}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      {overflow && (
+        <button
+          className="prob__resample"
+          onClick={onToggleShowAll}
+          title={showAll ? "Show top 64 only" : `Show all ${total} outcomes`}
+          style={{ marginTop: 4 }}
+        >
+          {showAll ? "Top 64" : `Show all ${total}`}
+        </button>
+      )}
+    </>
   );
 }

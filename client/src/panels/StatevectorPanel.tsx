@@ -19,8 +19,11 @@ function formatComplex(re: number, im: number): string {
   return `${re.toFixed(4)} ${sign} ${Math.abs(im).toFixed(4)}i`;
 }
 
+const STATEVECTOR_DEFAULT_LIMIT = 64;
+
 export function StatevectorPanel({ state }: Props) {
   const [hideZeros, setHideZeros] = useState(true);
+  const [showAll, setShowAll] = useState(false);
 
   const data = dataOf(state);
   const error = state.kind === "error" ? state.message : null;
@@ -116,7 +119,13 @@ export function StatevectorPanel({ state }: Props) {
           gives the exact per-qubit reduced state.
         </div>
       )}
-      {data && !data.isNoisy && !data.isStabilizer && (
+      {data && !data.isNoisy && !data.isStabilizer && (() => {
+        const visible = data.amplitudes.filter((a) => !hideZeros || !a.isZero);
+        const total = visible.length;
+        const cap = showAll ? Infinity : STATEVECTOR_DEFAULT_LIMIT;
+        const overflowed = total > cap;
+        const rows = overflowed ? visible.slice(0, cap) : visible;
+        return (
         <>
           <table className="statevector__table">
             <thead>
@@ -126,9 +135,7 @@ export function StatevectorPanel({ state }: Props) {
               </tr>
             </thead>
             <tbody>
-              {data.amplitudes
-                .filter((a) => !hideZeros || !a.isZero)
-                .map((a) => (
+              {rows.map((a) => (
                   <tr key={a.index} className={a.isZero ? "statevector__row--zero" : ""}>
                     <td className="statevector__basis">
                       <Tex latex={`|${a.basis}\\rangle`} />
@@ -140,6 +147,15 @@ export function StatevectorPanel({ state }: Props) {
                 ))}
             </tbody>
           </table>
+          {overflowed && (
+            <button
+              onClick={() => setShowAll((v) => !v)}
+              title={showAll ? `Cap at ${STATEVECTOR_DEFAULT_LIMIT} rows` : `Show all ${total} rows`}
+              style={{ marginTop: 4 }}
+            >
+              {showAll ? `Cap at ${STATEVECTOR_DEFAULT_LIMIT}` : `Show all ${total} rows`}
+            </button>
+          )}
           {data.measurementRecord && data.measurementRecord.length > 0 && (
             <div className="statevector__measurements">
               <span className="statevector__measurements-head">classical</span>
@@ -165,7 +181,8 @@ export function StatevectorPanel({ state }: Props) {
             </div>
           )}
         </>
-      )}
+        );
+      })()}
     </PanelShell>
   );
 }
