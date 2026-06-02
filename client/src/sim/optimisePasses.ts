@@ -615,13 +615,28 @@ const DIAGONAL_GATES = new Set([
   "cz", "cp", "cu1", "crz", "rzz",
 ]);
 const DIAGONAL_ROTATIONS = new Set(["rz", "p", "u1", "crz", "cp", "cu1", "rzz"]);
+/** Diagonal POWER-merge gates: T·T → S etc. Single-qubit, no params, so
+ *  the "merge" is a gate-id rewrite rather than a param sum. */
+const POWER_DIAGONAL = new Set(["t", "tdg", "s", "sdg"]);
+/** Controlled gates whose action on the *control* qubit is Z-stabilized
+ *  (i.e., they commute with diagonal operators on the control). CX is the
+ *  canonical example: Z(c)·CX(c,t) = CX(c,t)·Z(c). Same for CY/CH/CCX/etc.
+ *  CZ/CP/CRZ are already in DIAGONAL_GATES (diagonal everywhere). */
+const CONTROL_Z_STABILIZED = new Set([
+  "cx", "cy", "ch", "csx", "csxdg",
+  "ccx", "ccz", "c3x", "c4x", "cswap",
+]);
 
 function isDiagonalForQubit(g: PlacedGate, q: number): boolean {
   if (g.controlStates?.some((s) => !s)) return false;
   if (g.condition) return false;
   const qs = [...g.controls, ...g.targets];
   if (!qs.includes(q)) return true; // doesn't touch q at all — trivially commutes
-  return DIAGONAL_GATES.has(g.gateId);
+  if (DIAGONAL_GATES.has(g.gateId)) return true;
+  // Z-stabilized on control side: a diagonal operator on q hops past g iff
+  // q is one of g's controls (not targets).
+  if (g.controls.includes(q) && CONTROL_Z_STABILIZED.has(g.gateId)) return true;
+  return false;
 }
 
 function commuteDiagonalMerge(
@@ -633,38 +648,60 @@ function commuteDiagonalMerge(
   );
   const remove = new Set<string>();
   const mergedById = new Map<string, string[]>();
+  const rewriteById = new Map<string, string>();
+  /** Tracks the gateId a kept gate has been rewritten to during THIS pass.
+   *  The walker must respect this — a T·T → S rewrite changes prev's
+   *  effective id to "s", so a third T walking back must NOT re-fire the
+   *  "T·T → S" rule against the same prev (would silently drop a T worth
+   *  of phase). The outer fixed-point loop handles further chaining. */
+  const effectiveId = new Map<string, string>();
   let changed = false;
+
+  const isMergeable = (g: PlacedGate) =>
+    DIAGONAL_ROTATIONS.has(g.gateId) || POWER_DIAGONAL.has(g.gateId);
 
   for (let i = 0; i < sorted.length; i++) {
     const g = sorted[i];
     if (remove.has(g.id)) continue;
-    if (!DIAGONAL_ROTATIONS.has(g.gateId)) continue;
+    if (!isMergeable(g)) continue;
     if (g.condition || g.controlStates?.some((s) => !s)) continue;
     const qubits = [...g.controls, ...g.targets];
 
     // Walk backwards through earlier gates. Find the nearest predecessor
-    // that's a same-id, same-qubit-set rotation we can commute through.
+    // that's a same-id, same-qubit-set mergeable gate we can commute through.
     for (let j = i - 1; j >= 0; j--) {
       const prev = sorted[j];
       if (remove.has(prev.id)) continue;
-      // Does prev touch any of g's qubits?
       const prevQs = [...prev.controls, ...prev.targets];
       const overlap = prevQs.some((pq) => qubits.includes(pq));
       if (!overlap) continue; // independent, keep walking
-      // If prev is the same gate id on the same qubit set with same controls/targets
-      // → merge.
+      const prevEffId = effectiveId.get(prev.id) ?? prev.gateId;
+      // Same-id same-qubit predecessor → merge.
       if (
-        prev.gateId === g.gateId
+        prevEffId === g.gateId
         && sameQubitSet(prev, g)
         && !prev.condition
         && !prev.controlStates?.some((s) => !s)
       ) {
-        const prevParams = mergedById.get(prev.id) ?? prev.params;
-        const merged = prevParams.map((p, k) => combineExpr(p, g.params[k] ?? ""));
-        mergedById.set(prev.id, merged);
-        remove.add(g.id);
-        rules[`commute-merge ${g.gateId}`] =
-          (rules[`commute-merge ${g.gateId}`] ?? 0) + 1;
+        if (DIAGONAL_ROTATIONS.has(g.gateId)) {
+          // Parameterized rotation: sum the angles.
+          const prevParams = mergedById.get(prev.id) ?? prev.params;
+          const merged = prevParams.map((p, k) => combineExpr(p, g.params[k] ?? ""));
+          mergedById.set(prev.id, merged);
+          remove.add(g.id);
+          rules[`commute-merge ${g.gateId}`] =
+            (rules[`commute-merge ${g.gateId}`] ?? 0) + 1;
+        } else {
+          // Power-merge: T·T → S, S·S → Z. Rewrite kept gate, mark its
+          // effective id so subsequent iterations don't re-match it.
+          const result = POWER_PRODUCT[g.gateId];
+          if (!result) break;
+          rewriteById.set(prev.id, result);
+          effectiveId.set(prev.id, result);
+          remove.add(g.id);
+          rules[`commute-merge ${g.gateId}·${g.gateId} → ${result}`] =
+            (rules[`commute-merge ${g.gateId}·${g.gateId} → ${result}`] ?? 0) + 1;
+        }
         changed = true;
         break;
       }
@@ -682,6 +719,11 @@ function commuteDiagonalMerge(
     const mergedParams = mergedById.get(g.id);
     if (mergedParams) {
       next.push({ ...g, id: newGateId(), params: mergedParams });
+      continue;
+    }
+    const rewriteTo = rewriteById.get(g.id);
+    if (rewriteTo) {
+      next.push({ ...g, id: newGateId(), gateId: rewriteTo, params: [] });
       continue;
     }
     next.push(g);
