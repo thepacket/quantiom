@@ -9,29 +9,38 @@ Aaronson–Gottesman tableau ≤ 1024 qubits with **Pauli frame tracking
 for depolarising noise**, and a quantum-trajectory noise simulator
 with calibrated NISQ channels), and a column of researcher-grade
 panels. The Expectation panel evaluates either a single Pauli string
-or a **full weighted Pauli-sum Hamiltonian**; an Adam optimiser
-gradient-descends ⟨H⟩ for VQE/QAOA/QML loops; landscape sweep,
-barren-plateau diagnostic, and zero-noise extrapolation close the
-NISQ research loop. A one-click **Compile…** pipeline runs
-Transpile → Optimise → Route → Optimise to a target native gate set,
-reporting per-stage gate counts. The Hamiltonian panel emits **Trotter
-circuits at order 1 / 2 (Strang) / 4 (Suzuki) or QDrift** random
-compilation. Process tomography reconstructs the χ matrix in heatmap
-or Hinton view; equivalence-checking compares two open tabs with
-process fidelity and trace distance. Noise is per-gate-id, per-qubit,
-T1 / T2, crosstalk, custom Kraus, readout — all importable from IBM
+or a **full weighted Pauli-sum Hamiltonian**, with **Adam · SGD ·
+Quantum Natural Gradient (Fubini–Study metric)** optimisers,
+**zero-noise extrapolation**, **probabilistic error cancellation** for
+the 1q-depolarising / phase-damping / 2q-depolarising channels, plus
+**conditional ⟨P⟩** post-selected on a classical-bit outcome. A
+one-click **Compile…** pipeline runs Transpile → Optimise → Route →
+Optimise to a target native gate set, reporting per-stage gate counts.
+The Hamiltonian panel emits **Trotter circuits at order 1 / 2 (Strang)
+/ 4 (Suzuki) or QDrift** random compilation. Process tomography
+reconstructs the χ matrix in heatmap or Hinton view; equivalence-
+checking compares two open tabs with process fidelity and trace
+distance. Noise is per-gate-id, per-qubit, T1 / T2, crosstalk, **1q
+and 2q custom Kraus**, readout — all importable from IBM
 `BackendProperties` JSON (T1, T2, per-gate gate_error, readout error,
-coupling map). **WebGPU** detection and a 1-qubit-gate compute shader
-for trajectory parallelism land as a foundation. Circuits round-trip
-OpenQASM 3 (and parse OpenQASM 2), export to **Qiskit · Cirq · Braket
-· Q# · PyQuil · pytket**, serialize into a shareable URL hash, and
+coupling map). **WebGPU** trajectory parallelism feeds the
+Probabilities panel directly when the circuit fits the 1q-gate +
+depolarising support set; the foundation for activating Optimise /
+Landscape / Plateau / ZNE on the GPU is in place. An **AI chat panel
+at the bottom of the canvas** talks to OpenRouter (any of ~340 models,
+your own key), receives the current circuit as OpenQASM 3 on every
+turn, and **auto-opens any OpenQASM block in the reply as a new tab**.
+Circuits round-trip OpenQASM 3 (and parse OpenQASM 2), export to
+**Qiskit · Cirq · Braket · Q# · PyQuil · pytket · OpenQASM 2 · LaTeX
+(quantikz) · JSON · SVG**, serialize into a shareable URL hash, and
 the t-animation can be recorded as a WebM video.
 
 Live: **<https://quantiom.fly.dev>**
 
 Quantiom is moving fast and the surface to verify is wide — 55 gates,
-three simulator backends, 16 panels, OpenQASM 3 round-trip, and six SDK
-emitters. Expect rough edges; bug reports against any of it are welcome.
+three simulator backends, an AI chat assistant, ~18 panels, OpenQASM 3
+round-trip, and nine code/format emitters. Expect rough edges; bug
+reports against any of it are welcome.
 
 ## Authorship
 
@@ -88,9 +97,10 @@ them is the maintainer's.
   - Markers (barrier, delay)
 - **Canvas** — unbounded qubits and columns; SVG rendering. Distinct
   visuals for CNOT ⊕, SWAP ×, measure meter, reset, state-prep,
-  barrier, delay; per-category coloured gate strokes. **Hover any
-  gate** for a tooltip with name, qubits, column, parameters, and any
-  classical condition.
+  barrier, delay; per-category coloured gate strokes. **Per-column
+  adaptive widths** so wide rotation labels like `RY(π/2 * t)` don't
+  overlap into adjacent columns. **Hover any gate** for a tooltip with
+  name, qubits, column, parameters, and any classical condition.
 - **Drag and drop**
   - Palette → cell: place a new gate.
   - Placed gate → cell: move the whole gate; column auto-bumps on
@@ -101,8 +111,15 @@ them is the maintainer's.
   expressions (free-form: `π/2`, `θ`, `2*t + π/4`, `sin(t)`); per-control
   **anti-control** toggle (●/○); compact Re/Im **matrix entry grid**
   for `u_arb` (2×2) and `u_arb_2` (4×4); per-gate **classical
-  condition** picker (`fire only if c[k] == v`); **Step here** button
-  freezes the simulator one column before the selected gate.
+  condition** picker (`fire only if c[k] == v`); per-gate **annotation**
+  field (free-form note rendered as a small italic tag under the gate
+  box on the canvas; round-trips through QASM 3 as a `// note: …`
+  comment); **Step here** button freezes the simulator one column before
+  the selected gate.
+- **Per-qubit names** — double-click any `qN` rail label to rename
+  (e.g. `data`, `ancilla`, `syndrome`); names round-trip through a
+  `// qubit_names: …` comment in QASM 3 and are part of the share-link
+  payload. The Find box matches against them too.
 - **Step-through inspector** — slider above the canvas (⏮ ◀ ▶ ⏭)
   freezes the simulation at any column for gate-by-gate debugging;
   default "follow the end" so the sim shows the final state.
@@ -120,8 +137,9 @@ them is the maintainer's.
     matrices can't be inverted automatically and are confirmed before
     being omitted.
   - **Optimise** — peephole pass: cancel adjacent inverses, merge same-
-    axis rotations (`Rz(a)·Rz(b) → Rz(a+b)`), iterate to a fixed point;
-    reports rules fired.
+    axis rotations (`Rz(a)·Rz(b) → Rz(a+b)`), collapse same-qubit Pauli
+    pairs (`X·Y → Z`, etc.; global phase dropped), fuse `H·CX·H → CZ`
+    over a 3-gate window, iterate to a fixed point; reports rules fired.
   - **Compile…** — one-click pipeline that runs Transpile →
     Optimise → Route → Optimise for a chosen target. Skips the
     routing step when no coupling map is imported. Reports per-stage
@@ -141,15 +159,22 @@ them is the maintainer's.
     Delete buttons. Clones or removes all gates in `[from, to]`.
   - **History…** — multi-step undo / redo: "back 5/10/25/100" or
     matching forward jumps in one click.
+  - **Find** — toolbar search box; matches by gate id, `qN` /
+    user-renamed qubit name, or parameter substring; matching gates
+    glow with a yellow outline on the canvas.
+  - **Present** — toggle that hides the palette, Inspector, and the
+    right-side panel column so the canvas + key visualizers get the
+    whole window for screenshots. Setting persists across reloads.
 - **Undo / redo** — Cmd/Ctrl + Z, Cmd/Ctrl + Shift + Z (or Ctrl + Y);
   100 entries; consecutive parameter or QASM edits coalesce within
   500 ms.
 - **Auto-save** to `localStorage`; tabs restore on refresh.
 - **File menu** — Open `.qasm`, Download `.qasm`, **Examples…**
-  (typeahead search across 67 circuits), **Export…** popover
-  (Qiskit / Cirq / Braket / Q# / PyQuil / pytket / SVG), Share link.
-  Opening a file or example creates a new tab so your current work
-  stays.
+  (typeahead search across 70 circuits), **Export…** popover
+  (OpenQASM 2 · Qiskit · Cirq · Braket · Q# · PyQuil · pytket ·
+  **LaTeX (quantikz)** for papers · **JSON** raw IR · SVG), Share
+  link. Opening a file or example creates a new tab so your current
+  work stays.
 - **Dark theme** throughout.
 - **Title bar** — the current circuit's name is shown centered. The
   Quantiom logo on the left shows the running build's semver, commit
@@ -227,8 +252,22 @@ statevector path with zero overhead. When on:
   2×2 complex matrices. Applied via state-conditional sampling after
   every 1-qubit gate. Trace-preservation is the user's responsibility;
   rescaling keeps the state normalised.
+- **Custom 2-qubit Kraus channels** — up to 16 operators entered as
+  4×4 complex matrices (32 floats each, row-major Re/Im). Applied via
+  state-conditional sampling after every 2-qubit gate on the involved
+  pair. Lets you model correlated dephasing, two-qubit damping, or
+  any other 2q channel you can write down.
 - **Trajectory averaging** — runs T independent simulations (default
   256, presets up to 4 096), averages probabilities and Bloch vectors.
+- **WebGPU fast path for Probabilities** — when noise is enabled and
+  the circuit fits the GPU support set (1-qubit gates only,
+  depolarising noise, no T1/T2, no custom Kraus, no
+  measurements/conditions/reset), the Probabilities panel routes
+  through a WGSL compute shader running one thread per trajectory.
+  FP32; runs off the main thread; falls back to CPU silently the
+  moment any constraint fails. Extending the shader to feed
+  Optimise / Landscape / Plateau / ZNE is the next-up engineering
+  task.
 - **Per-qubit rate overrides** — a `perQubit` array with optional
   1-qubit depolarising / γ_AD / γ_PD / readout values shadows the
   globals per qubit.
@@ -288,14 +327,18 @@ nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
     plugged into Optimise / Landscape / Plateau / ZNE.
 
   In noise mode the value is trajectory-averaged with a "avg of N
-  trajectories" tag. The panel grows four diagnostic tools for
-  parameterised circuits:
+  trajectories" tag. The panel optionally **post-selects** on a
+  classical-bit outcome (`⟨P⟩ | c[k] == v`), dropping trajectories
+  whose final classical register doesn't match — useful for conditional
+  expectations after mid-circuit measurement. The panel grows five
+  diagnostic tools for parameterised circuits:
   - **Optimise** — pick which free symbols to vary, minimise or
-    maximise, set steps and learning rate, choose **Adam** (default)
-    or **SGD**. Quantiom runs central finite differences for the
-    gradient and Adam/SGD descent in the browser, pushing optimised
-    parameters back into the sliders. A loss sparkline plots ⟨P⟩ over
-    the trajectory.
+    maximise, set steps and learning rate, choose **Adam** (default),
+    **SGD**, or **QNG** (Quantum Natural Gradient — Fubini–Study
+    metric preconditioning via numerical finite differences on the
+    state vector; statevector mode only). Quantiom runs the loop in
+    the browser and pushes optimised parameters back into the sliders.
+    A loss sparkline plots ⟨P⟩ over the trajectory.
   - **Landscape** — for 1 or 2 picked symbols, sweep across [-π, π]
     on a 64-point line or 32×32 grid and render. 1D draws as a curve;
     2D as a diverging-colormap heatmap.
@@ -306,21 +349,40 @@ nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
     rates ×1, ×2, ×3 (scaling depolarising / damping / readout /
     crosstalk and per-qubit overrides), linearly fits ⟨P⟩(γ), reports
     γ=0 extrapolated value.
+  - **PEC** (visible when noise is on) — probabilistic error
+    cancellation. Inverts the 1q-depolarising, phase-damping, and
+    2q-depolarising channels via quasiprobability sampling; tracks
+    sign-weighted estimator and reports the per-channel location count
+    plus the multiplicative **variance overhead** so the user can see
+    when they're in a high-cost regime. Channels the noise model has
+    enabled but PEC doesn't yet invert (amplitude damping, readout,
+    crosstalk, custom Kraus) are listed so the estimate is honestly
+    labelled as partial.
 - **Reduced density matrix** — pick a qubit subset (≤ 4), see the
   2^|S| × 2^|S| matrix and `Tr(ρ²)` purity. Default-collapsed.
 - **Resources** — total gates, 1-qubit / 2-qubit / multi-qubit
   breakdown, **T-count and T-depth** (parallel T-layer count) and
   CX count, parallel depth, longest-qubit length, distinct qubits,
   free-symbol count, plus a Clifford-only flag and (when a coupling
-  map is imported) a connectivity-violation count.
+  map is imported) a connectivity-violation count. When `u_arb_2`
+  gates are present, surfaces an **≈ 3 CX + 8 1Q gates** KAK
+  decomposition cost estimate so researchers can see the
+  implementation overhead a 4×4 unitary block carries.
+- **Compare circuits** — pick another open tab from a dropdown to
+  diff the active circuit against it. Side-by-side table of qubits /
+  clbits / total gates / per-arity counts / CX / T-count / T-depth /
+  Clifford count / parallel depth / longest qubit / distinct qubits /
+  free symbols, with a Δ column. Default-collapsed.
 - **Noise model** — enable toggle; sliders for 1q depolarising, 2q
   depolarising, amplitude damping γ, phase damping γ, readout
   bit-flip, crosstalk; trajectory count with 64 / 256 / 1024 / 4096
   presets; **Import IBM BackendProperties .json** button; editable
   per-qubit rate table; **read-only per-gate-id rate table** when the
   importer populates it (sx, x, cx, ecr, etc. — each with its own
-  depolarising rate); a free-form **Custom 1q Kraus channel** editor
-  (up to 4 operators); **coupling-graph view** drawn as a small SVG;
+  depolarising rate); free-form **Custom 1q Kraus channel** editor
+  (up to 4 2×2 operators) plus a **Custom 2q Kraus channel** editor
+  (up to 16 4×4 operators applied after every 2-qubit gate on the
+  involved pair); **coupling-graph view** drawn as a small SVG;
   **WebGPU status chip** showing "available (Apple M3 / Apple)" or
   "unavailable (CPU only)".
 - **Equivalence check** — load a comparison `.qasm` OR pick another
@@ -375,6 +437,44 @@ nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
 Each panel is wrapped in its own React error boundary; a render-phase
 crash in one panel does not break the others.
 
+## AI chat (OpenRouter)
+
+A resizable chat panel at the bottom of the circuit-designer column
+talks to any model on [OpenRouter](https://openrouter.ai) — ~340 to
+pick from, including Claude, GPT, Gemini, Llama, Mistral, Qwen, and
+the long tail of open-weights. You supply your own API key; it's
+stored in `localStorage` only and sent solely as a `Bearer` token on
+the OpenRouter request. No proxy, no Quantiom-side logging — Quantiom
+is still 100% client-side.
+
+- **Always-attached circuit context.** Every message ships the current
+  OpenQASM 3 inside a ` ```qasm ` fence so the model can reason about
+  the actual circuit, not a vague description. Your visible chat
+  history only shows what you typed, not the attached QASM, so the
+  panel stays readable.
+- **Auto-open suggested circuits.** When the model replies with one
+  or more fenced blocks tagged `qasm` / `openqasm` / `openqasm3`, OR
+  whose first non-empty line contains `OPENQASM` / `qubit[` / `qreg`,
+  Quantiom parses each block and **opens it as a new tab the moment
+  the reply finishes streaming** — no button to click. Parse failures
+  log to console and skip silently. Auto-open fires once per reply,
+  not once per render, so reloading the page doesn't re-open old
+  suggestions.
+- **Model picker.** Live-fetches the full OpenRouter catalog with
+  search; click any model to switch. Choice persists per browser.
+- **Streaming responses** via SSE, with a Stop button to cancel
+  mid-stream. ⌘/Ctrl+Enter sends.
+- **Resizable height** by dragging the top edge; collapsible to a 24px
+  reopen strip. Height + open/closed state both persist.
+- **Bounded history persistence** (last 100 messages) so the next
+  session picks up where you left off without slowly filling
+  localStorage.
+
+Open the ⚙ drawer to paste your key (link to `openrouter.ai/keys`
+included). Anthropic, OpenAI, Google, Mistral, Meta, DeepSeek, xAI,
+Qwen all answer the same prompt format; reach for whichever pricing
+or capability tradeoff fits the task.
+
 ## Researcher workflows
 
 - **VQE / QAOA / QML loops**: paste a Hamiltonian (or build an ansatz
@@ -411,10 +511,17 @@ crash in one panel does not break the others.
   one period as a 3-second WebM video — paper / slide-ready.
 - **Resource estimation**: read T-count, T-depth, CX count,
   parallel depth, connectivity-violation count straight from the IR.
+- **AI-assisted circuit design**: open the chat at the bottom of the
+  canvas, ask "rewrite this as a depth-3 hardware-efficient ansatz on
+  4 qubits" or "give me a syndrome-extraction circuit for the
+  distance-3 surface code patch I have open", and the model's
+  OpenQASM 3 reply opens automatically as a new tab next to your
+  current one — ready to simulate, equivalence-check against your
+  original, transpile, or feed back into the chat for another round.
 
 ## Examples
 
-The Examples picker is a typeahead search across 67 hand-written
+The Examples picker is a typeahead search across 70 hand-written
 circuits in 8 categories:
 
 - **Intro** — coin flip, Walsh–Hadamard, magic state.
@@ -428,8 +535,13 @@ circuits in 8 categories:
   QFT (5q, 8q), inverse QFT, QPE, amplitude amplification, Hadamard
   cascade 8 / 12 / 16q, quantum-walk step.
 - **Arithmetic & ECC** — half adder, Cuccaro 3+3-bit adder, bit-flip
-  code, Steane [[7,1,3]] encoder, 5-qubit perfect code.
-- **Hamiltonian dynamics** — Ising-6 Trotter, XY-4 Trotter.
+  code, Steane [[7,1,3]] encoder, 5-qubit perfect code,
+  **distance-1 surface code plaquette** (XXXX + ZZZZ stabilizer
+  cycle on 4 data + 2 ancillas).
+- **Hamiltonian dynamics** — Ising-6 Trotter, XY-4 Trotter,
+  **Heisenberg XYZ Trotter step (4q)**,
+  **LiH Jordan–Wigner Trotter step (4q, 4 representative Pauli
+  terms with editable coefficients h1…h4)**.
 - **Decompositions** — Toffoli → Clifford + T.
 - **Variational** — QAOA triangle / kite / **square depth-2**,
   hardware-efficient 2-layer / 6-layer, **Real Amplitudes**,
@@ -456,6 +568,19 @@ circuits in 8 categories:
   Each walks the same IR with target-specific syntax. Free symbols
   carry through as named parameters so a Quantiom ansatz lands as a
   parameterised circuit on the other side.
+- **OpenQASM 2 export** — emits `qreg`/`creg`/`include "qelib1.inc"`
+  with arrow-form measurements. Gates outside qelib1.inc render as
+  commented placeholders so the structure stays readable; conditional
+  gates that need multi-bit creg comparisons are flagged with a warning.
+- **LaTeX (quantikz) export** — `\begin{quantikz} … \end{quantikz}`
+  snippet ready to paste into a paper. Single-qubit gates render as
+  `\gate{…}`, CX as `\ctrl{}` + `\targ{}`, CZ as `\ctrl{}` +
+  `\control{}`, SWAP as `\swap{}` + `\targX{}`, measurements as
+  `\meter{}`. Greek glyphs in parameters map to LaTeX.
+- **JSON IR export** — the raw Circuit IR as `.json`. Round-trip with
+  the share link is implicit; the explicit download is for tooling
+  that wants to read Quantiom circuits without going through the QASM
+  parser.
 - **Share link** — full circuit IR → JSON → gzip → base64url → URL
   hash fragment. Zero server cost; hashes never hit the wire.
 - **SVG export** of the canvas with embedded gate CSS and dark theme,
