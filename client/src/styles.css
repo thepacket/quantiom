@@ -221,6 +221,18 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .resources__note { color: #c8b88a; font-size: 11px; padding: 4px 6px; background: #2a2418; border: 1px solid #4a3f24; border-radius: 3px; }
 .resources__note--warn { color: #ff9b7a; background: #2a1a18; border-color: #6a3636; }
 
+/* ─── Tomography panel ───────────────────────────────────────────── */
+.tomo { display: flex; flex-direction: column; gap: 8px; }
+.tomo__run { padding: 4px 12px; font-size: 11px; background: var(--accent); color: var(--bg); border: 1px solid var(--accent); border-radius: 3px; cursor: pointer; font-weight: 600; align-self: flex-start; }
+.tomo__run:disabled { opacity: 0.4; cursor: not-allowed; }
+.tomo__meta { font-size: 11px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.tomo__match { color: var(--fg); }
+.tomo__hint { font-size: 10px; line-height: 1.4; }
+.tomo__chi-wrap { overflow-x: auto; }
+.tomo__chi { border-collapse: collapse; font-size: 10px; font-family: ui-monospace, monospace; }
+.tomo__chi th { color: var(--muted); padding: 2px 4px; font-weight: normal; font-size: 9px; }
+.tomo__cell { width: 28px; height: 22px; text-align: center; border: 1px solid var(--border); color: var(--fg); }
+
 /* ─── Equivalence panel ────────────────────────────────────────────── */
 .equiv { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
 .equiv__load { font-size: 11px; padding: 4px 8px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
