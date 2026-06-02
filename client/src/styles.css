@@ -177,6 +177,13 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .exp__op { color: var(--muted); font-family: ui-monospace, monospace; font-size: 13px; }
 .exp__value { color: var(--fg); font-family: ui-monospace, monospace; font-size: 16px; font-weight: 600; }
 .exp__noisy-tag { color: #c8b88a; font-size: 10px; margin-left: 8px; }
+.exp__mode { display: flex; gap: 2px; }
+.exp__mode-btn { font-size: 10px; padding: 3px 8px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; flex: 1; }
+.exp__mode-btn--on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+.exp__hamil { display: flex; flex-direction: column; gap: 4px; }
+.exp__hamil-text { width: 100%; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; font-family: ui-monospace, monospace; font-size: 11px; padding: 4px 6px; resize: vertical; }
+.exp__hamil-text:focus { outline: none; border-color: var(--accent); }
+.exp__hamil-meta { color: var(--muted); font-size: 10px; font-family: ui-monospace, monospace; }
 .exp__opt { display: flex; flex-direction: column; gap: 6px; padding: 6px; margin-top: 6px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; }
 .exp__opt-head { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
 .exp__opt-syms { display: flex; flex-wrap: wrap; gap: 4px; }

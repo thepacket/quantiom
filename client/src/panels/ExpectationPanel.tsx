@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
-import { paulis as evalPaulis, type Pauli } from "../sim/expectation";
-import { noisyPauliExpectation } from "../sim/simulateNoisy";
+import { paulis as evalPaulis, pauliSumExpectation, type Pauli, type Observable } from "../sim/expectation";
+import { noisyExpectationObservable } from "../sim/simulateNoisy";
 import { optimizeExpectation, zneFit, computeLandscape, barrenPlateauDiagnostic, type OptimizerKind } from "../sim/optimize";
+import { parsePauliSum, pauliSumQubitCount } from "../sim/trotter";
 import type { NoiseModel } from "../sim/noise";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
@@ -43,6 +44,8 @@ function ExpectationBody({ state, noisyContext }: Props) {
   const data = dataOf(state);
   const n = data?.numQubits ?? 0;
   const [selection, setSelection] = useState<Pauli[]>([]);
+  const [mode, setMode] = useState<"single" | "hamiltonian">("single");
+  const [hText, setHText] = useState<string>("0.5 * Z + 0.3 * X");
 
   // Resize per-qubit Pauli selection when the circuit width changes.
   useEffect(() => {
@@ -54,25 +57,46 @@ function ExpectationBody({ state, noisyContext }: Props) {
     });
   }, [n]);
 
+  // Parse the Pauli-sum input — useMemo so the panel doesn't reparse on every render.
+  const hParsed = useMemo<{ ok: true; terms: ReturnType<typeof parsePauliSum>; nH: number } | { ok: false; error: string }>(() => {
+    try {
+      const terms = parsePauliSum(hText);
+      return { ok: true, terms, nH: pauliSumQubitCount(terms) };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  }, [hText]);
+
+  // Build the observable that flows through to evaluators and tools.
+  const observable: Observable | null = useMemo(() => {
+    if (mode === "single") {
+      return selection.length === n ? { kind: "pauli", paulis: selection } : null;
+    }
+    if (!hParsed.ok) return null;
+    return { kind: "sum", terms: hParsed.terms };
+  }, [mode, selection, n, hParsed]);
+
   // O(n · 2^n) inner-product walk over the state. Skip while the panel
   // is hidden — that's the whole point of this guard. In noise mode, run
   // T trajectories and average rather than reading the biased single
   // representative trajectory.
   const value = useMemo(() => {
     if (collapsed) return null;
-    if (!data || selection.length !== n) return null;
+    if (!data || !observable) return null;
+    if (mode === "hamiltonian" && hParsed.ok && hParsed.nH !== n) return null;
     if (data.isNoisy && noisyContext) {
-      return noisyPauliExpectation(
+      return noisyExpectationObservable(
         noisyContext.circuit,
         noisyContext.paramValues,
         noisyContext.customGates,
         noisyContext.noise,
-        selection,
+        observable,
       );
     }
     if (data.isStabilizer) return null;
-    return evalPaulis(data.state, n, selection);
-  }, [data, selection, n, collapsed, noisyContext]);
+    if (observable.kind === "pauli") return evalPaulis(data.state, n, observable.paulis);
+    return pauliSumExpectation(data.state, n, observable.terms);
+  }, [data, observable, n, mode, hParsed, collapsed, noisyContext]);
 
   const opLabel = useMemo(() => {
     const parts: string[] = [];
@@ -102,31 +126,71 @@ function ExpectationBody({ state, noisyContext }: Props) {
     );
   }
 
+  const opDisplay = mode === "single"
+    ? `⟨${opLabel}⟩`
+    : `⟨H⟩` + (hParsed.ok ? ` (${hParsed.terms.length} terms)` : "");
+
   return (
     <div className="exp">
-      <div className="exp__row">
-        {selection.map((p, q) => (
-          <div key={q} className="exp__cell">
-            <span className="exp__qubit">q{q}</span>
-            <select className="exp__pauli" value={p} onChange={(e) => setQubit(q, e.target.value as Pauli)}>
-              {PAULIS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          </div>
-        ))}
+      <div className="exp__mode">
+        <button
+          className={"exp__mode-btn" + (mode === "single" ? " exp__mode-btn--on" : "")}
+          onClick={() => setMode("single")}
+        >
+          single Pauli
+        </button>
+        <button
+          className={"exp__mode-btn" + (mode === "hamiltonian" ? " exp__mode-btn--on" : "")}
+          onClick={() => setMode("hamiltonian")}
+        >
+          Hamiltonian
+        </button>
       </div>
+      {mode === "single" ? (
+        <div className="exp__row">
+          {selection.map((p, q) => (
+            <div key={q} className="exp__cell">
+              <span className="exp__qubit">q{q}</span>
+              <select className="exp__pauli" value={p} onChange={(e) => setQubit(q, e.target.value as Pauli)}>
+                {PAULIS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="exp__hamil">
+          <textarea
+            className="exp__hamil-text"
+            value={hText}
+            onChange={(e) => setHText(e.target.value)}
+            rows={2}
+            spellCheck={false}
+            placeholder="0.5 * ZZ + 0.3 * XX - 0.2 * YZ"
+          />
+          {hParsed.ok ? (
+            hParsed.nH !== n ? (
+              <div className="panel__error">term width {hParsed.nH} ≠ circuit width {n}</div>
+            ) : (
+              <div className="exp__hamil-meta">{hParsed.terms.length} terms · {hParsed.nH} qubits</div>
+            )
+          ) : (
+            <div className="panel__error">✗ {hParsed.error}</div>
+          )}
+        </div>
+      )}
       <div className="exp__result">
-        <span className="exp__op">⟨{opLabel}⟩</span>
+        <span className="exp__op">{opDisplay}</span>
         <span className="exp__value">{value === null ? "—" : value.toFixed(4)}</span>
         {data.isNoisy && (
           <span className="exp__noisy-tag">avg of {data.trajectories} trajectories</span>
         )}
       </div>
-      {noisyContext && data.freeSymbols.length > 0 && (
+      {noisyContext && observable && data.freeSymbols.length > 0 && (
         <Optimizer
           ctx={noisyContext}
-          observable={selection}
+          observable={observable}
           freeSymbols={data.freeSymbols}
           currentValue={value}
         />
@@ -142,7 +206,7 @@ function Optimizer({
   currentValue,
 }: {
   ctx: OptimizerContext;
-  observable: Pauli[];
+  observable: Observable;
   freeSymbols: string[];
   currentValue: number | null;
 }) {
@@ -268,7 +332,7 @@ function DiagnosticTools({
   picked,
 }: {
   ctx: OptimizerContext;
-  observable: Pauli[];
+  observable: Observable;
   picked: Set<string>;
 }) {
   const [busy, setBusy] = useState<"zne" | "landscape" | "plateau" | null>(null);

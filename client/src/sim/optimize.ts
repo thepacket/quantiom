@@ -1,8 +1,8 @@
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 import { simulate, type ParameterValues } from "./simulate";
-import { simulateNoisy, noisyPauliExpectation } from "./simulateNoisy";
-import { paulis as evalPaulis, type Pauli } from "./expectation";
+import { simulateNoisy, noisyExpectationObservable } from "./simulateNoisy";
+import { evaluateObservable, type Pauli, type Observable } from "./expectation";
 import type { NoiseModel } from "./noise";
 
 /**
@@ -29,7 +29,9 @@ export type OptimizerKind = "sgd" | "adam";
 
 export type OptimizerOptions = {
   symbols: string[];
-  observable: Pauli[];
+  /** Observable to optimise — either a single Pauli string (legacy) or a
+   *  weighted Pauli-sum Hamiltonian. */
+  observable: Pauli[] | Observable;
   /** Initial parameter values, including non-optimised symbols. */
   initial: ParameterValues;
   /** Steps of gradient descent. */
@@ -127,15 +129,21 @@ function evaluate(
   circuit: Circuit,
   customGates: CustomGate[],
   params: ParameterValues,
-  observable: Pauli[],
+  observable: Pauli[] | Observable,
   noise: NoiseModel | undefined,
 ): number {
+  const obs = toObservable(observable);
   if (noise?.enabled) {
-    return noisyPauliExpectation(circuit, params, customGates, noise, observable);
+    return noisyExpectationObservable(circuit, params, customGates, noise, obs);
   }
   const result = simulate(circuit, params, customGates);
   if (result.isStabilizer) return 0; // optimization not meaningful in Clifford-only
-  return evalPaulis(result.state, circuit.numQubits, observable);
+  return evaluateObservable(result.state, circuit.numQubits, obs);
+}
+
+function toObservable(o: Pauli[] | Observable): Observable {
+  if (Array.isArray(o)) return { kind: "pauli", paulis: o };
+  return o;
 }
 
 // Re-export for convenience even though only `optimizeExpectation` is the
@@ -158,14 +166,15 @@ export function zneFit(
   circuit: Circuit,
   paramValues: ParameterValues,
   customGates: CustomGate[],
-  observable: Pauli[],
+  observable: Pauli[] | Observable,
   baseNoise: NoiseModel,
   scales: number[] = [1, 2, 3],
 ): { samples: Array<{ scale: number; value: number }>; extrapolated: number } {
+  const obs = Array.isArray(observable) ? { kind: "pauli" as const, paulis: observable } : observable;
   const samples: Array<{ scale: number; value: number }> = [];
   for (const s of scales) {
     const scaled = scaleNoise(baseNoise, s);
-    const v = noisyPauliExpectation(circuit, paramValues, customGates, scaled, observable);
+    const v = noisyExpectationObservable(circuit, paramValues, customGates, scaled, obs);
     samples.push({ scale: s, value: v });
   }
   // Linear least-squares fit y = a + b·x.
@@ -211,7 +220,7 @@ export function computeLandscape(
   circuit: Circuit,
   paramValues: ParameterValues,
   customGates: CustomGate[],
-  observable: Pauli[],
+  observable: Pauli[] | Observable,
   symbols: string[],
   grid: number,
   range: [number, number],
@@ -250,15 +259,10 @@ function evalAt(
   circuit: Circuit,
   params: ParameterValues,
   customGates: CustomGate[],
-  observable: Pauli[],
+  observable: Pauli[] | Observable,
   noise: NoiseModel | undefined,
 ): number {
-  if (noise?.enabled) return noisyPauliExpectation(circuit, params, customGates, noise, observable);
-  const r = simulate(circuit, params, customGates);
-  if (r.isStabilizer) return 0;
-  // Inline the Pauli expectation: we need expectation.paulis but importing
-  // it here would create a circular dep; cheat by reaching into evaluate().
-  return evaluate(circuit, customGates, params, observable, undefined);
+  return evaluate(circuit, customGates, params, observable, noise);
 }
 
 /**
@@ -271,7 +275,7 @@ function evalAt(
 export function barrenPlateauDiagnostic(
   circuit: Circuit,
   customGates: CustomGate[],
-  observable: Pauli[],
+  observable: Pauli[] | Observable,
   symbols: string[],
   samples: number,
   noise?: NoiseModel,

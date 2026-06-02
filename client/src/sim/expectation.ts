@@ -13,6 +13,46 @@
 export type Pauli = "I" | "X" | "Y" | "Z";
 
 /**
+ * Observable abstraction: either a single multi-qubit Pauli string (the
+ * existing single-observable mode) or a weighted Pauli-sum Hamiltonian
+ * (the new VQE-shaped mode). The Expectation panel, Optimise loop,
+ * Landscape sweeper, Plateau diagnostic, and ZNE all flow through this
+ * type so they work transparently for both observables.
+ */
+export type Observable =
+  | { kind: "pauli"; paulis: Pauli[] }
+  | { kind: "sum"; terms: Array<{ coefficient: number; paulis: string }> };
+
+/** Compute ⟨ψ|H|ψ⟩ for a Pauli-sum Hamiltonian H = Σ_k h_k P_k. */
+export function pauliSumExpectation(
+  state: Float64Array,
+  n: number,
+  terms: Array<{ coefficient: number; paulis: string }>,
+): number {
+  let total = 0;
+  for (const term of terms) {
+    if (term.coefficient === 0) continue;
+    const pauliArr: Pauli[] = new Array(n);
+    for (let q = 0; q < n; q++) {
+      const ch = term.paulis[q] ?? "I";
+      pauliArr[q] = (ch === "X" || ch === "Y" || ch === "Z" ? ch : "I") as Pauli;
+    }
+    total += term.coefficient * paulis(state, n, pauliArr);
+  }
+  return total;
+}
+
+/** Evaluate an arbitrary Observable on a pure state. */
+export function evaluateObservable(
+  state: Float64Array,
+  n: number,
+  obs: Observable,
+): number {
+  if (obs.kind === "pauli") return paulis(state, n, obs.paulis);
+  return pauliSumExpectation(state, n, obs.terms);
+}
+
+/**
  * state is the interleaved-re/im Float64Array of length 2 · 2^n.
  * paulis[q] selects the Pauli on qubit q (big-endian: q = 0 is MSB).
  */

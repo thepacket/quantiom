@@ -3,7 +3,7 @@ import { buildMatrix, M_X, M_Y, M_Z, type Matrix } from "./matrices";
 import { applyKQubit } from "./apply";
 import { compileExpr } from "./expr";
 import { expandCustomGates, type CustomGate } from "../editor/customGates";
-import { paulis as evalPaulis, type Pauli } from "./expectation";
+import { paulis as evalPaulis, pauliSumExpectation, type Pauli, type Observable } from "./expectation";
 import { rateFor, type NoiseModel } from "./noise";
 import { measureX, measureY, measureZ, reset as resetQubit } from "./measure";
 import {
@@ -498,6 +498,127 @@ function accumulateBloch(state: Float64Array, n: number, sink: Float64Array): vo
  * Memoise on (circuit, params, noise rates, paulis) at the call site;
  * the result is stable for fixed inputs up to the Math.random() seed.
  */
+/**
+ * Trajectory-averaged expectation of an arbitrary Observable — either a
+ * single Pauli string or a weighted Pauli-sum Hamiltonian. For sums, the
+ * per-trajectory evaluation is Σ h_k ⟨ψ_t|P_k|ψ_t⟩; averaging across
+ * trajectories then commutes through the sum.
+ */
+export function noisyExpectationObservable(
+  circuit: Circuit,
+  paramValues: ParameterValues,
+  customGates: CustomGate[],
+  noise: NoiseModel,
+  obs: Observable,
+): number {
+  if (obs.kind === "pauli") {
+    return noisyPauliExpectation(circuit, paramValues, customGates, noise, obs.paulis);
+  }
+  return noisyPauliSumExpectation(circuit, paramValues, customGates, noise, obs.terms);
+}
+
+function noisyPauliSumExpectation(
+  circuit: Circuit,
+  paramValues: ParameterValues,
+  customGates: CustomGate[],
+  noise: NoiseModel,
+  terms: Array<{ coefficient: number; paulis: string }>,
+): number {
+  // Re-run the trajectory loop once and evaluate every term on each final
+  // trajectory state. Much cheaper than calling `noisyPauliExpectation` per
+  // term — single sim, T evaluations of |H|.
+  return runTrajectoryAverage(circuit, paramValues, customGates, noise, (state, n) =>
+    pauliSumExpectation(state, n, terms),
+  );
+}
+
+function runTrajectoryAverage(
+  circuit: Circuit,
+  paramValues: ParameterValues,
+  customGates: CustomGate[],
+  noise: NoiseModel,
+  observable: (state: Float64Array, n: number) => number,
+): number {
+  // Reusable single-pass driver. Mirrors the inner loop of
+  // `noisyPauliExpectation` but parameterised on the per-trajectory readout.
+  const n = circuit.numQubits;
+  if (n <= 0) return 0;
+  if (n > MAX_QUBITS) throw new Error(`max ${MAX_QUBITS} qubits (got ${n})`);
+  const dim = 1 << n;
+  const T = Math.max(1, noise.trajectories | 0);
+
+  const expanded = expandCustomGates(circuit.gates, customGates);
+  const gates = [...expanded].sort((a, b) =>
+    a.column !== b.column ? a.column - b.column : a.id.localeCompare(b.id),
+  );
+
+  type Step = { U: Matrix; qubits: number[]; antiQubits: number[] } | null;
+  const steps: Step[] = [];
+  for (const g of gates) {
+    if (MARKERS.has(g.gateId) || NON_UNITARY.has(g.gateId) || CONTROL_FLOW.has(g.gateId) || g.gateId in PREP_AMPS || g.gateId === "initialize") {
+      steps.push(null);
+      continue;
+    }
+    const params = g.params.map((p) => evalParam(p, paramValues));
+    const U = buildMatrix(g.gateId, params, g.controls.length);
+    if (!U) { steps.push(null); continue; }
+    const qubits = [...g.controls, ...g.targets];
+    const antiQubits: number[] = [];
+    if (g.controlStates) {
+      for (let i = 0; i < g.controls.length; i++) {
+        if (g.controlStates[i] === false) antiQubits.push(g.controls[i]);
+      }
+    }
+    steps.push({ U, qubits, antiQubits });
+  }
+
+  const cReg = new Uint8Array(Math.max(1, circuit.numClbits));
+  let sum = 0;
+  for (let t = 0; t < T; t++) {
+    const state = new Float64Array(2 * dim);
+    state[0] = 1;
+    cReg.fill(0);
+    for (let gi = 0; gi < gates.length; gi++) {
+      const s = steps[gi];
+      const g = gates[gi];
+      if (g.condition && cReg[g.condition.clbit] !== g.condition.value) continue;
+      if (g.gateId === "measure") { cReg[g.clbits[0]] = measureZ(state, n, g.targets[0], Math.random); continue; }
+      if (g.gateId === "measure_x") { cReg[g.clbits[0]] = measureX(state, n, g.targets[0], Math.random); continue; }
+      if (g.gateId === "measure_y") { cReg[g.clbits[0]] = measureY(state, n, g.targets[0], Math.random); continue; }
+      if (g.gateId === "reset") { resetQubit(state, n, g.targets[0], Math.random); continue; }
+      if (!s) {
+        if (g.gateId in PREP_AMPS) applyPrep(state, n, g.targets[0], PREP_AMPS[g.gateId]);
+        continue;
+      }
+      for (const q of s.antiQubits) applyKQubit(state, n, [q], M_X);
+      applyKQubit(state, n, s.qubits, s.U);
+      for (const q of s.antiQubits) applyKQubit(state, n, [q], M_X);
+      const involved = s.qubits;
+      if (involved.length === 1) {
+        const q = involved[0];
+        depolarise1(state, n, q, rateFor(noise, "oneQubitDepolarising", q));
+        damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+        if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
+      } else if (involved.length === 2) {
+        depolarise2(state, n, involved[0], involved[1], noise.twoQubitDepolarising);
+        for (const q of involved) {
+          damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+          if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
+        }
+        applyCrosstalk(state, n, involved[0], involved[1], noise);
+      } else {
+        for (const q of involved) {
+          depolarise1(state, n, q, noise.twoQubitDepolarising);
+          damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+          if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
+        }
+      }
+    }
+    sum += observable(state, n);
+  }
+  return sum / T;
+}
+
 export function noisyPauliExpectation(
   circuit: Circuit,
   paramValues: ParameterValues,
