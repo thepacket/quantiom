@@ -233,6 +233,22 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .tomo__chi th { color: var(--muted); padding: 2px 4px; font-weight: normal; font-size: 9px; }
 .tomo__cell { width: 28px; height: 22px; text-align: center; border: 1px solid var(--border); color: var(--fg); }
 
+/* ─── Hamiltonian panel ──────────────────────────────────────────── */
+.hamil { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.hamil__presets { display: flex; align-items: center; gap: 6px; }
+.hamil__presets label { color: var(--muted); font-size: 11px; }
+.hamil__presets select { font-size: 11px; flex: 1; }
+.hamil__hint { color: var(--muted); font-size: 10px; line-height: 1.4; margin: 0; }
+.hamil__text { width: 100%; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; font-family: ui-monospace, monospace; font-size: 11px; padding: 6px 8px; resize: vertical; }
+.hamil__text:focus { outline: none; border-color: var(--accent); }
+.hamil__summary { color: var(--muted); font-size: 10px; font-family: ui-monospace, monospace; }
+.hamil__config { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hamil__config label { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; }
+.hamil__config input[type="number"] { width: 56px; font-size: 11px; }
+.hamil__config input[type="text"] { font-size: 11px; }
+.hamil__build { padding: 3px 12px; font-size: 11px; background: var(--accent); color: var(--bg); border: 1px solid var(--accent); border-radius: 3px; cursor: pointer; font-weight: 600; }
+.hamil__build:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* ─── Equivalence panel ────────────────────────────────────────────── */
 .equiv { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
 .equiv__load { font-size: 11px; padding: 4px 8px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }

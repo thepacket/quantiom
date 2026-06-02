@@ -191,7 +191,10 @@ export function simulate(
       continue;
     }
     if (g.gateId === "initialize") {
-      skipped.push({ id: g.id, gateId: g.gateId, reason: "arbitrary Initialize not supported" });
+      const ok = applyInitialize(state, n, g.targets[0], g.params[0] ?? "|0⟩", paramValues);
+      if (!ok) {
+        skipped.push({ id: g.id, gateId: g.gateId, reason: `couldn't parse initialize("${g.params[0] ?? ""}")` });
+      }
       continue;
     }
 
@@ -359,6 +362,58 @@ function computeBloch(state: Float64Array, n: number): BlochVector[] {
     out[q] = { x: 2 * r01re, y: -2 * r01im, z: r00 - r11 };
   }
   return out;
+}
+
+/**
+ * Apply an `initialize(state)` gate. Accepts several syntaxes:
+ *   • Basis-state labels — "|0⟩", "|1⟩", "|+⟩", "|−⟩", "|+i⟩", "|-i⟩"
+ *     (and the bare "0", "1", "+", "-", "+i", "-i" variants).
+ *   • Amplitude tuple — "(re_a, im_a, re_b, im_b)" sets the qubit to the
+ *     normalised state α|0⟩ + β|1⟩. Components are parameter expressions
+ *     (the same evaluator the rotation gates use), so `(1/sqrt(2), 0,
+ *     cos(t), sin(t))` is valid.
+ *
+ * Returns false if the input doesn't match either form so the caller can
+ * record a skipped gate.
+ */
+function applyInitialize(
+  state: Float64Array,
+  n: number,
+  q: number,
+  raw: string,
+  paramValues: ParameterValues,
+): boolean {
+  const t = raw.trim().replace(/^\|/, "").replace(/⟩$/, "").trim();
+  // Basis-state labels.
+  switch (t) {
+    case "0": return applyPrep(state, n, q, [1, 0, 0, 0]);
+    case "1": return applyPrep(state, n, q, [0, 0, 1, 0]);
+    case "+": return applyPrep(state, n, q, [Math.SQRT1_2, 0, Math.SQRT1_2, 0]);
+    case "-":
+    case "−":
+      return applyPrep(state, n, q, [Math.SQRT1_2, 0, -Math.SQRT1_2, 0]);
+    case "+i":
+    case "i": return applyPrep(state, n, q, [Math.SQRT1_2, 0, 0, Math.SQRT1_2]);
+    case "-i":
+    case "−i": return applyPrep(state, n, q, [Math.SQRT1_2, 0, 0, -Math.SQRT1_2]);
+  }
+  // Amplitude tuple.
+  const m = t.match(/^\(\s*(.+?)\s*,\s*(.+?)\s*,\s*(.+?)\s*,\s*(.+?)\s*\)$/);
+  if (m) {
+    try {
+      const aRe = evalParam(m[1], paramValues);
+      const aIm = evalParam(m[2], paramValues);
+      const bRe = evalParam(m[3], paramValues);
+      const bIm = evalParam(m[4], paramValues);
+      const norm = Math.sqrt(aRe * aRe + aIm * aIm + bRe * bRe + bIm * bIm);
+      if (norm < 1e-12) return false;
+      const inv = 1 / norm;
+      return applyPrep(state, n, q, [aRe * inv, aIm * inv, bRe * inv, bIm * inv]);
+    } catch {
+      return false;
+    }
+  }
+  return false;
 }
 
 function applyPrep(
