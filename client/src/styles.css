@@ -43,48 +43,48 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 /* Chat panel sits inside editor__center, below the Inspector. */
 .chat { display: flex; flex-direction: column; position: relative; border-top: 1px solid var(--border); background: var(--panel); min-height: 0; }
 .chat--collapsed { height: 24px; min-height: 24px; }
-.chat--collapsed .chat__toggle { width: 100%; height: 100%; border: none; border-radius: 0; background: var(--bg-2); color: var(--muted); font-size: 11px; }
+.chat--collapsed .chat__toggle { width: 100%; height: 100%; border: none; border-radius: 0; background: var(--bg-2); color: var(--muted); font-size: 15px; }
 .chat__resize { position: absolute; top: 0; left: 0; right: 0; height: 4px; cursor: ns-resize; background: transparent; }
 .chat__resize:hover { background: var(--accent); opacity: 0.4; }
 .chat__header { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg-2); flex-wrap: wrap; }
 .chat__toggle { padding: 2px 8px; }
-.chat__title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.chat__title { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .chat__btn { padding: 2px 8px; }
-.chat__attach { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; }
+.chat__attach { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 15px; }
 .chat__settings { padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--bg); }
-.chat__settings-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+.chat__settings-row { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--muted); }
 .chat__settings-row input { flex: 1; padding: 4px 8px; }
-.chat__settings-note { margin-top: 4px; font-size: 10px; color: var(--muted); }
+.chat__settings-note { margin-top: 4px; font-size: 14px; color: var(--muted); }
 .chat__settings-note a { color: var(--accent); }
 .chat__messages { flex: 1; overflow: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
-.chat__empty { color: var(--muted); font-size: 12px; padding: 16px; text-align: center; }
+.chat__empty { color: var(--muted); font-size: 16px; padding: 16px; text-align: center; }
 .chat__msg { display: flex; gap: 8px; }
-.chat__msg-role { width: 32px; flex-shrink: 0; color: var(--muted); font-size: 10px; text-transform: uppercase; padding-top: 2px; }
+.chat__msg-role { width: 32px; flex-shrink: 0; color: var(--muted); font-size: 14px; text-transform: uppercase; padding-top: 2px; }
 .chat__msg-body { flex: 1; min-width: 0; }
 .chat__msg--user .chat__msg-role { color: var(--accent); }
 .chat__msg--assistant .chat__msg-role { color: #b2d2ff; }
 .chat__msg--streaming .chat__msg-body { opacity: 0.85; }
-.chat__text { white-space: pre-wrap; word-wrap: break-word; font-size: 13px; line-height: 1.5; }
+.chat__text { white-space: pre-wrap; word-wrap: break-word; font-size: 17px; line-height: 1.5; }
 .chat__code-block { margin: 4px 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-.chat__code-bar { display: flex; align-items: center; justify-content: space-between; padding: 2px 8px; background: var(--bg-2); font-size: 10px; color: var(--muted); }
+.chat__code-bar { display: flex; align-items: center; justify-content: space-between; padding: 2px 8px; background: var(--bg-2); font-size: 14px; color: var(--muted); }
 .chat__code-lang { font-family: ui-monospace, monospace; }
-.chat__open-tab { padding: 2px 8px; font-size: 10px; }
-.chat__code { margin: 0; padding: 8px; background: var(--bg); color: var(--fg); font-family: ui-monospace, monospace; font-size: 12px; overflow: auto; max-height: 320px; }
+.chat__open-tab { padding: 2px 8px; font-size: 14px; }
+.chat__code { margin: 0; padding: 8px; background: var(--bg); color: var(--fg); font-family: ui-monospace, monospace; font-size: 16px; overflow: auto; max-height: 320px; }
 .chat__input-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--border); background: var(--bg-2); }
-.chat__input { flex: 1; padding: 6px 8px; font-family: inherit; font-size: 13px; resize: vertical; min-height: 38px; max-height: 200px; }
+.chat__input { flex: 1; padding: 6px 8px; font-family: inherit; font-size: 17px; resize: vertical; min-height: 38px; max-height: 200px; }
 .chat__send { align-self: flex-end; min-width: 60px; }
-.chat__error { padding: 6px 10px; color: #ff8a8a; font-size: 12px; }
+.chat__error { padding: 6px 10px; color: #ff8a8a; font-size: 16px; }
 .chat__model { position: relative; }
-.chat__model-btn { font-size: 11px; padding: 3px 8px; min-width: 120px; text-align: left; }
+.chat__model-btn { font-size: 15px; padding: 3px 8px; min-width: 120px; text-align: left; }
 .chat__model-pop { position: absolute; top: 100%; left: 0; margin-top: 4px; width: 380px; max-height: 360px; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); z-index: 200; overflow: hidden; }
-.chat__model-search { padding: 6px 10px; background: var(--bg-2); border: none; border-bottom: 1px solid var(--border); color: var(--fg); font-size: 12px; outline: none; }
+.chat__model-search { padding: 6px 10px; background: var(--bg-2); border: none; border-bottom: 1px solid var(--border); color: var(--fg); font-size: 16px; outline: none; }
 .chat__model-list { flex: 1; overflow: auto; }
 .chat__model-item { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; padding: 6px 10px; border: none; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; text-align: left; cursor: pointer; }
 .chat__model-item:hover { background: var(--bg-2); }
 .chat__model-item--on { background: var(--bg-2); color: var(--accent); }
-.chat__model-name { font-size: 12px; color: var(--fg); }
-.chat__model-id { font-size: 10px; color: var(--muted); font-family: ui-monospace, monospace; }
-.chat__model-none { padding: 12px; color: var(--muted); font-size: 11px; text-align: center; }
+.chat__model-name { font-size: 16px; color: var(--fg); }
+.chat__model-id { font-size: 14px; color: var(--muted); font-family: ui-monospace, monospace; }
+.chat__model-none { padding: 12px; color: var(--muted); font-size: 15px; text-align: center; }
 /* Presentation mode hides the gate palette and right-side panels so the
    canvas + key visualizers get the screen. Inspector inside editor__center
    collapses too; QasmPanel hides since it's in editor__right. */
