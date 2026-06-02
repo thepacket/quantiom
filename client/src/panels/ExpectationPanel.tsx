@@ -155,7 +155,23 @@ function ExpectationBody({ state, noisyContext }: Props) {
         ps,
       );
     }
-    if (data.isStabilizer) return null;
+    if (data.isStabilizer) {
+      // Clifford fast path: tableau measurement gives ⟨P⟩ ∈ {−1, 0, +1}
+      // exactly. Pauli-sum mode weights each term's ±1/0 by its coefficient.
+      if (!data.pauliExpectation) return null;
+      if (observable.kind === "pauli") return data.pauliExpectation(observable.paulis);
+      let total = 0;
+      for (const term of observable.terms) {
+        if (term.coefficient === 0) continue;
+        const paulis = new Array<Pauli>(n);
+        for (let q = 0; q < n; q++) {
+          const ch = term.paulis[q] ?? "I";
+          paulis[q] = ch === "X" || ch === "Y" || ch === "Z" ? ch : "I";
+        }
+        total += term.coefficient * data.pauliExpectation(paulis);
+      }
+      return total;
+    }
     if (observable.kind === "pauli") return evalPaulis(data.state, n, observable.paulis);
     return pauliSumExpectation(data.state, n, observable.terms);
   }, [data, observable, n, mode, hParsed, collapsed, noisyContext, postSelectOn, postClbit, postValue, hasMeasurements, numClbits, gpuValue]);
@@ -178,15 +194,6 @@ function ExpectationBody({ state, noisyContext }: Props) {
 
   if (!data) return <div className="panel__placeholder">building circuit…</div>;
   if (n === 0) return null;
-  if (data.isStabilizer) {
-    return (
-      <div className="panel__notice">
-        Clifford fast path — multi-qubit ⟨P⟩ via tableau measurement is
-        on the follow-up list. Bloch panel gives single-qubit ⟨X/Y/Z⟩
-        directly.
-      </div>
-    );
-  }
 
   const opDisplay = mode === "single"
     ? `⟨${opLabel}⟩`

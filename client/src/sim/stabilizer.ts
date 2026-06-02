@@ -361,6 +361,94 @@ export class Stabilizer {
     if (bestX === 0 && bestZ === 1) return { x: 0, y: 0, z: sign };
     return { x: 0, y: sign, z: 0 }; // (1,1) → Y
   }
+
+  /**
+   * Multi-qubit Pauli expectation ⟨ψ|P|ψ⟩ for a stabilizer state |ψ⟩.
+   *
+   * For ANY Pauli operator P, the value is one of {−1, 0, +1}:
+   *   • +1 if P is in the stabilizer group of |ψ⟩
+   *   • −1 if −P is in the stabilizer group
+   *   •  0 otherwise (P anti-commutes with at least one generator)
+   *
+   * Algorithm:
+   *   1. If P anti-commutes with any stabilizer S_i, ⟨P⟩ = 0.
+   *   2. Else P (up to sign) decomposes uniquely over the stabilizer
+   *      generators: P = ±Π S_i^{a_i} where a_i = ω(P, D_i) (the symplectic
+   *      inner product with destabilizer D_i).
+   *   3. Multiply the chosen S_i together with AG's g-function for phase
+   *      tracking; the resulting overall phase is ±1, which is ⟨P⟩.
+   *
+   * Cost: O(n²). Called from the Expectation panel for the Clifford fast
+   * path; lets researchers compute multi-qubit Pauli expectations on
+   * stabilizer states up to 1024 qubits, which the dense statevector
+   * path can't reach.
+   *
+   * `paulis` is one entry per qubit ("I"/"X"/"Y"/"Z"), big-endian indexed
+   * (qubit 0 is MSB) — matches the rest of the codebase.
+   */
+  pauliExpectation(paulis: ReadonlyArray<"I" | "X" | "Y" | "Z">): -1 | 0 | 1 {
+    const n = this.n;
+    if (paulis.length !== n) return 0;
+    const Px = new Uint8Array(n);
+    const Pz = new Uint8Array(n);
+    for (let q = 0; q < n; q++) {
+      const p = paulis[q];
+      if (p === "X") { Px[q] = 1; }
+      else if (p === "Z") { Pz[q] = 1; }
+      else if (p === "Y") { Px[q] = 1; Pz[q] = 1; }
+    }
+
+    // (1) Anti-commutation check vs stabilizers (rows n..2n-1).
+    for (let i = 0; i < n; i++) {
+      let dot = 0;
+      const base = (n + i) * this.stride;
+      for (let q = 0; q < n; q++) {
+        dot ^= (Px[q] & this.tab[base + n + q]) ^ (Pz[q] & this.tab[base + q]);
+      }
+      if (dot & 1) return 0;
+    }
+
+    // (2) Decomposition coefficients a_i = ω(P, D_i) (destabilizers rows 0..n-1).
+    const a = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
+      let dot = 0;
+      const base = i * this.stride;
+      for (let q = 0; q < n; q++) {
+        dot ^= (Px[q] & this.tab[base + n + q]) ^ (Pz[q] & this.tab[base + q]);
+      }
+      a[i] = dot & 1;
+    }
+
+    // (3) Multiply Π S_i^{a_i} with AG phase tracking. acc starts as identity
+    // (x=z=0, phase=0). For each S_i with a_i=1, fold it into acc via the
+    // g-function (same rowsum recipe as measureZ uses).
+    const accX = new Uint8Array(n);
+    const accZ = new Uint8Array(n);
+    let accPhase = 0; // 0 = +1, 2 = −1 (mod 4 throughout)
+    for (let i = 0; i < n; i++) {
+      if (a[i] === 0) continue;
+      const baseS = (n + i) * this.stride;
+      let gSum = 0;
+      for (let q = 0; q < n; q++) {
+        // Multiply S_i (added) into acc (existing): g(x_S, z_S, x_acc, z_acc).
+        const xS = this.tab[baseS + q];
+        const zS = this.tab[baseS + n + q];
+        gSum += gFunction(xS, zS, accX[q], accZ[q]);
+      }
+      accPhase = (accPhase + 2 * this.tab[baseS + 2 * n] + gSum) & 3;
+      for (let q = 0; q < n; q++) {
+        accX[q] ^= this.tab[baseS + q];
+        accZ[q] ^= this.tab[baseS + n + q];
+      }
+    }
+
+    // Sanity: acc.x and acc.z should match P's. If not, the decomposition
+    // is inconsistent (shouldn't happen for valid inputs).
+    for (let q = 0; q < n; q++) {
+      if (accX[q] !== Px[q] || accZ[q] !== Pz[q]) return 0;
+    }
+    return accPhase === 2 ? -1 : 1;
+  }
 }
 
 // ─── Public dispatch (used by simulate.ts) ──────────────────────────────

@@ -56,6 +56,11 @@ export type SimResult = {
    *  Statevector / Probabilities / Density panels are unavailable in this
    *  mode (full state has too many basis elements); Bloch is exact. */
   isStabilizer?: boolean;
+  /** Multi-qubit Pauli expectation ⟨ψ|P|ψ⟩ for the Clifford fast path.
+   *  Returns one of {−1, 0, +1} (stabilizer states only support these).
+   *  Only present when `isStabilizer` is true. The panel falls back to
+   *  null when undefined. */
+  pauliExpectation?: (paulis: ReadonlyArray<"I" | "X" | "Y" | "Z">) => -1 | 0 | 1;
 };
 
 export type ParameterValues = Record<string, number>;
@@ -280,6 +285,7 @@ function stabilizerResult(
       if (!_blochs) _blochs = tab.blochVectors();
       return _blochs;
     },
+    pauliExpectation: (paulis) => tab.pauliExpectation(paulis),
   };
 }
 
