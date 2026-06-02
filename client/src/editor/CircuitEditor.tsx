@@ -13,6 +13,7 @@ import { inverseGates } from "./inverse";
 import { transpile, type TranspileTarget } from "../sim/transpile";
 import { routeCircuit } from "../sim/router";
 import { optimiseCircuit } from "../sim/optimisePasses";
+import { compileForDevice } from "../sim/compile";
 import { recordAnimationWebM } from "./recordAnimation";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
@@ -138,6 +139,43 @@ function RecordButton({ onRecord }: { onRecord: () => Promise<void> }) {
     >
       {busy ? "Recording…" : "Record"}
     </button>
+  );
+}
+
+function CompileButton({
+  onCompile,
+  hasCoupling,
+}: {
+  onCompile: (t: TranspileTarget) => void;
+  hasCoupling: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span style={{ position: "relative" }}>
+      <button onClick={() => setOpen((o) => !o)} title={hasCoupling ? "Transpile → optimise → route → optimise" : "Transpile → optimise (no coupling map; route step skipped)"}>
+        Compile…
+      </button>
+      {open && (
+        <div className="examples-picker__pop" style={{ width: 220, top: "100%", marginTop: 4 }} onMouseLeave={() => setOpen(false)}>
+          <div className="examples-picker__list">
+            {[
+              { id: "clifford-t" as const, label: "Clifford + T", hint: "{H, S, T, CX}" },
+              { id: "ibm-heavy-hex" as const, label: "IBM heavy-hex", hint: "{RZ, SX, CX}" },
+              { id: "rigetti" as const, label: "Rigetti", hint: "{RZ, RX(±π/2), CZ}" },
+            ].map((t) => (
+              <button
+                key={t.id}
+                className="examples-picker__item"
+                onClick={() => { setOpen(false); onCompile(t.id); }}
+              >
+                <span>{t.label}</span>
+                <span className="export-picker__hint">{t.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </span>
   );
 }
 
@@ -402,6 +440,21 @@ export function CircuitEditor() {
             >
               Optimise
             </button>
+            <CompileButton
+              hasCoupling={!!noise.coupling}
+              onCompile={(target) => {
+                const result = compileForDevice(circuit, target, noise.coupling);
+                const label =
+                  target === "clifford-t" ? "Clifford+T" : target === "ibm-heavy-hex" ? "IBM heavy-hex" : "Rigetti";
+                t.newTab(result.circuit, result.circuit.name);
+                const stagesText = result.stages
+                  .map((s) => `  ${s.name.padEnd(10)}: ${s.gates.toString().padStart(4)} gates, depth ${s.depth}`)
+                  .join("\n");
+                window.alert(
+                  `Compiled to ${label}${noise.coupling ? " + routed" : ""}:\n` + stagesText,
+                );
+              }}
+            />
             <TranspileButton
               onTranspile={(target) => {
                 const result = transpile(circuit, target);
