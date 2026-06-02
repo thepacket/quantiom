@@ -45,3 +45,20 @@ Composer) or read them as a worked-example reference.
 | [anim_ising_trotter.qasm](anim_ising_trotter.qasm) | 4 | Transverse-field Ising dynamics by Trotter |
 | [anim_cascade_5q.qasm](anim_cascade_5q.qasm) | 5 | Five qubits, five rotation rates (1,2,3,5,7) |
 | [anim_swirl_6q.qasm](anim_swirl_6q.qasm) | 6 | Dense 6-qubit ansatz, ~35 t-parameterized gates |
+| [swap_test.qasm](swap_test.qasm) | 3 | Overlap \|⟨ψ\|φ⟩\|² via controlled-SWAP and ancilla measurement |
+| [hadamard_test.qasm](hadamard_test.qasm) | 2 | Re ⟨ψ\|U\|ψ⟩ — the VQE expectation-estimation workhorse |
+| [bell_measurement.qasm](bell_measurement.qasm) | 2 | Project onto the Bell basis (teleportation primitive) |
+| [phase_flip_code.qasm](phase_flip_code.qasm) | 3 | 3-qubit code for Z errors — companion to bit-flip |
+| [mermin_ghz_test.qasm](mermin_ghz_test.qasm) | 3 | Mermin's GHZ inequality — single-shot nonlocality |
+| [iterative_qpe.qasm](iterative_qpe.qasm) | 2 | Kitaev-style 1-ancilla phase estimation |
+| [vqe_h2_minimal.qasm](vqe_h2_minimal.qasm) | 2 | Variational ansatz for the H₂ ground state |
+| [trotter_heisenberg_2q.qasm](trotter_heisenberg_2q.qasm) | 2 | Heisenberg XXX time evolution, one Trotter step |
+| [gate_teleportation.qasm](gate_teleportation.qasm) | 2 | T gate via magic state + Bell measurement |
+| [dicke_state_3q.qasm](dicke_state_3q.qasm) | 3 | Symmetric single-excitation state \|D₃¹⟩ |
+| [stabilizer_measurement.qasm](stabilizer_measurement.qasm) | 3 | Non-destructive Z⊗Z eigenvalue readout |
+| [shor_9q_encoder.qasm](shor_9q_encoder.qasm) | 9 | Original [[9,1,3]] code encoder |
+| [quantum_thermometer.qasm](quantum_thermometer.qasm) | 1 | Ramsey interferometry for phase / temperature sensing |
+| [no_cloning_witness.qasm](no_cloning_witness.qasm) | 2 | The CX-as-clone failure mode, visualised on Bloch |
+| [amplitude_estimation_2q.qasm](amplitude_estimation_2q.qasm) | 2 | Brassard-Høyer-Mosca-Tapp seed, one counting qubit |
+| [quantum_random_walk_cycle.qasm](quantum_random_walk_cycle.qasm) | 3 | Coined quantum walk on the 4-node cycle |
+| [quantum_fourier_addition_4q.qasm](quantum_fourier_addition_4q.qasm) | 4 | 2-bit Draper addition in the Fourier basis |
