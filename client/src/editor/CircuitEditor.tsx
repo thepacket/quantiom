@@ -510,7 +510,7 @@ export function CircuitEditor() {
           />
         </ErrorBoundary>
         <ErrorBoundary label="syndromes">
-          <SyndromePanel circuit={circuit} customGates={customGates} />
+          <SyndromePanel circuit={circuit} customGates={customGates} noise={noise} />
         </ErrorBoundary>
         <ErrorBoundary label="measurement-counts">
           <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />

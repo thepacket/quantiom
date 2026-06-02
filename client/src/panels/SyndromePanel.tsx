@@ -4,9 +4,12 @@ import { isCliffordOnly, sampleSyndromes } from "../sim/stabilizer";
 import { expandCustomGates, type CustomGate } from "../editor/customGates";
 import type { Circuit } from "../editor/types";
 
+import type { NoiseModel } from "../sim/noise";
+
 type Props = {
   circuit: Circuit;
   customGates: CustomGate[];
+  noise?: NoiseModel;
 };
 
 const SHOT_PRESETS = [100, 1024, 8192, 100_000];
@@ -17,19 +20,20 @@ const SHOT_PRESETS = [100, 1024, 8192, 100_000];
  * shot, and tabulates counts per classical bitstring. Foundation for QEC
  * decoder benchmarking — Stim's headline workload, now in a browser tab.
  */
-export function SyndromePanel({ circuit, customGates }: Props) {
+export function SyndromePanel({ circuit, customGates, noise }: Props) {
   return (
     <PanelShell id="syndromes" title="Syndromes (Clifford shots)" defaultCollapsed>
-      <SyndromeBody circuit={circuit} customGates={customGates} />
+      <SyndromeBody circuit={circuit} customGates={customGates} noise={noise} />
     </PanelShell>
   );
 }
 
-function SyndromeBody({ circuit, customGates }: Props) {
+function SyndromeBody({ circuit, customGates, noise }: Props) {
   const [shots, setShots] = useState(1024);
   const [counts, setCounts] = useState<Map<string, number> | null>(null);
   const [busy, setBusy] = useState(false);
   const [nonce, setNonce] = useState(0);
+  const [useNoise, setUseNoise] = useState(false);
 
   const expandedGates = useMemo(() => expandCustomGates(circuit.gates, customGates), [circuit, customGates]);
   const eligible = isCliffordOnly(expandedGates) && circuit.numClbits > 0;
@@ -44,7 +48,14 @@ function SyndromeBody({ circuit, customGates }: Props) {
     setBusy(true);
     setTimeout(() => {
       try {
-        const result = sampleSyndromes(circuit.numQubits, expandedGates, circuit.numClbits, shots);
+        const noiseProfile = useNoise && noise?.enabled
+          ? {
+              oneQubitDepolarising: noise.oneQubitDepolarising,
+              twoQubitDepolarising: noise.twoQubitDepolarising,
+              perGate: noise.perGate,
+            }
+          : undefined;
+        const result = sampleSyndromes(circuit.numQubits, expandedGates, circuit.numClbits, shots, noiseProfile);
         setCounts(result);
       } finally {
         setBusy(false);
@@ -83,6 +94,12 @@ function SyndromeBody({ circuit, customGates }: Props) {
             <option key={n} value={n}>{n.toLocaleString()}</option>
           ))}
         </select>
+        {noise?.enabled && (
+          <label className="tomo__noise" title="Use Pauli frame tracking: depolarising errors propagate as a Pauli frame through the tableau">
+            <input type="checkbox" checked={useNoise} onChange={(e) => setUseNoise(e.target.checked)} />
+            noise
+          </label>
+        )}
         <button className="syndromes__run" onClick={sample} disabled={busy}>
           {busy ? "Sampling…" : "Sample"}
         </button>

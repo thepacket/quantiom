@@ -464,14 +464,236 @@ export function sampleSyndromes(
   gates: Parameters<typeof runClifford>[1],
   numClbits: number,
   shots: number,
+  noise?: {
+    oneQubitDepolarising: number;
+    twoQubitDepolarising: number;
+    perGate?: Record<string, number>;
+  },
 ): Map<string, number> {
   const counts = new Map<string, number>();
   for (let s = 0; s < shots; s++) {
-    const { classical } = runClifford(n, gates, Math.random, numClbits);
+    const classical = noise
+      ? runCliffordNoisy(n, gates, Math.random, numClbits, noise).classical
+      : runClifford(n, gates, Math.random, numClbits).classical;
     const key = Array.from(classical.slice(0, numClbits)).reverse().join("");
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return counts;
+}
+
+/**
+ * Pauli frame tracking for Clifford+depolarising noise.
+ *
+ * The frame is a Pauli string F = ⊗_q F_q over the n qubits, encoded as
+ * a 2n binary array: f[q] = x_q bit, f[n + q] = z_q bit. I = (0,0),
+ * X = (1,0), Z = (0,1), Y = (1,1). Sign is ignored — we only need
+ * X-vs-not-X for measurement-outcome flipping.
+ *
+ * Propagation through Clifford gates uses the standard symplectic
+ * conjugation rules (H, S, CX). All Pauli gates (X, Y, Z) and gates
+ * built from them leave the frame bits unchanged (they only contribute
+ * signs we discard).
+ *
+ * Noise injection per gate: with the gate's depolarising rate p, sample
+ * a uniform non-identity Pauli on the involved qubit(s) and XOR it
+ * into F. Measurement of qubit q reads the noise-free outcome from the
+ * tableau and XORs it with f[q] (the X-bit, which determines whether
+ * F anticommutes with Z_q).
+ *
+ * This lets QEC syndrome benchmarks run under depolarising noise at the
+ * full 1024-qubit stabilizer cap — Stim's headline workload, in a
+ * browser tab.
+ */
+
+type Frame = Uint8Array;
+
+/** Frame rule for H on qubit a: swap x and z. */
+function frameH(f: Frame, n: number, a: number): void {
+  const xa = f[a];
+  f[a] = f[n + a];
+  f[n + a] = xa;
+}
+/** Frame rule for S on qubit a: z ^= x. */
+function frameS(f: Frame, n: number, a: number): void {
+  f[n + a] ^= f[a];
+}
+/** Frame rule for √X on qubit a: x ^= z. */
+function frameSX(f: Frame, n: number, a: number): void {
+  f[a] ^= f[n + a];
+}
+/** Frame rule for CX (control c, target t). */
+function frameCX(f: Frame, n: number, c: number, t: number): void {
+  f[t] ^= f[c];          // X_c → X_c X_t
+  f[n + c] ^= f[n + t];  // Z_t → Z_c Z_t
+}
+/** Frame rule for CZ (c, t). */
+function frameCZ(f: Frame, n: number, c: number, t: number): void {
+  f[n + t] ^= f[c];      // X_c → X_c Z_t
+  f[n + c] ^= f[t];      // X_t → Z_c X_t
+}
+/** Frame rule for SWAP — swap entries. */
+function frameSWAP(f: Frame, n: number, a: number, b: number): void {
+  const xa = f[a], za = f[n + a];
+  f[a] = f[b]; f[n + a] = f[n + b];
+  f[b] = xa; f[n + b] = za;
+}
+
+/** Propagate frame through one Clifford gate (no-op for I/X/Y/Z; bit
+ *  swaps / XORs for H/S/√X; pairwise for CX/CZ/CY/SWAP). */
+function propagateFrame(
+  f: Frame,
+  n: number,
+  g: { gateId: string; controls: number[]; targets: number[] },
+): void {
+  switch (g.gateId) {
+    case "i": case "x": case "y": case "z": return;
+    case "h": frameH(f, n, g.targets[0]); return;
+    case "s": frameS(f, n, g.targets[0]); return;
+    case "sdg":
+      // Sdg = SSS; type-effect equals S.
+      frameS(f, n, g.targets[0]); return;
+    case "sx": frameSX(f, n, g.targets[0]); return;
+    case "sxdg":
+      frameSX(f, n, g.targets[0]); return;
+    case "cx": frameCX(f, n, g.controls[0], g.targets[0]); return;
+    case "cy": {
+      const c = g.controls[0], t = g.targets[0];
+      // CY = (I ⊗ Sdg) CX (I ⊗ S). Type-effect = S, CX, S.
+      frameS(f, n, t); frameCX(f, n, c, t); frameS(f, n, t); return;
+    }
+    case "cz": frameCZ(f, n, g.controls[0], g.targets[0]); return;
+    case "swap": frameSWAP(f, n, g.targets[0], g.targets[1]); return;
+  }
+}
+
+/** Inject a 1-qubit depolarising Pauli error on qubit q with probability p. */
+function frameDepol1(f: Frame, n: number, q: number, p: number): void {
+  if (p <= 0 || Math.random() >= p) return;
+  const r = Math.random();
+  if (r < 1 / 3) f[q] ^= 1;                    // X
+  else if (r < 2 / 3) { f[q] ^= 1; f[n + q] ^= 1; } // Y
+  else f[n + q] ^= 1;                          // Z
+}
+/** Inject a 2-qubit depolarising Pauli error on (a, b) with probability p. */
+function frameDepol2(f: Frame, n: number, a: number, b: number, p: number): void {
+  if (p <= 0 || Math.random() >= p) return;
+  // Sample uniform non-identity over 15 pairs (one of 16 minus identity).
+  const idx = Math.floor(Math.random() * 15);
+  const pa = Math.floor(idx / 4); // 0..3
+  let pb = idx % 4;
+  if (pa === 0 && pb === 0) pb = 3; // map (I,I) slot to (I,Z) — keeps 15 outcomes
+  if (pa & 1) f[a] ^= 1;
+  if (pa & 2) f[n + a] ^= 1;
+  if (pb & 1) f[b] ^= 1;
+  if (pb & 2) f[n + b] ^= 1;
+}
+
+/**
+ * Run a Clifford circuit under stochastic Pauli (depolarising) noise via
+ * frame tracking. Outcome: a `classical` register and the final Pauli
+ * frame, plus the tableau state for further inspection.
+ *
+ * Per-gate rate selection: `perGate[gate.gateId]` first, then
+ * `oneQubitDepolarising` / `twoQubitDepolarising` global based on arity.
+ */
+export function runCliffordNoisy(
+  n: number,
+  gates: Parameters<typeof runClifford>[1],
+  rng: () => number,
+  numClbits: number,
+  noise: {
+    oneQubitDepolarising: number;
+    twoQubitDepolarising: number;
+    perGate?: Record<string, number>;
+  },
+): { tab: Stabilizer; classical: Uint8Array; frame: Uint8Array } {
+  const tab = new Stabilizer(n);
+  const classical = new Uint8Array(Math.max(1, numClbits));
+  const frame: Frame = new Uint8Array(2 * n);
+
+  for (const g of gates) {
+    if (CLIFFORD_NOOPS.has(g.gateId)) continue;
+    if (g.condition && classical[g.condition.clbit] !== g.condition.value) continue;
+
+    if (g.gateId === "measure") {
+      const q = g.targets[0];
+      const outcomeClean = tab.measureZ(q, rng);
+      const flip = frame[q]; // X-bit on q
+      classical[g.clbits[0]] = outcomeClean ^ flip;
+      frame[q] = 0;
+      frame[n + q] = 0;
+      continue;
+    }
+    if (g.gateId === "measure_x") {
+      // Rotate, measure, rotate back: frame propagates through H.
+      tab.h(q(g)); frameH(frame, n, q(g));
+      const out = tab.measureZ(q(g), rng);
+      classical[g.clbits[0]] = out ^ frame[q(g)];
+      frame[q(g)] = 0; frame[n + q(g)] = 0;
+      tab.h(q(g)); frameH(frame, n, q(g));
+      continue;
+    }
+    if (g.gateId === "measure_y") {
+      tab.sdg(q(g)); frameS(frame, n, q(g));
+      tab.h(q(g)); frameH(frame, n, q(g));
+      const out = tab.measureZ(q(g), rng);
+      classical[g.clbits[0]] = out ^ frame[q(g)];
+      frame[q(g)] = 0; frame[n + q(g)] = 0;
+      tab.h(q(g)); frameH(frame, n, q(g));
+      tab.s(q(g)); frameS(frame, n, q(g));
+      continue;
+    }
+    if (g.gateId === "reset") {
+      tab.resetQubit(q(g), rng);
+      frame[q(g)] = 0; frame[n + q(g)] = 0;
+      continue;
+    }
+    // Apply gate to tableau (with anti-control X-bracketing) AND propagate frame.
+    const antis: number[] = [];
+    if (g.controlStates) {
+      for (let i = 0; i < g.controls.length; i++) {
+        if (g.controlStates[i] === false) antis.push(g.controls[i]);
+      }
+    }
+    for (const a of antis) { tab.x(a); /* X doesn't update frame bits */ }
+    applyCliffordSwitch(tab, g);
+    propagateFrame(frame, n, g);
+    for (const a of antis) tab.x(a);
+
+    // Inject error.
+    const arity = g.controls.length + g.targets.length;
+    const perGate = noise.perGate?.[g.gateId];
+    if (arity === 1) {
+      frameDepol1(frame, n, g.targets[0], perGate ?? noise.oneQubitDepolarising);
+    } else if (arity === 2) {
+      const involved = [...g.controls, ...g.targets];
+      frameDepol2(frame, n, involved[0], involved[1], perGate ?? noise.twoQubitDepolarising);
+    } else {
+      const involved = [...g.controls, ...g.targets];
+      for (const qu of involved) frameDepol1(frame, n, qu, perGate ?? noise.twoQubitDepolarising);
+    }
+  }
+  return { tab, classical, frame };
+}
+
+function q(g: { targets: number[] }): number { return g.targets[0]; }
+
+function applyCliffordSwitch(tab: Stabilizer, g: { gateId: string; controls: number[]; targets: number[] }): void {
+  switch (g.gateId) {
+    case "i": return;
+    case "x": return tab.x(g.targets[0]);
+    case "y": return tab.y(g.targets[0]);
+    case "z": return tab.z(g.targets[0]);
+    case "h": return tab.h(g.targets[0]);
+    case "s": return tab.s(g.targets[0]);
+    case "sdg": return tab.sdg(g.targets[0]);
+    case "sx": return tab.sx(g.targets[0]);
+    case "sxdg": return tab.sxdg(g.targets[0]);
+    case "cx": return tab.cnot(g.controls[0], g.targets[0]);
+    case "cy": return tab.cy(g.controls[0], g.targets[0]);
+    case "cz": return tab.cz(g.controls[0], g.targets[0]);
+    case "swap": return tab.swap(g.targets[0], g.targets[1]);
+  }
 }
 
 function applyClifford(tab: Stabilizer, g: {
