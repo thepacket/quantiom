@@ -1,8 +1,29 @@
-// Eight steps of the coined quantum walk on the 4-cycle from
-// quantum_walk_step.qasm. After 8 unitary steps starting from |position
-// = 00, coin = 0⟩, the walker has spread non-classically across all four
-// positions; the position-marginal distribution differs from a classical
-// random walk on the same graph.
+// Coined quantum walk on the 4-cycle — 8 unitary steps without any
+// intermediate measurement. The classical random walk on the same
+// graph would spread diffusively (positions equally likely after many
+// steps). The quantum version spreads BALLISTICALLY (linear in the
+// number of steps) with interference patterns that no classical
+// process produces.
+//
+// Encoding: q[0..1] = position (4 nodes around the cycle), q[2] = coin
+// state (left / right). Each step:
+//   1. Coin Hadamard — superpose the two move directions.
+//   2. Conditional shift — modular ±1 on the position depending on coin.
+//
+// After 8 steps the position-marginal distribution differs dramatically
+// from a classical walk: instead of the binomial-like spread you'd see
+// classically, you get a distribution with sharp peaks at SPECIFIC
+// position values determined by the interference of the coin
+// trajectories.
+//
+// Quantum walks underlie several algorithms with provable speedups:
+// element distinctness, triangle finding, matrix product verification,
+// boolean formula evaluation. The interference pattern shown here is
+// the basic mechanism.
+//
+// Open the Probabilities panel after loading; trace the qubit 0–1
+// marginals (sum probabilities by position bits) to see the
+// non-classical distribution.
 
 OPENQASM 3.0;
 include "stdgates.inc";

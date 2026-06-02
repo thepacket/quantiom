@@ -1,8 +1,30 @@
-// Hardware-efficient variational ansatz on 4 qubits, two layers.
+// Hardware-efficient variational ansatz — the workhorse of NISQ-era
+// variational quantum eigensolvers (VQE) and quantum approximate
+// optimization (QAOA).
 //
-// Per layer: single-qubit RY/RZ rotations on every qubit, then a ring of
-// CNOTs for entanglement. Eight symbolic parameters per layer, sixteen
-// total — typical scale for a small VQE/QAOA experiment.
+// Structure (per layer):
+//   1. RY(θ_q) on every qubit — populates the |0⟩/|1⟩ axis.
+//   2. RZ(φ_q) on every qubit — adds a phase.
+//   3. Ring of CNOTs (q0→q1→q2→q3→q0) — entangling layer.
+//
+// Two layers, 16 parameters total (8 RY angles + 8 RZ phases). The
+// CNOT ring gives every qubit at least two-hop reach to any other
+// qubit, so two layers can already prepare highly entangled trial
+// wavefunctions over the full 16-dim Hilbert space.
+//
+// To run a VQE: load this circuit, set up a Hamiltonian in the
+// Expectation panel (sum mode), then click "Optimise" — the parameter
+// values will be tuned to minimise ⟨H⟩. The Parameter panel shows
+// every (θ, φ) as a live slider you can drive manually too.
+//
+// "Hardware-efficient" because the entangling structure is a single
+// linear ring — matches the connectivity of most superconducting
+// devices without any SWAP overhead. The trade-off: trainability
+// suffers from barren plateaus as depth grows (use the Plateau button
+// in the Expectation panel to diagnose).
+//
+// Reference: Kandala et al. (2017), "Hardware-efficient variational
+// quantum eigensolver for small molecules and quantum magnets".
 
 OPENQASM 3.0;
 include "stdgates.inc";

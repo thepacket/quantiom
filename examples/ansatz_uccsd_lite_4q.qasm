@@ -5,10 +5,29 @@ input float theta;
 
 qubit[4] q;
 
-// UCCSD-lite: a single excitation rotation e^{-iθ (a†_0 a_2 - a_2† a_0)} on
-// a Hartree-Fock reference |1100⟩. Decomposes into a CNOT staircase with
-// an Ry(θ) in the middle — the canonical "Givens rotation" pattern that
-// shows up everywhere in quantum chemistry ansätze.
+// UCCSD-lite — a stripped-down Unitary Coupled-Cluster Singles
+// Doubles ansatz, the gold-standard variational form for molecular
+// ground states.
+//
+// Full UCCSD applies all single and double fermionic excitations
+// e^{T - T†} where T = Σ t_ia (a†_i a_a) + Σ t_ijab (a†_i a†_j a_b a_a).
+// On a 4-orbital system that's many parameters and very deep circuits.
+// "UCCSD-lite" here implements just ONE single excitation between
+// occupied orbital 2 and virtual orbital 0:
+//
+//     U(θ) = exp(−iθ (a†_0 a_2 − a_2† a_0)) / 2
+//
+// Under Jordan-Wigner, that exponential becomes a Pauli-string
+// rotation Rz(2θ) on a single qubit conjugated by a "CNOT staircase"
+// that propagates the JW string parity. The pattern is universal:
+// every fermionic excitation lowers to this CNOT-staircase + middle
+// rotation form, which is why it shows up in nearly every chemistry
+// ansatz from UCCSD to k-UpCCGSD to ADAPT-VQE.
+//
+// Below: Hartree-Fock reference |1100⟩ on q[0..3], one excitation
+// rotation. Slide θ in the Parameter panel to watch the
+// |1100⟩ ↔ |0011⟩ amplitudes oscillate (full state interferes within
+// the particle-conserving subspace).
 
 // Hartree-Fock reference: spin-up orbitals occupied.
 x q[0];

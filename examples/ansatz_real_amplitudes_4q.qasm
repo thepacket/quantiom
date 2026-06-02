@@ -12,9 +12,25 @@ input float theta_7;
 
 qubit[4] q;
 
-// Real Amplitudes ansatz (Qiskit standard) — 2 layers of Ry rotations
-// separated by a linear chain of CNOTs. Real-valued amplitudes (no Rz),
-// suitable for ground-state energies of real Hamiltonians.
+// Real Amplitudes ansatz — Qiskit's standard real-valued variational
+// circuit, particularly well-suited to VQE for Hamiltonians that are
+// real in the computational basis (which most condensed-matter and
+// quantum-chemistry Hamiltonians are after Jordan-Wigner mapping).
+//
+// Structure: alternating layers of single-qubit RY rotations and a
+// linear CNOT entangling chain. No RZ, no T — every amplitude in the
+// resulting state vector is REAL (no complex phases). This halves the
+// effective parameter space versus a generic hardware-efficient
+// ansatz, which matters for trainability and barren plateau mitigation.
+//
+// When to use: ground-state problems where the target eigenstate is
+// known to be real (Hamiltonian = sum of real Paulis I, X, Z, XX, ZZ,
+// etc. — anything without Y). Hubbard, Heisenberg XXX/XXZ, lattice
+// gauge theories, many chemistry Hamiltonians after Bravyi-Kitaev or
+// JW.
+//
+// Below: 2 layers, 8 parameters total — small enough to optimise from
+// scratch via the Optimise button in the Expectation panel.
 
 // Layer 0
 ry(theta_0) q[0];

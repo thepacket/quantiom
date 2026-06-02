@@ -1,8 +1,23 @@
-// Generalised amplitude amplification on a 3-qubit register where the
-// "marked" subspace is the two states {|001⟩, |110⟩}. The oracle phase-
-// flips both; the diffusion step inverts about the equal-superposition
-// state. After a single iteration the combined probability of the two
-// marked states is amplified well above its initial 1/4.
+// Generalised amplitude amplification — Grover-style search with a
+// multi-element marked set.
+//
+// Setup: a 3-qubit register N = 8 with a "marked subspace" containing
+// TWO states: {|001⟩, |110⟩}. Initial uniform superposition has
+// 2/8 = 1/4 probability of landing in the marked subspace. One
+// Grover iteration amplifies this toward unity:
+//
+//   1. Oracle: phase-flips ONLY the marked states (no flag qubit
+//      needed — direct in-place phase kickback via controlled-Z
+//      conjugated by X gates that select the marked bitstring).
+//   2. Diffusion: reflection about the mean. Implemented as the
+//      classic H · X · (multi-CZ) · X · H sandwich.
+//
+// Optimal iteration count for M = 2 marked items out of N = 8:
+// k = floor(π√(N/M) / 4) = floor(π · 2 / 4) = 1. After exactly one
+// iteration, the combined marked probability peaks at
+// sin²(3·arcsin(√(M/N))) ≈ 0.78 — almost 4× the random-guess baseline.
+//
+// Reference: Brassard, Høyer, Mosca, Tapp (2002).
 
 OPENQASM 3.0;
 include "stdgates.inc";

@@ -1,7 +1,20 @@
-// 8-qubit Quantum Fourier Transform. Produces all 256 Fourier coefficients
-// of the |00000000⟩ input — which by symmetry is the uniform superposition
-// (the Fourier transform of the all-zero "delta" is constant). A good
-// scale test: 64 gates, 256-dim state.
+// 8-qubit Quantum Fourier Transform. Same structure as qft_3q / qft_5q
+// but scaled to 256 amplitudes — a useful stress test for the editor
+// and the simulator alike (~36 gates, 256-dim statevector).
+//
+// On the |00000000⟩ input, the QFT produces the uniform superposition
+// (1/16) Σ |k⟩: the Fourier transform of a delta is constant. Open the
+// Probabilities panel: every one of the 256 bins should read 1/256 =
+// 0.00391.
+//
+// The gate count scales as n(n+1)/2 H + cp pairs + n/2 final swaps =
+// O(n²). Classical FFT is O(n·2ⁿ) — already at n = 8 the quantum form
+// is 36 gates vs. ~2048 classical multiplications.
+//
+// Try replacing the all-zero input with `x q[0];` before the QFT to
+// see the Fourier transform of a single-excitation state (phase fan-out
+// across the register that's hard to write down classically but easy
+// to render here).
 
 OPENQASM 3.0;
 include "stdgates.inc";

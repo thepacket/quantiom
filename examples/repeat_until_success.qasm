@@ -4,13 +4,33 @@ include "stdgates.inc";
 qubit[2] q;
 bit[1] c;
 
-// Repeat-until-success template: try a non-deterministic state prep,
-// measure an ancilla. If outcome=0, the data qubit is in the desired
-// state and we proceed; if outcome=1, apply a correction.
+// Repeat-Until-Success (RUS) circuit — a small protocol that
+// probabilistically synthesises an exotic single-qubit unitary using
+// only Clifford+T resources, with classical feedback on the outcome.
 //
-// This is the simplest non-trivial example of a dynamic circuit with
-// classical feedback — it actually changes what happens to the data
-// qubit depending on the measurement outcome.
+// Motivation: some target unitaries (e.g. exact V₃ = (I + 2iZ)/√5)
+// don't have ANY exact decomposition over Clifford+T. They admit
+// probabilistic decompositions: with probability p the protocol
+// succeeds and applies the desired gate; with probability 1−p you
+// have to re-run.
+//
+// Template:
+//   1. Try a non-deterministic state prep on data + ancilla.
+//   2. Measure the ancilla. Outcome 0 = success, the data qubit now
+//      holds the target unitary applied to its input.
+//   3. Outcome 1 = failure, apply a known correction gate and retry
+//      (in a real RUS protocol, this branch loops; here the
+//      conditional gate captures the correction without an explicit
+//      while-loop).
+//
+// This is the simplest non-trivial DYNAMIC circuit in Quantiom: the
+// classically-conditioned X and T on q[0] only fire on the failure
+// branch, so the simulation actually splits trajectories. Open the
+// Measurement Counts panel after loading and you'll see two distinct
+// outcomes with their probabilities.
+//
+// Reference: Paetznick, Svore (2014), "Repeat-until-success: non-
+// deterministic decomposition of single-qubit unitaries".
 
 // Attempt: H on data, controlled rotation on ancilla, T on data.
 h q[0];

@@ -1,6 +1,25 @@
-// Bernstein–Vazirani with a 7-bit hidden string s = 1011010 (read MSB-
-// first). 8 qubits total: 7 input + 1 ancilla. The probabilities panel
-// shows a single spike at the hidden string's index.
+// Bernstein–Vazirani with a 7-bit hidden string s = 1011010.
+//
+// Problem: an oracle implements f(x) = s · x mod 2 for some unknown
+// hidden bit-string s ∈ {0,1}⁷. Recover s.
+//
+// Classical lower bound: 7 oracle queries (one per bit of s, querying
+// e_k = 0…010…0 reveals s[k]).
+//
+// Quantum (this circuit): exactly ONE oracle call. The Hadamard
+// transform before and after the oracle turns the parity computation
+// f(x) = s · x into a direct readout: measuring the input register
+// after the second H block returns s outright.
+//
+// Mechanism: phase kickback gives the input register a phase
+// (−1)^{s·x} on branch |x⟩. The final Hadamard transform converts
+// "phase pattern" → "amplitude pattern" — and the (−1)^{s·x} phase
+// pattern is exactly the Hadamard-transform image of the bit-string
+// s. So the final state is exactly |s⟩.
+//
+// Below the oracle has bits set at positions 0, 2, 3, 5 — that's
+// s = 1011010 (read q[0] q[1] q[2] q[3] q[4] q[5] q[6] = MSB first).
+// The Probabilities panel shows a single spike at index 0b1011010 = 90.
 
 OPENQASM 3.0;
 include "stdgates.inc";
