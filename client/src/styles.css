@@ -20,7 +20,7 @@
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--fg); }
-button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
 button:hover { background: var(--panel); border-color: var(--border-strong); }
 input, select { font: inherit; color: var(--fg); background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; }
 input:focus, select:focus { outline: none; border-color: var(--accent); }
@@ -42,14 +42,14 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .editor { display: grid; grid-template-columns: 280px 1fr 360px; grid-template-rows: auto 1fr; flex: 1; min-height: 0; height: 100%; }
 .editor__right { border-left: 1px solid var(--border); background: var(--panel); overflow: auto; min-width: 0; }
 .editor__center { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; min-height: 0; }
-.editor__toolbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg-2); gap: 12px; }
+.editor__toolbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg-2); gap: 12px; flex-wrap: wrap; row-gap: 6px; }
 .editor__counts { display: flex; align-items: center; gap: 6px; color: var(--muted); }
 .editor__counts span { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; color: var(--fg); }
 .editor__counts button { width: 22px; height: 22px; padding: 0; line-height: 1; }
 .editor__sep { color: var(--border-strong); min-width: auto !important; }
 .file-menu { display: flex; gap: 4px; align-items: center; }
 .file-menu select { padding: 3px 6px; }
-.editor__actions { display: flex; gap: 6px; }
+.editor__actions { display: flex; gap: 6px; flex-wrap: wrap; row-gap: 6px; align-items: center; }
 .editor__canvas-scroll { overflow: auto; background: var(--bg); }
 
 /* ─── Palette ───────────────────────────────────────────────────────── */

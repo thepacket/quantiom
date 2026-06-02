@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { version as APP_VERSION } from "../../package.json";
 import { useTabs } from "./tabs";
 import { TabStrip } from "./TabStrip";
@@ -142,69 +142,98 @@ function RecordButton({ onRecord }: { onRecord: () => Promise<void> }) {
   );
 }
 
-function CompileButton({
-  onCompile,
+/**
+ * Single popover that consolidates the six "transform the circuit" actions —
+ * Compact, Append U†, Optimise, Transpile…, Compile…, Route. Replaces a row
+ * of six toolbar buttons with one menu so the toolbar fits on a normal
+ * laptop screen even with all the new features.
+ *
+ * Transpile and Compile both want a target gate set; the popover shows
+ * them as sub-rows. Route is only shown when a coupling map is imported.
+ */
+function TransformMenu({
   hasCoupling,
+  onCompact,
+  onAppendInverse,
+  onOptimise,
+  onTranspile,
+  onCompile,
+  onRoute,
 }: {
-  onCompile: (t: TranspileTarget) => void;
   hasCoupling: boolean;
+  onCompact: () => void;
+  onAppendInverse: () => void;
+  onOptimise: () => void;
+  onTranspile: (t: TranspileTarget) => void;
+  onCompile: (t: TranspileTarget) => void;
+  onRoute: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  const targets: Array<{ id: TranspileTarget; label: string; hint: string }> = [
+    { id: "clifford-t", label: "Clifford + T", hint: "{H, S, T, CX}" },
+    { id: "ibm-heavy-hex", label: "IBM heavy-hex", hint: "{RZ, SX, CX}" },
+    { id: "rigetti", label: "Rigetti", hint: "{RZ, RX(±π/2), CZ}" },
+  ];
   return (
-    <span style={{ position: "relative" }}>
-      <button onClick={() => setOpen((o) => !o)} title={hasCoupling ? "Transpile → optimise → route → optimise" : "Transpile → optimise (no coupling map; route step skipped)"}>
-        Compile…
+    <span style={{ position: "relative" }} ref={wrapRef}>
+      <button onClick={() => setOpen((o) => !o)} title="Compact, Append U†, Optimise, Transpile, Compile, Route">
+        Transform…
       </button>
       {open && (
-        <div className="examples-picker__pop" style={{ width: 220, top: "100%", marginTop: 4 }} onMouseLeave={() => setOpen(false)}>
+        <div className="examples-picker__pop" style={{ width: 260, top: "100%", marginTop: 4 }}>
           <div className="examples-picker__list">
-            {[
-              { id: "clifford-t" as const, label: "Clifford + T", hint: "{H, S, T, CX}" },
-              { id: "ibm-heavy-hex" as const, label: "IBM heavy-hex", hint: "{RZ, SX, CX}" },
-              { id: "rigetti" as const, label: "Rigetti", hint: "{RZ, RX(±π/2), CZ}" },
-            ].map((t) => (
+            <button className="examples-picker__item" onClick={() => { setOpen(false); onCompact(); }}>
+              <span>Compact</span>
+              <span className="export-picker__hint">ASAP-repack columns</span>
+            </button>
+            <button className="examples-picker__item" onClick={() => { setOpen(false); onAppendInverse(); }}>
+              <span>Append U†</span>
+              <span className="export-picker__hint">inverse of current circuit</span>
+            </button>
+            <button className="examples-picker__item" onClick={() => { setOpen(false); onOptimise(); }}>
+              <span>Optimise</span>
+              <span className="export-picker__hint">peephole rewrites</span>
+            </button>
+            <div className="examples-picker__cat-label">Transpile to native →</div>
+            {targets.map((tg) => (
               <button
-                key={t.id}
+                key={`tp-${tg.id}`}
                 className="examples-picker__item"
-                onClick={() => { setOpen(false); onCompile(t.id); }}
+                onClick={() => { setOpen(false); onTranspile(tg.id); }}
               >
-                <span>{t.label}</span>
-                <span className="export-picker__hint">{t.hint}</span>
+                <span>{tg.label}</span>
+                <span className="export-picker__hint">{tg.hint}</span>
               </button>
             ))}
-          </div>
-        </div>
-      )}
-    </span>
-  );
-}
-
-function TranspileButton({ onTranspile }: { onTranspile: (t: TranspileTarget) => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <span style={{ position: "relative" }}>
-      <button onClick={() => setOpen((o) => !o)} title="Rewrite into a target native gate set">Transpile…</button>
-      {open && (
-        <div
-          className="examples-picker__pop"
-          style={{ width: 200, top: "100%", marginTop: 4 }}
-          onMouseLeave={() => setOpen(false)}
-        >
-          <div className="examples-picker__list">
-            {[
-              { id: "clifford-t" as const, label: "Clifford + T", hint: "{H, S, T, CX}" },
-              { id: "ibm-heavy-hex" as const, label: "IBM heavy-hex", hint: "{RZ, SX, CX}" },
-              { id: "rigetti" as const, label: "Rigetti", hint: "{RZ, RX(±π/2), CZ}" },
-            ].map((t) => (
+            <div className="examples-picker__cat-label">Compile (transpile + optimise + route) →</div>
+            {targets.map((tg) => (
               <button
-                key={t.id}
+                key={`cp-${tg.id}`}
                 className="examples-picker__item"
-                onClick={() => { setOpen(false); onTranspile(t.id); }}
+                onClick={() => { setOpen(false); onCompile(tg.id); }}
               >
-                <span>{t.label}</span>
-                <span className="export-picker__hint">{t.hint}</span>
+                <span>{tg.label}</span>
+                <span className="export-picker__hint">{tg.hint}</span>
               </button>
             ))}
+            {hasCoupling && (
+              <>
+                <div className="examples-picker__cat-label">Route</div>
+                <button className="examples-picker__item" onClick={() => { setOpen(false); onRoute(); }}>
+                  <span>Insert SWAPs</span>
+                  <span className="export-picker__hint">satisfy coupling map</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -385,8 +414,10 @@ export function CircuitEditor() {
               }}
             />
             <button onClick={onSaveAsGate} title="Save the current circuit as a reusable custom gate">Save as gate</button>
-            <button
-              onClick={() => {
+            <TransformMenu
+              hasCoupling={!!noise.coupling}
+              onCompact={() => dispatch({ type: "compact-columns" })}
+              onAppendInverse={() => {
                 const maxCol = circuit.gates.reduce((m, g) => Math.max(m, g.column), -1);
                 if (maxCol < 0) return;
                 const { inverted, skipped } = inverseGates(circuit, 0, maxCol);
@@ -398,29 +429,7 @@ export function CircuitEditor() {
                 }
                 for (const g of inverted) dispatch({ type: "place-gate", gate: g });
               }}
-              title="Append the inverse (U†) of the current circuit"
-            >
-              Append U†
-            </button>
-            {noise.coupling && (
-              <button
-                onClick={() => {
-                  const result = routeCircuit(circuit, noise.coupling!);
-                  t.newTab(result.circuit, result.circuit.name);
-                  window.alert(
-                    `Routed to coupling map:\n` +
-                    `  violations:    ${result.violationsBefore}\n` +
-                    `  SWAPs added:   ${result.swapsInserted}\n` +
-                    `  total gates:   ${circuit.gates.length} → ${result.circuit.gates.length}`,
-                  );
-                }}
-                title="Insert SWAPs to satisfy the imported coupling map"
-              >
-                Route
-              </button>
-            )}
-            <button
-              onClick={() => {
+              onOptimise={() => {
                 const result = optimiseCircuit(circuit);
                 if (result.before === result.after && Object.keys(result.rulesFired).length === 0) {
                   window.alert("No rewrites applied — circuit is already in fixed-point form.");
@@ -436,26 +445,6 @@ export function CircuitEditor() {
                   (rulesText ? `\nRules fired:\n${rulesText}` : ""),
                 );
               }}
-              title="Apply peephole optimisations (cancel adjacent inverses, merge same-axis rotations)"
-            >
-              Optimise
-            </button>
-            <CompileButton
-              hasCoupling={!!noise.coupling}
-              onCompile={(target) => {
-                const result = compileForDevice(circuit, target, noise.coupling);
-                const label =
-                  target === "clifford-t" ? "Clifford+T" : target === "ibm-heavy-hex" ? "IBM heavy-hex" : "Rigetti";
-                t.newTab(result.circuit, result.circuit.name);
-                const stagesText = result.stages
-                  .map((s) => `  ${s.name.padEnd(10)}: ${s.gates.toString().padStart(4)} gates, depth ${s.depth}`)
-                  .join("\n");
-                window.alert(
-                  `Compiled to ${label}${noise.coupling ? " + routed" : ""}:\n` + stagesText,
-                );
-              }}
-            />
-            <TranspileButton
               onTranspile={(target) => {
                 const result = transpile(circuit, target);
                 const label =
@@ -473,13 +462,30 @@ export function CircuitEditor() {
                   (result.skipped.length > 0 ? `\n  (${result.skipped.length} gates not decomposable to ${label})` : ""),
                 );
               }}
+              onCompile={(target) => {
+                const result = compileForDevice(circuit, target, noise.coupling);
+                const label =
+                  target === "clifford-t" ? "Clifford+T" : target === "ibm-heavy-hex" ? "IBM heavy-hex" : "Rigetti";
+                t.newTab(result.circuit, result.circuit.name);
+                const stagesText = result.stages
+                  .map((s) => `  ${s.name.padEnd(10)}: ${s.gates.toString().padStart(4)} gates, depth ${s.depth}`)
+                  .join("\n");
+                window.alert(
+                  `Compiled to ${label}${noise.coupling ? " + routed" : ""}:\n` + stagesText,
+                );
+              }}
+              onRoute={() => {
+                if (!noise.coupling) return;
+                const result = routeCircuit(circuit, noise.coupling);
+                t.newTab(result.circuit, result.circuit.name);
+                window.alert(
+                  `Routed to coupling map:\n` +
+                  `  violations:    ${result.violationsBefore}\n` +
+                  `  SWAPs added:   ${result.swapsInserted}\n` +
+                  `  total gates:   ${circuit.gates.length} → ${result.circuit.gates.length}`,
+                );
+              }}
             />
-            <button
-              onClick={() => dispatch({ type: "compact-columns" })}
-              title="Auto-arrange columns: pull every gate as far left as it can go without collision"
-            >
-              Compact
-            </button>
             {simState.kind === "ready" && simState.data.freeSymbols.includes("t") && (
               <RecordButton
                 onRecord={async () => {
