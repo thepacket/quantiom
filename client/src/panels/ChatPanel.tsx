@@ -108,6 +108,10 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
         abortRef.current = null;
         if (full.length > 0) setHistory((h) => [...h, { role: "assistant", content: full }]);
         setStreamBuf("");
+        // Auto-open every detected QASM block as a new tab. Done here
+        // (not in render) so reloading the page from history doesn't
+        // re-open already-shown circuits.
+        autoOpenQasmBlocks(full, onLoadInNewTab);
       },
       onError: (msg) => {
         setStreaming(false);
@@ -116,7 +120,7 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
         setStreamBuf("");
       },
     });
-  }, [input, streaming, apiKey, model, attachCircuit, circuit, history]);
+  }, [input, streaming, apiKey, model, attachCircuit, circuit, history, onLoadInNewTab]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -147,15 +151,6 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
     window.addEventListener("mouseup", onUp);
   }, [height]);
 
-  // Open a QASM block as a new tab.
-  const openInTab = useCallback((qasm: string, idx: number) => {
-    const result = parseQasm3(qasm);
-    if (!result.ok) {
-      window.alert(`Parse error on line ${result.line}: ${result.error}`);
-      return;
-    }
-    onLoadInNewTab(result.circuit, `AI suggestion #${idx + 1}`);
-  }, [onLoadInNewTab]);
 
   // Collapsed strip: a thin always-visible bar at the bottom.
   if (!open) {
@@ -210,16 +205,15 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
         {history.length === 0 && !streamBuf && (
           <div className="chat__empty">
             Ask anything about the current circuit. Replies containing OpenQASM
-            blocks will show an "Open as new tab" button.
+            blocks open automatically as new tabs.
           </div>
         )}
         {history.map((m, i) => (
-          <Message key={i} message={m} onOpenQasm={(q) => openInTab(q, i)} />
+          <Message key={i} message={m} />
         ))}
         {streamBuf && (
           <Message
             message={{ role: "assistant", content: streamBuf }}
-            onOpenQasm={(q) => openInTab(q, history.length)}
             inProgress
           />
         )}
@@ -254,11 +248,9 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
 
 function Message({
   message,
-  onOpenQasm,
   inProgress,
 }: {
   message: ChatMessage;
-  onOpenQasm: (qasm: string) => void;
   inProgress?: boolean;
 }) {
   const parts = useMemo(() => splitFencedBlocks(message.content), [message.content]);
@@ -274,13 +266,9 @@ function Message({
               <div className="chat__code-bar">
                 <span className="chat__code-lang">{part.lang || "code"}</span>
                 {part.isQasm && (
-                  <button
-                    className="chat__open-tab"
-                    onClick={() => onOpenQasm(part.text)}
-                    title="Parse this OpenQASM block and open as a new tab"
-                  >
-                    Open in new tab
-                  </button>
+                  <span className="chat__open-tab" title="This block was opened as a new tab when the message arrived">
+                    auto-opened as new tab
+                  </span>
                 )}
               </div>
               <pre className="chat__code"><code>{part.text}</code></pre>
@@ -290,6 +278,34 @@ function Message({
       </div>
     </div>
   );
+}
+
+/**
+ * Scan a finished assistant message for fenced QASM blocks and open each
+ * one as a new tab. Runs once per message, in the streaming onDone path —
+ * NOT in the render path — so that reloading the page from persisted
+ * history doesn't reopen tabs that were already created in a prior session.
+ *
+ * Parse failures are logged but otherwise silent: the block stays visible
+ * in the chat for the user to copy out manually if they want to repair it.
+ */
+function autoOpenQasmBlocks(
+  full: string,
+  onLoadInNewTab: (circuit: Circuit, name?: string) => void,
+): void {
+  const parts = splitFencedBlocks(full);
+  let n = 0;
+  for (const part of parts) {
+    if (part.kind !== "code" || !part.isQasm) continue;
+    n++;
+    const result = parseQasm3(part.text);
+    if (!result.ok) {
+      // eslint-disable-next-line no-console
+      console.warn(`Quantiom: auto-open skipped a QASM block — parse error on line ${result.line}: ${result.error}`);
+      continue;
+    }
+    onLoadInNewTab(result.circuit, `AI suggestion #${n}`);
+  }
 }
 
 type Part =
