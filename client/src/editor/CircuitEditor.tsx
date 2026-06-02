@@ -215,7 +215,7 @@ function TransformMenu({
   hasCoupling: boolean;
   onCompact: () => void;
   onAppendInverse: () => void;
-  onOptimise: () => void;
+  onOptimise: (deep: boolean) => void;
   onTranspile: (t: TranspileTarget) => void;
   onCompile: (t: TranspileTarget) => void;
   onRoute: () => void;
@@ -252,9 +252,13 @@ function TransformMenu({
               <span>Append U†</span>
               <span className="export-picker__hint">inverse of current circuit</span>
             </button>
-            <button className="examples-picker__item" onClick={() => { setOpen(false); onOptimise(); }}>
+            <button className="examples-picker__item" onClick={() => { setOpen(false); onOptimise(false); }}>
               <span>Optimise</span>
-              <span className="export-picker__hint">peephole rewrites</span>
+              <span className="export-picker__hint">peephole rewrites (safe)</span>
+            </button>
+            <button className="examples-picker__item" onClick={() => { setOpen(false); onOptimise(true); }}>
+              <span>Optimise (deep)</span>
+              <span className="export-picker__hint">+ commute-through-diagonals; may reflow layout</span>
             </button>
             <button className="examples-picker__item" onClick={() => { setOpen(false); onRandomClifford(); }}>
               <span>Random Clifford…</span>
@@ -445,7 +449,9 @@ export function CircuitEditor() {
   // Opt-in WebGPU fast path: only kicks in when noise is enabled and the
   // circuit is in the GPU-supported subset (1-qubit + depolarising only).
   // Falls back silently to the CPU result the moment any constraint fails.
-  const gpuProbs = useGPUNoisyProbabilities(steppedCircuit, paramValues, customGates, noise, true);
+  const gpuResult = useGPUNoisyProbabilities(steppedCircuit, paramValues, customGates, noise, true);
+  const gpuProbs = gpuResult?.probabilities ?? null;
+  const gpuBloch = gpuResult?.blochVectors ?? null;
 
   // Auto shot-batches timer. When enabled, a setInterval at the chosen
   // rate increments `shotsTick`, which is threaded into every shot-based
@@ -742,8 +748,8 @@ export function CircuitEditor() {
                 }
                 for (const g of inverted) dispatch({ type: "place-gate", gate: g });
               }}
-              onOptimise={() => {
-                const result = optimiseCircuit(circuit);
+              onOptimise={(deep) => {
+                const result = optimiseCircuit(circuit, { deep });
                 if (result.before === result.after && Object.keys(result.rulesFired).length === 0) {
                   window.alert("No rewrites applied — circuit is already in fixed-point form.");
                   return;
@@ -955,7 +961,7 @@ export function CircuitEditor() {
             shotsTick={shotsTick}
           />
         </ErrorBoundary>
-        <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="bloch"><BlochPanel state={simState} gpuBlochVectors={gpuBloch} /></ErrorBoundary>
         <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="expectation">
           <ExpectationPanel

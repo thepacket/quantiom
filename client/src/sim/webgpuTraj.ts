@@ -46,7 +46,11 @@ const WG_SIZE = 64;
 const MAX_QUBITS_GPU = 14;        // 2^14 = 16k amplitudes per trajectory = 128 KB FP32
 const MIN_TRAJ_FOR_GPU = 64;
 
+export type GPUBlochVector = { x: number; y: number; z: number };
 export type WebGPUResult = {
+  /** Per-qubit (⟨X⟩, ⟨Y⟩, ⟨Z⟩) averaged over all trajectories. Indexed by
+   *  qubit number. Same convention as the CPU Bloch panel. */
+  blochVectors?: GPUBlochVector[];
   probabilities: number[];
   trajectories: number;
 };
@@ -219,6 +223,13 @@ async function dispatchGPU(
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
   });
 
+  // Per-(trajectory, qubit) Bloch vectors (x, y, z, _pad) = 16 bytes per slot.
+  const blochBytes = T * n * 4 * 4;
+  const blochBuf = device.createBuffer({
+    size: blochBytes,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+  });
+
   // Uniforms: n, dim, T, numOps.
   const uniformData = new Uint32Array([n, dim, T, ops.length]);
   const uniformBuf = device.createBuffer({
@@ -241,6 +252,9 @@ struct Op {
 @group(0) @binding(2) var<storage, read> rngs: array<f32>;
 @group(0) @binding(3) var<storage, read_write> probs: array<f32>;
 @group(0) @binding(4) var<uniform> U: Uniforms;
+// Per-(trajectory, qubit) Bloch vectors: stride 4 floats (x, y, z, _pad)
+// for tidy 16-byte rows.
+@group(0) @binding(5) var<storage, read_write> bloch: array<f32>;
 
 fn stateIdx(t: u32, b: u32) -> u32 { return (t * U.dim + b) * 2u; }
 
@@ -317,6 +331,41 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let im = state[idx + 1u];
     probs[t * U.dim + b] = re*re + im*im;
   }
+
+  // Per-qubit Bloch expectations for this trajectory.
+  // ⟨Z_q⟩ = Σ_b (1 - 2·bit_q(b)) · |amp[b]|²
+  // ⟨X_q⟩ = 2·Re Σ_{b with bit_q(b)=0} conj(amp[b]) · amp[b ⊕ mask_q]
+  // ⟨Y_q⟩ = 2·Im Σ_{b with bit_q(b)=0} conj(amp[b]) · amp[b ⊕ mask_q]
+  for (var q: u32 = 0u; q < U.n; q = q + 1u) {
+    let mask = 1u << (U.n - 1u - q);
+    var z: f32 = 0.0;
+    var x: f32 = 0.0;
+    var y: f32 = 0.0;
+    for (var b: u32 = 0u; b < U.dim; b = b + 1u) {
+      let bit = (b & mask) != 0u;
+      let idx = stateIdx(t, b);
+      let re = state[idx];
+      let im = state[idx + 1u];
+      let p = re*re + im*im;
+      if (bit) { z = z - p; } else { z = z + p; }
+      // X/Y: only loop over bit=0 to pair each |..0..⟩ with its partner |..1..⟩.
+      if (!bit) {
+        let idxJ = stateIdx(t, b | mask);
+        let pre = state[idxJ];
+        let pim = state[idxJ + 1u];
+        // conj(amp[b]) · amp[b|mask] = (re - i·im) · (pre + i·pim)
+        //   re part: re*pre + im*pim
+        //   im part: re*pim - im*pre
+        x = x + 2.0 * (re*pre + im*pim);
+        y = y + 2.0 * (re*pim - im*pre);
+      }
+    }
+    let bBase = (t * U.n + q) * 4u;
+    bloch[bBase] = x;
+    bloch[bBase + 1u] = y;
+    bloch[bBase + 2u] = z;
+    bloch[bBase + 3u] = 0.0;
+  }
 }
 `;
 
@@ -333,6 +382,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
       { binding: 2, resource: { buffer: rngBuf } },
       { binding: 3, resource: { buffer: probsBuf } },
       { binding: 4, resource: { buffer: uniformBuf } },
+      { binding: 5, resource: { buffer: blochBuf } },
     ],
   });
 
@@ -349,10 +399,19 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
   });
   encoder.copyBufferToBuffer(probsBuf, 0, readBuf, 0, T * dim * 4);
+  // Read back Bloch vectors.
+  const readBlochBuf = device.createBuffer({
+    size: blochBytes,
+    usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+  });
+  encoder.copyBufferToBuffer(blochBuf, 0, readBlochBuf, 0, blochBytes);
   device.queue.submit([encoder.finish()]);
   await readBuf.mapAsync(GPUMapMode.READ);
   const raw = new Float32Array(readBuf.getMappedRange()).slice();
   readBuf.unmap();
+  await readBlochBuf.mapAsync(GPUMapMode.READ);
+  const rawBloch = new Float32Array(readBlochBuf.getMappedRange()).slice();
+  readBlochBuf.unmap();
 
   // Average across trajectories.
   const probs = new Array<number>(dim).fill(0);
@@ -363,15 +422,30 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   }
   for (let b = 0; b < dim; b++) probs[b] /= T;
 
+  // Average Bloch vectors per qubit.
+  const blochVectors: GPUBlochVector[] = [];
+  for (let q = 0; q < n; q++) {
+    let sx = 0, sy = 0, sz = 0;
+    for (let t = 0; t < T; t++) {
+      const off = (t * n + q) * 4;
+      sx += rawBloch[off];
+      sy += rawBloch[off + 1];
+      sz += rawBloch[off + 2];
+    }
+    blochVectors.push({ x: sx / T, y: sy / T, z: sz / T });
+  }
+
   // Cleanup
   stateBuf.destroy();
   opsBuf.destroy();
   rngBuf.destroy();
   probsBuf.destroy();
+  blochBuf.destroy();
   uniformBuf.destroy();
   readBuf.destroy();
+  readBlochBuf.destroy();
 
-  return { probabilities: probs, trajectories: T };
+  return { probabilities: probs, trajectories: T, blochVectors };
 }
 
 // ─── Expression cache (mirrors simulate.ts) ─────────────────────────────

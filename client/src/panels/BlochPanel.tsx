@@ -4,31 +4,47 @@ import { dataOf } from "./useSimulation";
 import { project } from "./sphere";
 import { PanelShell } from "./PanelShell";
 
-type Props = { state: SimState };
+type Props = {
+  state: SimState;
+  /** Optional GPU-computed Bloch vectors from the WebGPU trajectory path.
+   *  Override the CPU result when present (avoids a second pass on the same
+   *  trajectories). Same big-endian qubit indexing as the CPU panel. */
+  gpuBlochVectors?: { x: number; y: number; z: number }[] | null;
+};
 
 const SIZE = 110;
 const R = 42;
 
-export function BlochPanel({ state }: Props) {
+export function BlochPanel({ state, gpuBlochVectors }: Props) {
   const data = dataOf(state);
+  const blochs: BlochVector[] | null = gpuBlochVectors && data && gpuBlochVectors.length === data.blochVectors.length
+    ? gpuBlochVectors
+    : data?.blochVectors ?? null;
+  const source: "gpu" | "cpu" = gpuBlochVectors && data && gpuBlochVectors.length === data.blochVectors.length
+    ? "gpu" : "cpu";
 
   const copy = () => {
-    if (!data) return "";
-    return data.blochVectors
+    if (!blochs) return "";
+    return blochs
       .map((b, i) => `q${i}: (${b.x.toFixed(4)}, ${b.y.toFixed(4)}, ${b.z.toFixed(4)})`)
       .join("\n");
   };
 
   return (
     <PanelShell id="bloch" title="Bloch spheres" getCopyText={copy}>
-      {!data ? (
+      {!blochs ? (
         <div className="panel__placeholder">building circuit…</div>
       ) : (
-        <div className="bloch__grid">
-          {data.blochVectors.map((b, i) => (
-            <BlochSphere key={i} qubit={i} v={b} />
-          ))}
-        </div>
+        <>
+          <div className="bloch__grid">
+            {blochs.map((b, i) => (
+              <BlochSphere key={i} qubit={i} v={b} />
+            ))}
+          </div>
+          {source === "gpu" && (
+            <div className="prob__note">WebGPU trajectory-averaged Bloch vectors</div>
+          )}
+        </>
       )}
     </PanelShell>
   );

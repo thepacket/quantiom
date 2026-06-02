@@ -59,7 +59,14 @@ const PAULI_PRODUCT: Record<string, string> = {
   zx: "y", xz: "y",
 };
 
-export function optimiseCircuit(circuit: Circuit): OptimiseResult {
+export type OptimiseOptions = {
+  /** When true, also runs the commute-through-diagonals pass that hops
+   *  rotations past CZ / RZZ / Z / S / T blockers to find merges. Disabled
+   *  by default — it can perturb user-curated layout. */
+  deep?: boolean;
+};
+
+export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): OptimiseResult {
   const before = circuit.gates.length;
   const rulesFired: Record<string, number> = {};
   let gates = [...circuit.gates].sort(
@@ -157,15 +164,17 @@ export function optimiseCircuit(circuit: Circuit): OptimiseResult {
     gates = result.gates;
   }
 
-  // Post-pass: commute-through-diagonals merge. Rz/P/U1/CP/CRZ rotations
-  // on the same qubit can hop past any other diagonal gate (Z, S, T, CZ,
-  // RZZ, …) to find a same-id same-qubit partner to merge with. We do this
-  // after the main passes so it picks up only the "leftovers" not caught by
-  // simple adjacency.
-  for (let i = 0; i < 50; i++) {
-    const result = commuteDiagonalMerge(gates, rulesFired);
-    if (!result.changed) break;
-    gates = result.gates;
+  // Post-pass (deep mode only): commute-through-diagonals merge. Rz/P/U1/
+  // CP/CRZ rotations on the same qubit can hop past any other diagonal
+  // gate (Z, S, T, CZ, RZZ, …) to find a same-id same-qubit partner to
+  // merge with. Gated because the column reflow that follows changes the
+  // layout the user may have curated.
+  if (opts.deep) {
+    for (let i = 0; i < 50; i++) {
+      const result = commuteDiagonalMerge(gates, rulesFired);
+      if (!result.changed) break;
+      gates = result.gates;
+    }
   }
 
   // ASAP re-pack columns.

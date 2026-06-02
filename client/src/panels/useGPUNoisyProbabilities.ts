@@ -3,7 +3,7 @@ import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 import type { ParameterValues } from "../sim/simulate";
 import type { NoiseModel } from "../sim/noise";
-import { isWebGPUAvailable, tryRunWebGPUTrajectories } from "../sim/webgpuTraj";
+import { isWebGPUAvailable, tryRunWebGPUTrajectories, type GPUBlochVector } from "../sim/webgpuTraj";
 
 /**
  * Off-main-thread WebGPU trajectory probabilities for the noise path.
@@ -24,14 +24,24 @@ import { isWebGPUAvailable, tryRunWebGPUTrajectories } from "../sim/webgpuTraj";
  * The cache key is intentionally narrow so user-facing param sweeps
  * (Landscape / Optimise / etc.) don't thrash GPU work the panel won't show.
  */
+/**
+ * Bundled GPU output: probabilities plus per-qubit Bloch vectors averaged
+ * across trajectories. `null` for either means "the GPU path didn't apply
+ * for this circuit / noise / param combo, fall back to CPU".
+ */
+export type GPUNoisyResult = {
+  probabilities: number[];
+  blochVectors?: GPUBlochVector[];
+};
+
 export function useGPUNoisyProbabilities(
   circuit: Circuit,
   parameterValues: ParameterValues,
   customGates: CustomGate[],
   noise: NoiseModel | undefined,
   enabled: boolean,
-): number[] | null {
-  const [result, setResult] = useState<number[] | null>(null);
+): GPUNoisyResult | null {
+  const [result, setResult] = useState<GPUNoisyResult | null>(null);
 
   // Stable string keys so the effect doesn't fire on every reference change.
   const noiseEnabled = enabled && !!noise?.enabled;
@@ -58,7 +68,7 @@ export function useGPUNoisyProbabilities(
     tryRunWebGPUTrajectories(circuit, parameterValues, customGates, noise, noise.trajectories)
       .then((r) => {
         if (cancelled) return;
-        setResult(r ? r.probabilities : null);
+        setResult(r ? { probabilities: r.probabilities, blochVectors: r.blochVectors } : null);
       })
       .catch(() => {
         if (!cancelled) setResult(null);
