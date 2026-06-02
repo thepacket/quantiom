@@ -12,6 +12,7 @@ import { decodeCircuitFromHash } from "./shareLink";
 import { inverseGates } from "./inverse";
 import { transpile, type TranspileTarget } from "../sim/transpile";
 import { routeCircuit } from "../sim/router";
+import { optimiseCircuit } from "../sim/optimisePasses";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -261,6 +262,27 @@ export function CircuitEditor() {
                 Route
               </button>
             )}
+            <button
+              onClick={() => {
+                const result = optimiseCircuit(circuit);
+                if (result.before === result.after && Object.keys(result.rulesFired).length === 0) {
+                  window.alert("No rewrites applied — circuit is already in fixed-point form.");
+                  return;
+                }
+                t.newTab(result.circuit, result.circuit.name);
+                const rulesText = Object.entries(result.rulesFired)
+                  .map(([rule, n]) => `  ${rule}: ${n}×`)
+                  .join("\n");
+                window.alert(
+                  `Optimised in ${result.passes} pass(es):\n` +
+                  `  gates: ${result.before} → ${result.after}\n` +
+                  (rulesText ? `\nRules fired:\n${rulesText}` : ""),
+                );
+              }}
+              title="Apply peephole optimisations (cancel adjacent inverses, merge same-axis rotations)"
+            >
+              Optimise
+            </button>
             <TranspileButton
               onTranspile={(target) => {
                 const result = transpile(circuit, target);
