@@ -1,4 +1,5 @@
 import type { ChatMessage } from "../sim/openrouter";
+import type { AttachKey } from "./chatContext";
 
 /**
  * localStorage glue for the AI chat panel. All keys are namespaced under
@@ -15,6 +16,7 @@ const KEY_MODEL = "quantiom:chat:model";
 const KEY_HEIGHT = "quantiom:chat:height";
 const KEY_HISTORY = "quantiom:chat:history";
 const KEY_OPEN = "quantiom:chat:open";
+const KEY_ATTACHED = "quantiom:chat:attached";
 
 export function loadApiKey(): string {
   try { return localStorage.getItem(KEY_API) ?? ""; } catch { return ""; }
@@ -50,6 +52,29 @@ export function saveOpen(open: boolean): void {
 /** Bounded history persistence. Old chats get truncated to the last N
  *  messages so localStorage doesn't slowly fill up. */
 const MAX_PERSISTED_MESSAGES = 100;
+
+const VALID_ATTACH_KEYS: AttachKey[] = [
+  "statevector", "probabilities", "bloch", "resources", "noise", "classicalRegister",
+];
+
+export function loadAttached(): Set<AttachKey> {
+  try {
+    const raw = localStorage.getItem(KEY_ATTACHED);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return new Set();
+    const valid = new Set<AttachKey>();
+    for (const k of arr) {
+      if (typeof k === "string" && VALID_ATTACH_KEYS.includes(k as AttachKey)) {
+        valid.add(k as AttachKey);
+      }
+    }
+    return valid;
+  } catch { return new Set(); }
+}
+export function saveAttached(attached: ReadonlySet<AttachKey>): void {
+  try { localStorage.setItem(KEY_ATTACHED, JSON.stringify([...attached])); } catch { /* ignore */ }
+}
 
 export function loadHistory(): ChatMessage[] {
   try {

@@ -62,7 +62,7 @@ import { TomographyPanel } from "../panels/TomographyPanel";
 import { HamiltonianPanel } from "../panels/HamiltonianPanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
-import { useStatevector } from "../panels/useSimulation";
+import { useStatevector, dataOf } from "../panels/useSimulation";
 import { useGPUNoisyProbabilities } from "../panels/useGPUNoisyProbabilities";
 import { loadNoise, saveNoise, type NoiseModel } from "../sim/noise";
 
@@ -658,7 +658,12 @@ export function CircuitEditor() {
           onStepTo={setPickedStep}
         />
         <ErrorBoundary label="chat">
-          <ChatPanel circuit={circuit} onLoadInNewTab={(c, n) => t.newTab(c, n)} />
+          <ChatPanel
+            circuit={circuit}
+            simResult={dataOf(simState)}
+            noise={noise}
+            onLoadInNewTab={(c, n) => t.newTab(c, n)}
+          />
         </ErrorBoundary>
       </div>
       <div className="editor__right">

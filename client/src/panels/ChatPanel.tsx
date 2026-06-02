@@ -8,12 +8,21 @@ import {
   type ChatMessage,
   type OpenRouterModel,
 } from "../sim/openrouter";
+import type { SimResult } from "../sim/simulate";
+import type { NoiseModel } from "../sim/noise";
+import {
+  ALL_ATTACH_KEYS,
+  ATTACH_LABELS,
+  buildAttachedContext,
+  type AttachKey,
+} from "./chatContext";
 import {
   loadApiKey, saveApiKey,
   loadModel, saveModel,
   loadHistory, saveHistory,
   loadHeight, saveHeight,
   loadOpen, saveOpen,
+  loadAttached, saveAttached,
 } from "./chatStorage";
 
 /**
@@ -31,6 +40,11 @@ import {
 
 type Props = {
   circuit: Circuit;
+  /** Latest simulator result for the active circuit; null while computing
+   *  or when the panel can't derive one (large stabilizer circuits etc.).
+   *  Used to populate optional context attachments. */
+  simResult: SimResult | null;
+  noise: NoiseModel;
   onLoadInNewTab: (circuit: Circuit, name?: string) => void;
 };
 
@@ -43,7 +57,7 @@ const SYSTEM_PROMPT =
   "auto-detects those blocks and offers to open them as a new tab. Be " +
   "concise; do not over-explain quantum-computing basics.";
 
-export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
+export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) {
   const [open, setOpen] = useState<boolean>(loadOpen);
   const [height, setHeight] = useState<number>(loadHeight);
   const [apiKey, setApiKey] = useState<string>(loadApiKey);
@@ -54,6 +68,8 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
   const [streamBuf, setStreamBuf] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [showContext, setShowContext] = useState<boolean>(false);
+  const [attached, setAttached] = useState<Set<AttachKey>>(loadAttached);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -62,6 +78,7 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
   useEffect(() => { saveApiKey(apiKey); }, [apiKey]);
   useEffect(() => { saveModel(model); }, [model]);
   useEffect(() => { saveHistory(history); }, [history]);
+  useEffect(() => { saveAttached(attached); }, [attached]);
 
   // Auto-scroll to bottom on new content.
   useEffect(() => {
@@ -81,10 +98,12 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
     // the model needs context to give grounded answers; cheaper than
     // making the user remember to re-attach.
     const qasm = emitQasm3(circuit);
+    const extra = buildAttachedContext(attached, circuit, simResult, noise);
     const userContent =
       `Current circuit (OpenQASM 3, ${circuit.numQubits} qubits, ` +
-      `${circuit.gates.length} gates):\n\n\`\`\`qasm\n${qasm}\n\`\`\`\n\n` +
-      `User message:\n${text}`;
+      `${circuit.gates.length} gates):\n\n\`\`\`qasm\n${qasm}\n\`\`\`` +
+      (extra ? `\n\nAdditional Quantiom-computed context:\n\n${extra}` : "") +
+      `\n\nUser message:\n${text}`;
 
     const userMsg: ChatMessage = { role: "user", content: userContent };
     const msgs: ChatMessage[] = [
@@ -118,7 +137,7 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
         setStreamBuf("");
       },
     });
-  }, [input, streaming, apiKey, model, circuit, history, onLoadInNewTab]);
+  }, [input, streaming, apiKey, model, circuit, history, onLoadInNewTab, attached, simResult, noise]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -168,6 +187,12 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
         <button className="chat__toggle" onClick={() => setOpen(false)} title="Hide chat">▾</button>
         <span className="chat__title">AI chat</span>
         <ModelPicker model={model} onPick={setModel} apiKey={apiKey} />
+        <ContextPicker
+          attached={attached}
+          onChange={setAttached}
+          open={showContext}
+          onToggle={() => setShowContext((s) => !s)}
+        />
         <button className="chat__btn" onClick={() => setShowSettings((s) => !s)} title="API key & options">
           ⚙
         </button>
@@ -367,6 +392,75 @@ function isLikelyQasm(lang: string, body: string): boolean {
     return /OPENQASM\b|qubit\s*\[|qreg\s+/i.test(t);
   }
   return false;
+}
+
+// ─── Context-attach picker ─────────────────────────────────────────────
+
+/**
+ * Popover with one checkbox per attachable Quantiom-computed quantity.
+ * Selected items get serialised by `buildAttachedContext` and spliced
+ * into the user message above the typed text. Selection persists across
+ * sessions; the button label shows a live count so users know what
+ * they're sending.
+ */
+function ContextPicker({
+  attached,
+  onChange,
+  open,
+  onToggle,
+}: {
+  attached: ReadonlySet<AttachKey>;
+  onChange: (next: Set<AttachKey>) => void;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onToggle();
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open, onToggle]);
+
+  const toggle = (k: AttachKey) => {
+    const next = new Set(attached);
+    if (next.has(k)) next.delete(k); else next.add(k);
+    onChange(next);
+  };
+
+  const count = attached.size;
+  return (
+    <div className="chat__context" ref={wrapRef}>
+      <button
+        className="chat__btn"
+        onClick={onToggle}
+        title="Pick extra Quantiom-computed context to attach to your next message"
+      >
+        + context{count > 0 ? ` (${count})` : ""}
+      </button>
+      {open && (
+        <div className="chat__context-pop">
+          <div className="chat__context-head">attach to every message</div>
+          {ALL_ATTACH_KEYS.map((k) => (
+            <label key={k} className="chat__context-row">
+              <input
+                type="checkbox"
+                checked={attached.has(k)}
+                onChange={() => toggle(k)}
+              />
+              <span>{ATTACH_LABELS[k]}</span>
+            </label>
+          ))}
+          <div className="chat__context-note">
+            Each adds a short pre-serialised block above your prompt.
+            Distributions cap at the top 64 entries by probability.
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Model picker ──────────────────────────────────────────────────────
