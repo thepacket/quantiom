@@ -201,6 +201,27 @@ export function NoisePanel({ noise, onChange }: Props) {
 
         <CustomKrausEditor noise={noise} onChange={onChange} />
 
+        {noise.perGate && Object.keys(noise.perGate).length > 0 && (
+          <fieldset className="noise__group">
+            <legend>Per-gate-id rates ({Object.keys(noise.perGate).length})</legend>
+            <div className="noise__pergate">
+              {Object.entries(noise.perGate)
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([gid, rate]) => (
+                  <div key={gid} className="noise__pergate-row">
+                    <code>{gid}</code>
+                    <span>{rate.toExponential(2)}</span>
+                  </div>
+                ))}
+            </div>
+            <p className="noise__hint">
+              Override globals for the listed gate ids (populated by the IBM
+              importer from device gate_error data). Overrides depolarising
+              rates; amplitude/phase damping still uses per-qubit T1/T2.
+            </p>
+          </fieldset>
+        )}
+
         {noise.perQubit && noise.perQubit.length > 0 && (
           <fieldset className="noise__group">
             <legend>Per-qubit rates ({noise.perQubit.length} qubits)</legend>

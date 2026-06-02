@@ -129,21 +129,25 @@ export function simulateNoisy(
       // qubit (see noise.ts docstring). Depolarising uses per-qubit rates
       // when available; damping always uses per-qubit (T1/T2 are physical).
       const involved = m.qubits;
+      const perGateRate = noise.perGate?.[g.gateId];
       if (involved.length === 1) {
         const q = involved[0];
-        depolarise1(state, n, q, rateFor(noise, "oneQubitDepolarising", q));
+        const d1 = perGateRate ?? rateFor(noise, "oneQubitDepolarising", q);
+        depolarise1(state, n, q, d1);
         damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
         if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
       } else if (involved.length === 2) {
-        depolarise2(state, n, involved[0], involved[1], noise.twoQubitDepolarising);
+        const d2 = perGateRate ?? noise.twoQubitDepolarising;
+        depolarise2(state, n, involved[0], involved[1], d2);
         for (const q of involved) {
           damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
           if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
         }
         applyCrosstalk(state, n, involved[0], involved[1], noise);
       } else {
+        const d2 = perGateRate ?? noise.twoQubitDepolarising;
         for (const q of involved) {
-          depolarise1(state, n, q, noise.twoQubitDepolarising);
+          depolarise1(state, n, q, d2);
           damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
           if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
         }
@@ -594,21 +598,25 @@ function runTrajectoryAverage(
       applyKQubit(state, n, s.qubits, s.U);
       for (const q of s.antiQubits) applyKQubit(state, n, [q], M_X);
       const involved = s.qubits;
+      const perGateRate = noise.perGate?.[g.gateId];
       if (involved.length === 1) {
         const q = involved[0];
-        depolarise1(state, n, q, rateFor(noise, "oneQubitDepolarising", q));
+        const d1 = perGateRate ?? rateFor(noise, "oneQubitDepolarising", q);
+        depolarise1(state, n, q, d1);
         damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
         if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
       } else if (involved.length === 2) {
-        depolarise2(state, n, involved[0], involved[1], noise.twoQubitDepolarising);
+        const d2 = perGateRate ?? noise.twoQubitDepolarising;
+        depolarise2(state, n, involved[0], involved[1], d2);
         for (const q of involved) {
           damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
           if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
         }
         applyCrosstalk(state, n, involved[0], involved[1], noise);
       } else {
+        const d2 = perGateRate ?? noise.twoQubitDepolarising;
         for (const q of involved) {
-          depolarise1(state, n, q, noise.twoQubitDepolarising);
+          depolarise1(state, n, q, d2);
           damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
           if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
         }
@@ -680,17 +688,21 @@ export function noisyPauliExpectation(
       applyKQubit(state, n, s.qubits, s.U);
       for (const q of s.antiQubits) applyKQubit(state, n, [q], M_X);
       const involved = s.qubits;
+      const perGateRate = noise.perGate?.[g.gateId];
       if (involved.length === 1) {
         const q = involved[0];
-        depolarise1(state, n, q, rateFor(noise, "oneQubitDepolarising", q));
+        const d1 = perGateRate ?? rateFor(noise, "oneQubitDepolarising", q);
+        depolarise1(state, n, q, d1);
         damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
       } else if (involved.length === 2) {
-        depolarise2(state, n, involved[0], involved[1], noise.twoQubitDepolarising);
+        const d2 = perGateRate ?? noise.twoQubitDepolarising;
+        depolarise2(state, n, involved[0], involved[1], d2);
         for (const q of involved) damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
         applyCrosstalk(state, n, involved[0], involved[1], noise);
       } else {
+        const d2 = perGateRate ?? noise.twoQubitDepolarising;
         for (const q of involved) {
-          depolarise1(state, n, q, noise.twoQubitDepolarising);
+          depolarise1(state, n, q, d2);
           damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
         }
       }

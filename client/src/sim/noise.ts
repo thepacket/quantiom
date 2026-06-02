@@ -77,6 +77,14 @@ export type NoiseModel = {
   /** Per-qubit overrides. Length matches the circuit width when set by
    *  the importer; out-of-range qubits fall back to the global rates. */
   perQubit?: PerQubitRates[];
+  /** Per-gate-id depolarising rate. Keys are gate IDs in the IR
+   *  (`sx`, `x`, `cx`, `cz`, `ecr`, etc.). When present, overrides
+   *  `oneQubitDepolarising` / `twoQubitDepolarising` for matching gates.
+   *  Populated by the IBM importer from `gate_error` entries — aggregated
+   *  by gate name across qubits (median). Real-device emulation: sx
+   *  errors are typically 10× smaller than cx errors; per-gate rates
+   *  capture that, the globals can't. */
+  perGate?: Record<string, number>;
   /** Free-form note populated by the importer (device name + snapshot
    *  date) so the user can see which device the calibration came from. */
   source?: string;
@@ -112,6 +120,13 @@ export function loadNoise(): NoiseModel {
       trajectories: Math.max(1, Math.min(8192, parsed.trajectories ?? DEFAULT_NOISE.trajectories)),
       perQubit: Array.isArray(parsed.perQubit) ? parsed.perQubit.map(sanitisePerQubit) : undefined,
       coupling: Array.isArray(parsed.coupling) ? parsed.coupling : undefined,
+      perGate: typeof parsed.perGate === "object" && parsed.perGate !== null
+        ? Object.fromEntries(
+            Object.entries(parsed.perGate as Record<string, unknown>)
+              .filter(([, v]) => typeof v === "number" && Number.isFinite(v))
+              .map(([k, v]) => [k, clamp01(v as number)]),
+          )
+        : undefined,
       customKraus: parsed.customKraus && typeof parsed.customKraus === "object" && Array.isArray(parsed.customKraus.operators)
         ? {
             enabled: !!parsed.customKraus.enabled,
@@ -275,6 +290,25 @@ export function importIbmBackend(json: string): NoiseModel {
   }
   const couplingHasEdges = coupling.some((nbrs) => nbrs.length > 0);
 
+  // Per-gate-id rates: collect every gate_error entry, bucket by gate name,
+  // store the median per-bucket. IBM gate names (sx, x, cx, cz, ecr, reset)
+  // match Quantiom IR ids directly; non-matching names are ignored.
+  const buckets = new Map<string, number[]>();
+  for (const g of gates) {
+    const e = g as Record<string, unknown>;
+    const name = typeof e.gate === "string" ? e.gate : null;
+    if (!name) continue;
+    const err = paramValue(e.parameters, "gate_error");
+    if (typeof err !== "number") continue;
+    const arr = buckets.get(name) ?? [];
+    arr.push(err);
+    buckets.set(name, arr);
+  }
+  const perGate: Record<string, number> = {};
+  for (const [name, vals] of buckets) {
+    perGate[name] = clamp01(median(vals));
+  }
+
   return {
     enabled: true,
     trajectories: DEFAULT_NOISE.trajectories,
@@ -286,6 +320,7 @@ export function importIbmBackend(json: string): NoiseModel {
     crosstalk: 0,
     perQubit,
     coupling: couplingHasEdges ? coupling : undefined,
+    perGate: Object.keys(perGate).length > 0 ? perGate : undefined,
     source: `${name}${date ? ` @ ${date.slice(0, 10)}` : ""}`,
   };
 }

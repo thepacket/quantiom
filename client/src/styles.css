@@ -451,6 +451,10 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .coupling-edge { stroke: var(--border); stroke-width: 1.2; }
 .coupling-node { fill: var(--accent); }
 .coupling-label { fill: var(--bg); font-size: 8px; font-family: ui-monospace, monospace; font-weight: 600; }
+.noise__pergate { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; max-height: 120px; overflow-y: auto; }
+.noise__pergate-row { display: flex; justify-content: space-between; font-size: 10px; font-family: ui-monospace, monospace; padding: 1px 4px; }
+.noise__pergate-row code { color: var(--accent); }
+.noise__pergate-row span { color: var(--muted); }
 
 .statevector__ket { padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow-x: auto; font-size: 15px; }
 .statevector__ket .katex-display { margin: 0; }
