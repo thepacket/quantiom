@@ -27,10 +27,11 @@ OpenQASM 3 (and parse OpenQASM 2), export to **Qiskit · Cirq · Braket
 · Q# · PyQuil · pytket**, serialize into a shareable URL hash, and
 the t-animation can be recorded as a WebM video.
 
-For users already comfortable with quantum-computing concepts. IBM
-Quantum Composer is the floor, not the ceiling.
-
 Live: **<https://quantiom.fly.dev>**
+
+Quantiom is moving fast and the surface to verify is wide — 55 gates,
+three simulator backends, 16 panels, OpenQASM 3 round-trip, and six SDK
+emitters. Expect rough edges; bug reports against any of it are welcome.
 
 ## Authorship
 
