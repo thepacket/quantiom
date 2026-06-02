@@ -285,18 +285,50 @@ export function decomposeKAK4x4(U: Complex[][]): KakResult | null {
     }
   }
   const sim = simultaneousDiagonalise(Are, Bim);
-  let R = sim.R;
+  const Rraw = sim.R;
   const dRe = sim.Da;
   const dIm = sim.Db;
-  // R is real-orthogonal but may have det -1; flip the first column to
-  // force det +1 so it sits in SO(4). The corresponding phase sign also
-  // flips, which the brute-force perm/sign loop will pick up.
-  if (det4(R) < 0) {
-    const flipped: number[][] = R.map((row) => [...row]);
-    for (let i = 0; i < 4; i++) flipped[i][0] = -flipped[i][0];
-    R = flipped;
+  const phasesRaw = dRe.map((re, k) => Math.atan2(dIm[k], re));
+  // Try every column-sign pattern (16 variants) so we cover both det
+  // chiralities and the per-column ± freedom inside any degenerate
+  // eigenvalue blocks. The brute-force perm × sign-mask loop runs on
+  // each variant; first one to hit residual < TOL wins.
+  const Rvariants: { R: number[][]; phases: number[] }[] = [];
+  for (let colMask = 0; colMask < 16; colMask++) {
+    const Rv: number[][] = Rraw.map((row) => [...row]);
+    for (let c = 0; c < 4; c++) {
+      if (colMask & (1 << c)) {
+        for (let i = 0; i < 4; i++) Rv[i][c] = -Rv[i][c];
+      }
+    }
+    if (det4(Rv) < 0) continue; // restrict to SO(4)
+    Rvariants.push({ R: Rv, phases: phasesRaw });
   }
-  const phases = dRe.map((re, k) => Math.atan2(dIm[k], re));
+  // Run the main loop body across every R variant, picking the best hit.
+  let bestAcrossVariants: { result: KakResult } | null = null;
+  for (const variant of Rvariants) {
+    const sub = decomposeWithR(variant.R, variant.phases, Usu, M, Um);
+    if (sub && sub.residual < TOL) return sub;
+    if (sub && (!bestAcrossVariants || sub.residual < bestAcrossVariants.result.residual)) {
+      bestAcrossVariants = { result: sub };
+    }
+  }
+  if (bestAcrossVariants && bestAcrossVariants.result.residual < 0.1) return bestAcrossVariants.result;
+  if (bestAcrossVariants && typeof (globalThis as { __KAK_DEBUG__?: boolean }).__KAK_DEBUG__ !== "undefined") {
+    // eslint-disable-next-line no-console
+    console.log(`KAK: best residual = ${bestAcrossVariants.result.residual.toExponential(2)}`);
+  }
+  return null;
+}
+
+function decomposeWithR(
+  R: number[][],
+  phasesRaw: number[],
+  U: Complex[][],
+  _M: Complex[][],
+  Um: Complex[][],
+): KakResult | null {
+  const phases = phasesRaw;
 
   // The eigenvalues of K(α, β, γ) = exp(i(α XX + β YY + γ ZZ)) in the
   // magic basis form a specific multiset:
@@ -378,17 +410,7 @@ export function decomposeKAK4x4(U: Complex[][]): KakResult | null {
       }
     }
   }
-  // No combination matched within tolerance — return the best attempt so
-  // callers can decide whether it's good enough. We return only when
-  // residual is comfortably below 1; anything worse signals the algorithm
-  // didn't converge.
-  // Debug-friendly: log when something close but not below TOL is found.
-  if (best && best.result.residual < 0.1) return best.result;
-  if (best && typeof (globalThis as { __KAK_DEBUG__?: boolean }).__KAK_DEBUG__ !== "undefined") {
-    // eslint-disable-next-line no-console
-    console.log(`KAK: best residual = ${best.result.residual.toExponential(2)}, α=${best.result.interaction.alpha.toFixed(4)} β=${best.result.interaction.beta.toFixed(4)} γ=${best.result.interaction.gamma.toFixed(4)}`);
-  }
-  return null;
+  return best ? best.result : null;
 }
 
 // All 24 permutations of [0, 1, 2, 3].
