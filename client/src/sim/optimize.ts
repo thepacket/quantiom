@@ -141,3 +141,168 @@ function evaluate(
 // Re-export for convenience even though only `optimizeExpectation` is the
 // public surface.
 export { simulateNoisy };
+
+/**
+ * Zero-noise extrapolation. Runs the circuit at noise rates scaled by
+ * each factor in `scales` (e.g. [1, 2, 3]), then linearly fits ⟨P⟩(γ)
+ * and returns the value extrapolated to γ = 0 along with the sample
+ * points. Researchers paired this with VQE/QAOA under calibrated noise:
+ * compute ⟨H⟩ at increasingly noisy versions of the device profile, fit,
+ * read off the noise-free estimate.
+ *
+ * The "scale" multiplies every depolarising, damping, readout, and
+ * crosstalk rate; per-qubit overrides scale too. Custom Kraus operators
+ * pass through unchanged (scaling Kraus is ill-defined in general).
+ */
+export function zneFit(
+  circuit: Circuit,
+  paramValues: ParameterValues,
+  customGates: CustomGate[],
+  observable: Pauli[],
+  baseNoise: NoiseModel,
+  scales: number[] = [1, 2, 3],
+): { samples: Array<{ scale: number; value: number }>; extrapolated: number } {
+  const samples: Array<{ scale: number; value: number }> = [];
+  for (const s of scales) {
+    const scaled = scaleNoise(baseNoise, s);
+    const v = noisyPauliExpectation(circuit, paramValues, customGates, scaled, observable);
+    samples.push({ scale: s, value: v });
+  }
+  // Linear least-squares fit y = a + b·x.
+  const n = samples.length;
+  let sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (const { scale, value } of samples) {
+    sx += scale; sy += value; sxx += scale * scale; sxy += scale * value;
+  }
+  const denom = n * sxx - sx * sx;
+  if (Math.abs(denom) < 1e-12) return { samples, extrapolated: samples[0]?.value ?? 0 };
+  const b = (n * sxy - sx * sy) / denom;
+  const a = (sy - b * sx) / n;
+  return { samples, extrapolated: a };
+}
+
+function scaleNoise(noise: NoiseModel, factor: number): NoiseModel {
+  const clamp = (v: number) => Math.max(0, Math.min(1, v * factor));
+  return {
+    ...noise,
+    oneQubitDepolarising: clamp(noise.oneQubitDepolarising),
+    twoQubitDepolarising: clamp(noise.twoQubitDepolarising),
+    amplitudeDamping: clamp(noise.amplitudeDamping),
+    phaseDamping: clamp(noise.phaseDamping),
+    readoutBitFlip: clamp(noise.readoutBitFlip),
+    crosstalk: clamp(noise.crosstalk),
+    perQubit: noise.perQubit?.map((p) => ({
+      oneQubitDepolarising: p.oneQubitDepolarising !== undefined ? clamp(p.oneQubitDepolarising) : undefined,
+      amplitudeDamping: p.amplitudeDamping !== undefined ? clamp(p.amplitudeDamping) : undefined,
+      phaseDamping: p.phaseDamping !== undefined ? clamp(p.phaseDamping) : undefined,
+      readoutBitFlip: p.readoutBitFlip !== undefined ? clamp(p.readoutBitFlip) : undefined,
+    })),
+  };
+}
+
+/**
+ * Sweep one or two free symbols across [-π, π] (or a user-supplied range)
+ * and return a grid of ⟨P⟩ values. Used by the Landscape sub-panel to
+ * render a 1D curve (one symbol) or 2D heatmap (two symbols). 32×32 is
+ * a reasonable default — 1 024 sim calls finish under a second for
+ * n ≤ 10.
+ */
+export function computeLandscape(
+  circuit: Circuit,
+  paramValues: ParameterValues,
+  customGates: CustomGate[],
+  observable: Pauli[],
+  symbols: string[],
+  grid: number,
+  range: [number, number],
+  noise?: NoiseModel,
+): number[][] {
+  if (symbols.length < 1 || symbols.length > 2) {
+    throw new Error("landscape supports 1 or 2 symbols");
+  }
+  const [lo, hi] = range;
+  const params: ParameterValues = { ...paramValues };
+  const out: number[][] = [];
+  if (symbols.length === 1) {
+    const [sym] = symbols;
+    const row: number[] = [];
+    for (let i = 0; i < grid; i++) {
+      params[sym] = lo + (hi - lo) * (i / (grid - 1));
+      row.push(evalAt(circuit, params, customGates, observable, noise));
+    }
+    out.push(row);
+  } else {
+    const [sx, sy] = symbols;
+    for (let j = 0; j < grid; j++) {
+      params[sy] = lo + (hi - lo) * (j / (grid - 1));
+      const row: number[] = [];
+      for (let i = 0; i < grid; i++) {
+        params[sx] = lo + (hi - lo) * (i / (grid - 1));
+        row.push(evalAt(circuit, params, customGates, observable, noise));
+      }
+      out.push(row);
+    }
+  }
+  return out;
+}
+
+function evalAt(
+  circuit: Circuit,
+  params: ParameterValues,
+  customGates: CustomGate[],
+  observable: Pauli[],
+  noise: NoiseModel | undefined,
+): number {
+  if (noise?.enabled) return noisyPauliExpectation(circuit, params, customGates, noise, observable);
+  const r = simulate(circuit, params, customGates);
+  if (r.isStabilizer) return 0;
+  // Inline the Pauli expectation: we need expectation.paulis but importing
+  // it here would create a circular dep; cheat by reaching into evaluate().
+  return evaluate(circuit, customGates, params, observable, undefined);
+}
+
+/**
+ * Barren-plateau diagnostic. Samples `samples` uniformly random points
+ * over [-π, π] for each symbol, computes the central-difference gradient
+ * at each point, returns the per-symbol gradient variance. A value
+ * exponentially small in n is the textbook signature of a barren plateau
+ * — the ansatz is essentially un-trainable from a random init.
+ */
+export function barrenPlateauDiagnostic(
+  circuit: Circuit,
+  customGates: CustomGate[],
+  observable: Pauli[],
+  symbols: string[],
+  samples: number,
+  noise?: NoiseModel,
+): { variancePerSymbol: number[]; meanGradPerSymbol: number[] } {
+  const eps = 1e-3;
+  const grads: number[][] = symbols.map(() => []);
+  const params: ParameterValues = {};
+  for (let s = 0; s < samples; s++) {
+    for (const sym of symbols) params[sym] = (Math.random() * 2 - 1) * Math.PI;
+    for (let i = 0; i < symbols.length; i++) {
+      const sym = symbols[i];
+      const original = params[sym];
+      params[sym] = original + eps;
+      const ePlus = evalAt(circuit, params, customGates, observable, noise);
+      params[sym] = original - eps;
+      const eMinus = evalAt(circuit, params, customGates, observable, noise);
+      params[sym] = original;
+      grads[i].push((ePlus - eMinus) / (2 * eps));
+    }
+  }
+  const variancePerSymbol = grads.map((g) => variance(g));
+  const meanGradPerSymbol = grads.map((g) => g.reduce((a, b) => a + b, 0) / Math.max(1, g.length));
+  return { variancePerSymbol, meanGradPerSymbol };
+}
+
+function variance(xs: number[]): number {
+  if (xs.length === 0) return 0;
+  let m = 0;
+  for (const x of xs) m += x;
+  m /= xs.length;
+  let v = 0;
+  for (const x of xs) v += (x - m) * (x - m);
+  return v / xs.length;
+}

@@ -195,6 +195,16 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .exp__opt-chart-svg { background: var(--bg); border: 1px solid var(--border); border-radius: 3px; flex-shrink: 0; }
 .exp__opt-chart-line { stroke: var(--accent); stroke-width: 1.5; stroke-linejoin: round; }
 .exp__opt-chart-meta { color: var(--muted); font-size: 10px; font-family: ui-monospace, monospace; }
+.exp__tools { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px; }
+.exp__tools-bar { display: flex; gap: 4px; }
+.exp__tools-bar button { font-size: 10px; padding: 3px 8px; background: var(--bg-2); border: 1px solid var(--border); color: var(--muted); border-radius: 3px; cursor: pointer; }
+.exp__tools-bar button:hover:not(:disabled) { color: var(--fg); border-color: var(--accent); }
+.exp__tools-bar button:disabled { opacity: 0.3; cursor: not-allowed; }
+.exp__tools-result { font-size: 10px; color: var(--muted); font-family: ui-monospace, monospace; padding: 4px 6px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 3px; display: flex; flex-direction: column; gap: 2px; }
+.exp__tools-row { display: flex; justify-content: space-between; gap: 8px; }
+.exp__tools-val { color: var(--fg); }
+.exp__tools-extrap { color: var(--accent); font-weight: 600; }
+.exp__landscape { background: var(--bg); display: block; margin: 4px 0; }
 
 /* ─── Phase disk panel ──────────────────────────────────────────────── */
 .phase-disk__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }

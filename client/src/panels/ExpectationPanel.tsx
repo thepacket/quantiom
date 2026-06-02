@@ -4,7 +4,7 @@ import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { paulis as evalPaulis, type Pauli } from "../sim/expectation";
 import { noisyPauliExpectation } from "../sim/simulateNoisy";
-import { optimizeExpectation, type OptimizerKind } from "../sim/optimize";
+import { optimizeExpectation, zneFit, computeLandscape, barrenPlateauDiagnostic, type OptimizerKind } from "../sim/optimize";
 import type { NoiseModel } from "../sim/noise";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
@@ -257,6 +257,170 @@ function Optimizer({
         </div>
       )}
       {history.length > 1 && <HistoryChart history={history} goal={goal} />}
+      <DiagnosticTools ctx={ctx} observable={observable} picked={picked} />
+    </div>
+  );
+}
+
+function DiagnosticTools({
+  ctx,
+  observable,
+  picked,
+}: {
+  ctx: OptimizerContext;
+  observable: Pauli[];
+  picked: Set<string>;
+}) {
+  const [busy, setBusy] = useState<"zne" | "landscape" | "plateau" | null>(null);
+  const [zne, setZne] = useState<{ samples: Array<{ scale: number; value: number }>; extrapolated: number } | null>(null);
+  const [landscape, setLandscape] = useState<{ grid: number[][]; symbols: string[] } | null>(null);
+  const [plateau, setPlateau] = useState<{ varPerSym: number[]; symbols: string[] } | null>(null);
+
+  const runZne = () => {
+    if (!ctx.noise.enabled || busy) return;
+    setBusy("zne");
+    setTimeout(() => {
+      try {
+        const result = zneFit(ctx.circuit, ctx.paramValues, ctx.customGates, observable, ctx.noise);
+        setZne(result);
+      } finally { setBusy(null); }
+    }, 0);
+  };
+
+  const runLandscape = () => {
+    const syms = [...picked];
+    if (syms.length < 1 || syms.length > 2 || busy) return;
+    setBusy("landscape");
+    setTimeout(() => {
+      try {
+        const grid = computeLandscape(
+          ctx.circuit, ctx.paramValues, ctx.customGates, observable,
+          syms, syms.length === 1 ? 64 : 32, [-Math.PI, Math.PI],
+          ctx.noise.enabled ? ctx.noise : undefined,
+        );
+        setLandscape({ grid, symbols: syms });
+      } finally { setBusy(null); }
+    }, 0);
+  };
+
+  const runPlateau = () => {
+    const syms = [...picked];
+    if (syms.length === 0 || busy) return;
+    setBusy("plateau");
+    setTimeout(() => {
+      try {
+        const result = barrenPlateauDiagnostic(
+          ctx.circuit, ctx.customGates, observable, syms, 100,
+          ctx.noise.enabled ? ctx.noise : undefined,
+        );
+        setPlateau({ varPerSym: result.variancePerSymbol, symbols: syms });
+      } finally { setBusy(null); }
+    }, 0);
+  };
+
+  return (
+    <div className="exp__tools">
+      <div className="exp__tools-bar">
+        <button
+          onClick={runLandscape}
+          disabled={picked.size < 1 || picked.size > 2 || busy !== null}
+          title="Sweep 1 or 2 picked symbols across [-π, π], render ⟨P⟩ as a curve / heatmap"
+        >
+          {busy === "landscape" ? "…" : "Landscape"}
+        </button>
+        <button
+          onClick={runPlateau}
+          disabled={picked.size === 0 || busy !== null}
+          title="Sample 100 random parameter points, compute gradient variance — diagnoses barren plateaus"
+        >
+          {busy === "plateau" ? "…" : "Plateau"}
+        </button>
+        <button
+          onClick={runZne}
+          disabled={!ctx.noise.enabled || busy !== null}
+          title="Zero-noise extrapolation: run at 1× / 2× / 3× noise, linearly fit ⟨P⟩(γ→0)"
+        >
+          {busy === "zne" ? "…" : "ZNE"}
+        </button>
+      </div>
+      {landscape && <LandscapeView grid={landscape.grid} symbols={landscape.symbols} />}
+      {plateau && (
+        <div className="exp__tools-result">
+          Barren-plateau diagnostic ({plateau.symbols.length} sym, 100 samples):
+          {plateau.symbols.map((s, i) => (
+            <div key={s} className="exp__tools-row">
+              <span>{s}</span>
+              <span className="exp__tools-val">Var(∂⟨P⟩/∂{s}) = {plateau.varPerSym[i].toExponential(2)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {zne && (
+        <div className="exp__tools-result">
+          ZNE samples: {zne.samples.map((s) => `${s.scale}×: ${s.value.toFixed(4)}`).join(" · ")}
+          <div className="exp__tools-extrap">→ ⟨P⟩(γ=0) ≈ {zne.extrapolated.toFixed(4)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LandscapeView({ grid, symbols }: { grid: number[][]; symbols: string[] }) {
+  // Min/max for color scaling.
+  let minV = Infinity, maxV = -Infinity;
+  for (const row of grid) for (const v of row) {
+    if (v < minV) minV = v;
+    if (v > maxV) maxV = v;
+  }
+  const range = maxV - minV || 1;
+  if (symbols.length === 1) {
+    // 1D line chart.
+    const W = 220, H = 60;
+    const path = grid[0]
+      .map((v, i) => {
+        const x = (i / (grid[0].length - 1)) * W;
+        const y = H - ((v - minV) / range) * H;
+        return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+    return (
+      <div className="exp__tools-result">
+        Landscape over {symbols[0]} ∈ [-π, π]:
+        <svg width={W} height={H} className="exp__opt-chart-svg">
+          <path d={path} className="exp__opt-chart-line" fill="none" />
+        </svg>
+        <div className="exp__tools-extrap">range: [{minV.toFixed(3)}, {maxV.toFixed(3)}]</div>
+      </div>
+    );
+  }
+  // 2D heatmap.
+  const cellSize = 6;
+  const N = grid.length;
+  return (
+    <div className="exp__tools-result">
+      Landscape over ({symbols[0]}, {symbols[1]}) ∈ [-π, π]²:
+      <svg width={N * cellSize + 24} height={N * cellSize + 12} className="exp__landscape">
+        {grid.map((row, j) =>
+          row.map((v, i) => {
+            const t = (v - minV) / range;
+            // Diverging viridis-ish: low = dark blue, mid = teal, high = yellow.
+            const r = Math.round(40 + 215 * t);
+            const g = Math.round(40 + 180 * t);
+            const b = Math.round(80 + 160 * (1 - t));
+            return (
+              <rect
+                key={`${i}-${j}`}
+                x={i * cellSize}
+                y={j * cellSize}
+                width={cellSize}
+                height={cellSize}
+                fill={`rgb(${r},${g},${b})`}
+              />
+            );
+          }),
+        )}
+      </svg>
+      <div className="exp__tools-extrap">range: [{minV.toFixed(3)}, {maxV.toFixed(3)}]</div>
     </div>
   );
 }
