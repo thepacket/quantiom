@@ -21,11 +21,11 @@ import {
  * parameter / circuit / noise tuple; the panel prefers the GPU value when
  * present and falls back to CPU otherwise.
  *
- * For Pauli sums H = Σ_k h_k P_k we fire one dispatch per term and sum
- * the weighted results on the CPU. Each dispatch re-runs the trajectory
- * loop on the GPU (a future optimisation would batch K Pauli strings
- * into a single shader pass to amortise the gate sequence), but even K
- * dispatches keep the main thread free for UI.
+ * For Pauli sums H = Σ_k h_k P_k we batch all K terms into a single GPU
+ * dispatch — the shader simulates the trajectories once and then runs K
+ * reductions to produce K ⟨P_k⟩ values, which the CPU weights and sums.
+ * Cost is one trajectory pass plus K · O(dim) reductions, not K full
+ * passes (the earlier per-term-dispatch implementation).
  *
  * Big-endian: qubit 0 is MSB, matching the rest of the codebase.
  */
@@ -64,23 +64,35 @@ export function useGPUNoisyPauli(
     if (!isWebGPUAvailable()) { setValue(null); return; }
     let cancelled = false;
     const run = async (): Promise<number | null> => {
+      // Build the list of (coefficient, paulis) the GPU needs to evaluate,
+      // pre-deducting any identity terms (which contribute coefficient × 1
+      // by themselves — no shader work required).
+      let identityContribution = 0;
+      const dispatchTerms: Array<{ coefficient: number; paulis: GPUPauli[] }> = [];
       if (observable.kind === "pauli") {
         if (observable.paulis.every((p) => p === "I")) return 1;
-        const r = await tryRunWebGPUTrajectories(
-          circuit, parameterValues, customGates, noise, noise.trajectories, observable.paulis,
-        );
-        return r && typeof r.pauliExpectation === "number" ? r.pauliExpectation : null;
+        dispatchTerms.push({ coefficient: 1, paulis: observable.paulis });
+      } else {
+        for (const term of observable.terms) {
+          if (term.coefficient === 0) continue;
+          if (term.paulis.every((p) => p === "I")) {
+            identityContribution += term.coefficient;
+            continue;
+          }
+          dispatchTerms.push(term);
+        }
       }
-      // Sum: weighted sum over per-term GPU dispatches.
-      let total = 0;
-      for (const term of observable.terms) {
-        if (term.coefficient === 0) continue;
-        if (term.paulis.every((p) => p === "I")) { total += term.coefficient; continue; }
-        const r = await tryRunWebGPUTrajectories(
-          circuit, parameterValues, customGates, noise, noise.trajectories, term.paulis,
-        );
-        if (!r || typeof r.pauliExpectation !== "number") return null;
-        total += term.coefficient * r.pauliExpectation;
+      if (dispatchTerms.length === 0) return identityContribution;
+      const r = await tryRunWebGPUTrajectories(
+        circuit, parameterValues, customGates, noise, noise.trajectories,
+        dispatchTerms.map((t) => t.paulis),
+      );
+      if (!r || !r.pauliExpectations || r.pauliExpectations.length !== dispatchTerms.length) {
+        return null;
+      }
+      let total = identityContribution;
+      for (let k = 0; k < dispatchTerms.length; k++) {
+        total += dispatchTerms[k].coefficient * r.pauliExpectations[k];
       }
       return total;
     };
