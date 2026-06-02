@@ -20,6 +20,8 @@ export type Action =
   | { type: "reassign-qubit"; id: string; role: "controls" | "targets"; index: number; newQubit: number }
   | { type: "replace-circuit"; circuit: Circuit }
   | { type: "compact-columns" }
+  | { type: "delete-range"; fromColumn: number; toColumn: number }
+  | { type: "duplicate-range"; fromColumn: number; toColumn: number }
   | { type: "clear" };
 
 export type HistoryAction = Action | { type: "undo" } | { type: "redo" };
@@ -113,6 +115,39 @@ function reducer(state: Circuit, action: Action): Circuit {
         for (const c of g.clbits) nextColC[c] = col + 1;
       }
       return { ...state, gates: out };
+    }
+    case "delete-range": {
+      const { fromColumn, toColumn } = action;
+      const lo = Math.min(fromColumn, toColumn);
+      const hi = Math.max(fromColumn, toColumn);
+      return {
+        ...state,
+        gates: state.gates.filter((g) => g.column < lo || g.column > hi),
+      };
+    }
+    case "duplicate-range": {
+      const { fromColumn, toColumn } = action;
+      const lo = Math.min(fromColumn, toColumn);
+      const hi = Math.max(fromColumn, toColumn);
+      const span = hi - lo + 1;
+      const selected = state.gates
+        .filter((g) => g.column >= lo && g.column <= hi)
+        .sort((a, b) => a.column - b.column);
+      const maxCol = state.gates.reduce((m, g) => Math.max(m, g.column), -1);
+      const offset = maxCol + 1 - lo;
+      const cloned = selected.map((g) => ({
+        ...g,
+        id: newGateId(),
+        column: g.column + offset,
+        controls: [...g.controls],
+        targets: [...g.targets],
+        clbits: [...g.clbits],
+        params: [...g.params],
+        controlStates: g.controlStates ? [...g.controlStates] : undefined,
+        condition: g.condition ? { ...g.condition } : undefined,
+      }));
+      void span;
+      return { ...state, gates: [...state.gates, ...cloned] };
     }
     case "clear":
       return { ...state, gates: [] };

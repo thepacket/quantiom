@@ -33,6 +33,97 @@ import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
 import { loadNoise, saveNoise, type NoiseModel } from "../sim/noise";
 
+function HistoryButton({
+  canUndo,
+  canRedo,
+  onJumpBack,
+  onJumpForward,
+}: {
+  canUndo: boolean;
+  canRedo: boolean;
+  onJumpBack: (n: number) => void;
+  onJumpForward: (n: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const jumps = [5, 10, 25, 100];
+  return (
+    <span style={{ position: "relative" }}>
+      <button onClick={() => setOpen((o) => !o)} title="Jump multiple undo / redo steps at once">History…</button>
+      {open && (
+        <div className="examples-picker__pop" style={{ width: 180, top: "100%", marginTop: 4, padding: 6 }} onMouseLeave={() => setOpen(false)}>
+          <div style={{ color: "var(--muted)", fontSize: 10, padding: "2px 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>back</div>
+          <div style={{ display: "flex", gap: 2 }}>
+            {jumps.map((n) => (
+              <button key={`b${n}`} disabled={!canUndo} onClick={() => { onJumpBack(n); setOpen(false); }} style={{ flex: 1, fontSize: 10 }}>
+                {n}
+              </button>
+            ))}
+          </div>
+          <div style={{ color: "var(--muted)", fontSize: 10, padding: "2px 4px", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>forward</div>
+          <div style={{ display: "flex", gap: 2 }}>
+            {jumps.map((n) => (
+              <button key={`f${n}`} disabled={!canRedo} onClick={() => { onJumpForward(n); setOpen(false); }} style={{ flex: 1, fontSize: 10 }}>
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
+
+function SelectionButton({
+  maxColumn,
+  onDelete,
+  onDuplicate,
+}: {
+  maxColumn: number;
+  onDelete: (lo: number, hi: number) => void;
+  onDuplicate: (lo: number, hi: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [from, setFrom] = useState(0);
+  const [to, setTo] = useState(0);
+  return (
+    <span style={{ position: "relative" }}>
+      <button onClick={() => setOpen((o) => !o)} title="Operate on a column range">Select…</button>
+      {open && (
+        <div
+          className="examples-picker__pop"
+          style={{ width: 220, top: "100%", marginTop: 4, padding: 8 }}
+          onMouseLeave={() => setOpen(false)}
+        >
+          <div style={{ display: "flex", gap: 4, alignItems: "center", fontSize: 11, marginBottom: 6 }}>
+            <span style={{ color: "var(--muted)" }}>cols</span>
+            <input
+              type="number"
+              min={0}
+              max={maxColumn}
+              value={from}
+              onChange={(e) => setFrom(parseInt(e.target.value || "0", 10))}
+              style={{ width: 56, fontSize: 11 }}
+            />
+            <span style={{ color: "var(--muted)" }}>–</span>
+            <input
+              type="number"
+              min={0}
+              max={maxColumn}
+              value={to}
+              onChange={(e) => setTo(parseInt(e.target.value || "0", 10))}
+              style={{ width: 56, fontSize: 11 }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button onClick={() => { onDuplicate(from, to); setOpen(false); }}>Duplicate</button>
+            <button onClick={() => { if (window.confirm(`Delete gates in columns ${from}–${to}?`)) { onDelete(from, to); setOpen(false); } }}>Delete</button>
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
+
 function RecordButton({ onRecord }: { onRecord: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   return (
@@ -245,6 +336,16 @@ export function CircuitEditor() {
             >
               Redo
             </button>
+            <HistoryButton
+              canUndo={undoState.canUndo}
+              canRedo={undoState.canRedo}
+              onJumpBack={(n) => {
+                for (let i = 0; i < n; i++) dispatch({ type: "undo" });
+              }}
+              onJumpForward={(n) => {
+                for (let i = 0; i < n; i++) dispatch({ type: "redo" });
+              }}
+            />
             <button onClick={onSaveAsGate} title="Save the current circuit as a reusable custom gate">Save as gate</button>
             <button
               onClick={() => {
@@ -344,6 +445,11 @@ export function CircuitEditor() {
                 }}
               />
             )}
+            <SelectionButton
+              maxColumn={maxColumn}
+              onDelete={(lo, hi) => dispatch({ type: "delete-range", fromColumn: lo, toColumn: hi })}
+              onDuplicate={(lo, hi) => dispatch({ type: "duplicate-range", fromColumn: lo, toColumn: hi })}
+            />
             <button onClick={() => dispatch({ type: "clear" })} title="Clear circuit">Clear</button>
           </div>
         </div>
