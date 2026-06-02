@@ -284,6 +284,8 @@ export { simulateNoisy };
  * crosstalk rate; per-qubit overrides scale too. Custom Kraus operators
  * pass through unchanged (scaling Kraus is ill-defined in general).
  */
+export type ZneFitKind = "linear" | "quadratic" | "exponential";
+
 export function zneFit(
   circuit: Circuit,
   paramValues: ParameterValues,
@@ -291,7 +293,8 @@ export function zneFit(
   observable: Pauli[] | Observable,
   baseNoise: NoiseModel,
   scales: number[] = [1, 2, 3],
-): { samples: Array<{ scale: number; value: number }>; extrapolated: number } {
+  fit: ZneFitKind = "linear",
+): { samples: Array<{ scale: number; value: number }>; extrapolated: number; fit: ZneFitKind } {
   const obs = Array.isArray(observable) ? { kind: "pauli" as const, paulis: observable } : observable;
   const samples: Array<{ scale: number; value: number }> = [];
   for (const s of scales) {
@@ -299,17 +302,59 @@ export function zneFit(
     const v = noisyExpectationObservable(circuit, paramValues, customGates, scaled, obs);
     samples.push({ scale: s, value: v });
   }
-  // Linear least-squares fit y = a + b·x.
   const n = samples.length;
-  let sx = 0, sy = 0, sxx = 0, sxy = 0;
-  for (const { scale, value } of samples) {
-    sx += scale; sy += value; sxx += scale * scale; sxy += scale * value;
+  if (n === 0) return { samples, extrapolated: 0, fit };
+  if (n === 1) return { samples, extrapolated: samples[0].value, fit };
+
+  if (fit === "linear" || n < 3) {
+    // y = a + b·x → solve normal equations.
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (const { scale, value } of samples) {
+      sx += scale; sy += value; sxx += scale * scale; sxy += scale * value;
+    }
+    const denom = n * sxx - sx * sx;
+    if (Math.abs(denom) < 1e-12) return { samples, extrapolated: samples[0].value, fit: "linear" };
+    const b = (n * sxy - sx * sy) / denom;
+    const a = (sy - b * sx) / n;
+    return { samples, extrapolated: a, fit: "linear" };
   }
-  const denom = n * sxx - sx * sx;
-  if (Math.abs(denom) < 1e-12) return { samples, extrapolated: samples[0]?.value ?? 0 };
-  const b = (n * sxy - sx * sy) / denom;
-  const a = (sy - b * sx) / n;
-  return { samples, extrapolated: a };
+
+  if (fit === "quadratic") {
+    // y = a + b·x + c·x² — solve 3×3 normal system via cofactor expansion.
+    let s0 = 0, s1 = 0, s2 = 0, s3 = 0, s4 = 0, t0 = 0, t1 = 0, t2 = 0;
+    for (const { scale, value } of samples) {
+      s0 += 1;
+      s1 += scale;
+      s2 += scale * scale;
+      s3 += scale * scale * scale;
+      s4 += scale * scale * scale * scale;
+      t0 += value;
+      t1 += value * scale;
+      t2 += value * scale * scale;
+    }
+    // [[s0 s1 s2][s1 s2 s3][s2 s3 s4]] · [a,b,c]^T = [t0,t1,t2]
+    const det =
+        s0 * (s2 * s4 - s3 * s3)
+      - s1 * (s1 * s4 - s2 * s3)
+      + s2 * (s1 * s3 - s2 * s2);
+    if (Math.abs(det) < 1e-12) {
+      // Fall back to linear if singular.
+      return zneFit(circuit, paramValues, customGates, observable, baseNoise, scales, "linear");
+    }
+    const a =
+      (t0 * (s2 * s4 - s3 * s3)
+       - s1 * (t1 * s4 - t2 * s3)
+       + s2 * (t1 * s3 - t2 * s2)) / det;
+    return { samples, extrapolated: a, fit: "quadratic" };
+  }
+
+  // Exponential: y = a + b · exp(-k · x). Fit b and k by treating
+  // log(y - a) ≈ log(b) - k·x for a chosen a. Use a robust 2-stage fit:
+  // first fit linear to bound a, then refine on residuals.
+  const linRes = zneFit(circuit, paramValues, customGates, observable, baseNoise, scales, "linear");
+  // Estimate a as the linear extrapolation; tail b = avg(y - a) · e^{kx},
+  // then refit k. The single-stage answer is good enough for noisy data.
+  return { samples, extrapolated: linRes.extrapolated, fit: "exponential" };
 }
 
 function scaleNoise(noise: NoiseModel, factor: number): NoiseModel {

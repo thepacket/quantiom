@@ -373,7 +373,10 @@ function DiagnosticTools({
   picked: Set<string>;
 }) {
   const [busy, setBusy] = useState<"zne" | "landscape" | "plateau" | "pec" | null>(null);
-  const [zne, setZne] = useState<{ samples: Array<{ scale: number; value: number }>; extrapolated: number } | null>(null);
+  const [zne, setZne] = useState<{ samples: Array<{ scale: number; value: number }>; extrapolated: number; fit?: string } | null>(null);
+  const [zneFitKind, setZneFitKind] = useState<"linear" | "quadratic">(() => {
+    try { return (localStorage.getItem("quantiom:zne-fit") === "quadratic" ? "quadratic" : "linear"); } catch { return "linear"; }
+  });
   const [landscape, setLandscape] = useState<{ grid: number[][]; symbols: string[] } | null>(null);
   const [plateau, setPlateau] = useState<{ varPerSym: number[]; symbols: string[] } | null>(null);
   const [pec, setPec] = useState<{
@@ -407,7 +410,7 @@ function DiagnosticTools({
     setBusy("zne");
     setTimeout(() => {
       try {
-        const result = zneFit(ctx.circuit, ctx.paramValues, ctx.customGates, observable, ctx.noise);
+        const result = zneFit(ctx.circuit, ctx.paramValues, ctx.customGates, observable, ctx.noise, [1, 2, 3], zneFitKind);
         setZne(result);
       } finally { setBusy(null); }
     }, 0);
@@ -464,10 +467,24 @@ function DiagnosticTools({
         <button
           onClick={runZne}
           disabled={!ctx.noise.enabled || busy !== null}
-          title="Zero-noise extrapolation: run at 1× / 2× / 3× noise, linearly fit ⟨P⟩(γ→0)"
+          title={`Zero-noise extrapolation: run at 1× / 2× / 3× noise, ${zneFitKind} fit ⟨P⟩(γ→0)`}
         >
           {busy === "zne" ? "…" : "ZNE"}
         </button>
+        <select
+          value={zneFitKind}
+          onChange={(e) => {
+            const v = e.target.value === "quadratic" ? "quadratic" : "linear";
+            setZneFitKind(v);
+            try { localStorage.setItem("quantiom:zne-fit", v); } catch { /* ignore */ }
+          }}
+          disabled={busy !== null}
+          style={{ fontSize: 11 }}
+          title="Choose the ZNE extrapolation curve. Quadratic = exact 3-point Richardson interpolation."
+        >
+          <option value="linear">lin</option>
+          <option value="quadratic">quad</option>
+        </select>
         <button
           onClick={runPec}
           disabled={!ctx.noise.enabled || busy !== null}
