@@ -13,6 +13,7 @@ import { inverseGates } from "./inverse";
 import { transpile, type TranspileTarget } from "../sim/transpile";
 import { routeCircuit } from "../sim/router";
 import { optimiseCircuit } from "../sim/optimisePasses";
+import { recordAnimationWebM } from "./recordAnimation";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -31,6 +32,23 @@ import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
 import { loadNoise, saveNoise, type NoiseModel } from "../sim/noise";
+
+function RecordButton({ onRecord }: { onRecord: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      onClick={async () => {
+        if (busy) return;
+        setBusy(true);
+        try { await onRecord(); } finally { setBusy(false); }
+      }}
+      disabled={busy}
+      title="Record one period of the t-animation as a WebM video (3 s at 30 fps)"
+    >
+      {busy ? "Recording…" : "Record"}
+    </button>
+  );
+}
 
 function TranspileButton({ onTranspile }: { onTranspile: (t: TranspileTarget) => void }) {
   const [open, setOpen] = useState(false);
@@ -308,6 +326,24 @@ export function CircuitEditor() {
             >
               Compact
             </button>
+            {simState.kind === "ready" && simState.data.freeSymbols.includes("t") && (
+              <RecordButton
+                onRecord={async () => {
+                  const baseName = (circuit.name ?? "circuit").toLowerCase().replace(/[^a-z0-9]+/g, "_") || "circuit";
+                  try {
+                    await recordAnimationWebM({
+                      setParamValues,
+                      currentParams: paramValues,
+                      duration_ms: 3000,
+                      fps: 30,
+                      filename: `${baseName}.webm`,
+                    });
+                  } catch (e) {
+                    window.alert(`Recording failed: ${e instanceof Error ? e.message : String(e)}`);
+                  }
+                }}
+              />
+            )}
             <button onClick={() => dispatch({ type: "clear" })} title="Clear circuit">Clear</button>
           </div>
         </div>
