@@ -127,7 +127,7 @@ function relocateIfCollision(existing: PlacedGate[], gate: PlacedGate): PlacedGa
 const MAX_HISTORY = 100;
 const COALESCE_MS = 500;
 
-type Versioned = {
+export type Versioned = {
   past: Circuit[];
   present: Circuit;
   future: Circuit[];
@@ -187,6 +187,10 @@ function historyReducer(v: Versioned, action: HistoryAction): Versioned {
 }
 
 const INITIAL_VERSIONED: Versioned = { past: [], present: INITIAL, future: [], coalesce: null };
+
+/** Exposed for the multi-tab module (editor/tabs.ts) to compose. */
+export const initialVersioned = INITIAL_VERSIONED;
+export const historyReducerExport = historyReducer;
 
 const STORAGE_KEY = "quantiom:circuit:v1";
 

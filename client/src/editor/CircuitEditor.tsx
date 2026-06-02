@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { version as APP_VERSION } from "../../package.json";
-import { useCircuit } from "./state";
+import { useTabs } from "./tabs";
+import { TabStrip } from "./TabStrip";
 import { CircuitCanvas } from "./CircuitCanvas";
 import { GatePalette } from "./GatePalette";
 import { Inspector } from "./Inspector";
@@ -23,12 +24,17 @@ import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
 import { loadNoise, saveNoise, type NoiseModel } from "../sim/noise";
-import type { ParameterValues } from "../api";
 
 export function CircuitEditor() {
-  const [circuit, dispatch, history] = useCircuit();
-  const [selectedGateId, setSelectedGateId] = useState<string | null>(null);
-  const [paramValues, setParamValues] = useState<ParameterValues>({});
+  const t = useTabs();
+  const circuit = t.activeCircuit;
+  const dispatch = t.circuitDispatch;
+  const undoState = t.history;
+  const { selectedGateId, pickedStep, paramValues } = t.ui;
+  const setSelectedGateId = t.setSelected;
+  const setPickedStep = t.setStep;
+  const setParamValues = t.setParams;
+
   const [customGates, setCustomGates] = useState<CustomGate[]>(() => loadCustomGates());
   const [noise, setNoise] = useState<NoiseModel>(() => loadNoise());
 
@@ -41,16 +47,18 @@ export function CircuitEditor() {
   }, [noise]);
 
   // Auto-load circuit from URL hash (#c=<gzip+base64url>) once on mount.
-  // Wins over localStorage so shared links open the intended circuit even
-  // when the user already has a saved working circuit.
+  // Opens shared links into a new tab so the user doesn't lose their work.
   useEffect(() => {
     let cancelled = false;
     decodeCircuitFromHash(location.hash).then((c) => {
       if (cancelled || !c) return;
-      dispatch({ type: "replace-circuit", circuit: c });
+      t.newTab(c, c.name ?? "Shared");
+      // Clear the hash so a refresh doesn't reopen the tab again.
+      window.history.replaceState(null, "", `${location.pathname}${location.search}`);
     });
     return () => { cancelled = true; };
-  }, [dispatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onSaveAsGate = () => {
     const name = window.prompt("Name for this gate?", circuit.name ?? "myblock");
@@ -75,7 +83,6 @@ export function CircuitEditor() {
   // Step-through state. null means "follow the end of the circuit" — i.e.
   // the user hasn't picked a step explicitly, so the simulation reflects
   // every gate. A non-null number freezes the simulation at that column.
-  const [pickedStep, setPickedStep] = useState<number | null>(null);
   const maxColumn = useMemo(
     () => circuit.gates.reduce((m, g) => Math.max(m, g.column), -1),
     [circuit.gates],
@@ -106,6 +113,20 @@ export function CircuitEditor() {
         dispatch({ type: "redo" });
         return;
       }
+      // Tab navigation: Cmd/Ctrl + 1..9 jumps to that tab; Cmd/Ctrl + T opens new.
+      if (mod && /^[1-9]$/.test(e.key)) {
+        const idx = parseInt(e.key, 10) - 1;
+        if (idx < t.tabs.length) {
+          e.preventDefault();
+          t.switchTab(t.tabs[idx].id);
+          return;
+        }
+      }
+      if (mod && e.key.toLowerCase() === "t" && !e.shiftKey) {
+        e.preventDefault();
+        t.newTab();
+        return;
+      }
 
       if ((e.key === "Delete" || e.key === "Backspace") && selectedGateId && !inField) {
         dispatch({ type: "remove-gate", id: selectedGateId });
@@ -114,7 +135,7 @@ export function CircuitEditor() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dispatch, selectedGateId]);
+  }, [dispatch, selectedGateId, setSelectedGateId, t]);
 
   return (
     <div className="editor">
@@ -129,6 +150,16 @@ export function CircuitEditor() {
       </header>
       <GatePalette customGates={customGates} onRemoveCustomGate={removeCustomGate} />
       <div className="editor__center">
+        <TabStrip
+          tabs={t.tabs}
+          activeId={t.activeId}
+          onSwitch={t.switchTab}
+          onClose={t.closeTab}
+          onReorder={t.reorderTab}
+          onRename={t.renameTab}
+          onNew={() => t.newTab()}
+          onDuplicate={t.duplicateTab}
+        />
         <div className="editor__toolbar">
           <div className="editor__counts">
             <button onClick={() => dispatch({ type: "remove-qubit" })} title="Remove last qubit">−</button>
@@ -140,18 +171,18 @@ export function CircuitEditor() {
             <button onClick={() => dispatch({ type: "add-clbit" })} title="Add a classical bit">+</button>
           </div>
           <div className="editor__actions">
-            <FileMenu circuit={circuit} dispatch={dispatch} />
+            <FileMenu circuit={circuit} dispatch={dispatch} onLoadInNewTab={(c, name) => t.newTab(c, name)} />
             <span className="editor__sep">·</span>
             <button
               onClick={() => dispatch({ type: "undo" })}
-              disabled={!history.canUndo}
+              disabled={!undoState.canUndo}
               title="Undo (⌘Z / Ctrl+Z)"
             >
               Undo
             </button>
             <button
               onClick={() => dispatch({ type: "redo" })}
-              disabled={!history.canRedo}
+              disabled={!undoState.canRedo}
               title="Redo (⇧⌘Z / Ctrl+Shift+Z)"
             >
               Redo
@@ -212,3 +243,4 @@ export function CircuitEditor() {
     </div>
   );
 }
+

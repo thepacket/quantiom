@@ -11,6 +11,9 @@ import { buildShareURL } from "./shareLink";
 type Props = {
   circuit: Circuit;
   dispatch: React.Dispatch<HistoryAction>;
+  /** When provided, "Open" and Examples create a new tab instead of
+   *  replacing the current circuit. Used by the multi-tab editor. */
+  onLoadInNewTab?: (circuit: Circuit, name?: string) => void;
 };
 
 /** Slugify a name into something safe for a file system download. */
@@ -19,17 +22,19 @@ function toFilename(name: string | undefined): string {
   return (base || "circuit") + ".qasm";
 }
 
-export function FileMenu({ circuit, dispatch }: Props) {
+export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "failed">("idle");
 
-  const loadQasm = (qasm: string, name: string | undefined) => {
+  const loadQasm = (qasm: string, name: string | undefined, inNewTab = false) => {
     const result = parseQasm3(qasm);
     if (!result.ok) {
       window.alert(`Parse error on line ${result.line}: ${result.error}`);
       return;
     }
-    dispatch({ type: "replace-circuit", circuit: { ...result.circuit, name } });
+    const c = { ...result.circuit, name };
+    if (inNewTab && onLoadInNewTab) onLoadInNewTab(c, name);
+    else dispatch({ type: "replace-circuit", circuit: c });
   };
 
   const onOpen = () => fileInputRef.current?.click();
@@ -40,7 +45,8 @@ export function FileMenu({ circuit, dispatch }: Props) {
     const text = await f.text();
     // Drop the .qasm extension for the displayed title.
     const name = f.name.replace(/\.qasm$/i, "");
-    loadQasm(text, name);
+    // Default to a new tab when the multi-tab handler is wired in.
+    loadQasm(text, name, !!onLoadInNewTab);
     e.target.value = "";
   };
 
@@ -88,7 +94,7 @@ export function FileMenu({ circuit, dispatch }: Props) {
     const id = e.target.value;
     if (!id) return;
     const ex = EXAMPLES.find((x) => x.id === id);
-    if (ex) loadQasm(ex.qasm, ex.label);
+    if (ex) loadQasm(ex.qasm, ex.label, !!onLoadInNewTab);
     e.target.value = "";
   };
 
