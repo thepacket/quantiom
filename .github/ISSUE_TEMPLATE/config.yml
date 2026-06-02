@@ -1,0 +1,10 @@
+# Issue chooser config. Hides the blank-issue option and points
+# everything that isn't a bug to Discussions, matching CONTRIBUTING.md.
+blank_issues_enabled: false
+contact_links:
+  - name: Feature request or idea
+    url: https://github.com/thepacket/quantiom/discussions/new?category=ideas
+    about: Concrete use cases (what gates, what visualization, what workflow) are most useful.
+  - name: Question / discussion
+    url: https://github.com/thepacket/quantiom/discussions
+    about: Anything that isn't a bug — usage questions, design discussion, ideas — belongs in Discussions.

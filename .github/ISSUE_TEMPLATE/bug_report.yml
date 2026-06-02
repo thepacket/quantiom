@@ -1,0 +1,95 @@
+name: Bug report
+description: Something in Quantiom is broken or behaves unexpectedly.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Quantiom moves fast and
+        the surface to verify is wide — every reproducible report helps.
+
+        Before filing, a quick check: please scan the open issues for an
+        existing report.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A short description of what went wrong.
+      placeholder: e.g. "Probabilities panel shows 100% on one basis state when the circuit has measurements"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What did you think would happen instead?
+      placeholder: e.g. "Distribution averaged across measurement outcomes, matching Measurement counts"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: |
+        Steps to reproduce. Even better: paste an OpenQASM 3 snippet or a
+        Quantiom Share link (Share button in the editor toolbar) that loads
+        the failing circuit straight into another browser.
+      placeholder: |
+        1. Open the OpenQASM editor and paste:
+        ```
+        OPENQASM 3.0;
+        include "stdgates.inc";
+        ...
+        ```
+        2. Click "Sample" in the Measurement counts panel
+        3. Observe the Probabilities panel
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Quantiom version
+      description: |
+        The string shown in the top-left, next to the Quantiom logo —
+        looks like `v0.1.0.113 (4c0331a)`. Includes the build's commit
+        count and short SHA so we can pin down what code you were on.
+      placeholder: v0.1.0.113 (4c0331a)
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      description: Live site or self-hosted?
+      options:
+        - quantiom.fly.dev
+        - Local dev (`npm run dev`)
+        - Self-hosted (Docker / fly.io / other)
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: Browser + version + OS.
+      placeholder: e.g. "Chrome 144 on macOS 15.5"
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Browser console / network errors (if any)
+      description: |
+        Open DevTools → Console + Network tabs. Paste any red errors
+        or failing requests here. Skip if there's nothing relevant.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, screen recordings, hypotheses about the root cause, related issues — drop them here.
+    validations:
+      required: false
