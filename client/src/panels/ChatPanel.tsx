@@ -217,12 +217,17 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
         <textarea
           className="chat__input"
           value={input}
-          placeholder={streaming ? "streaming…" : "Message (⌘/Ctrl+Enter to send)"}
+          placeholder={streaming ? "streaming…" : "Message (Enter to send · Shift+Enter for newline)"}
           rows={2}
           spellCheck={false}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if ((e.key === "Enter") && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
+            // Enter sends; Shift+Enter inserts a newline; ⌘/Ctrl+Enter still
+            // sends too so muscle memory from the old binding keeps working.
+            if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+              e.preventDefault();
+              send();
+            }
           }}
           disabled={streaming}
         />
