@@ -54,6 +54,7 @@ import { NoisePanel } from "../panels/NoisePanel";
 import { PhaseDiskPanel } from "../panels/PhaseDiskPanel";
 import { ResourcePanel } from "../panels/ResourcePanel";
 import { ComparePanel } from "../panels/ComparePanel";
+import { ChatPanel } from "../panels/ChatPanel";
 import { EquivalencePanel } from "../panels/EquivalencePanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
 import { MeasurementCountsPanel } from "../panels/MeasurementCountsPanel";
@@ -718,6 +719,9 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
+      <ErrorBoundary label="chat">
+        <ChatPanel circuit={circuit} onLoadInNewTab={(c, n) => t.newTab(c, n)} />
+      </ErrorBoundary>
     </div>
   );
 }
