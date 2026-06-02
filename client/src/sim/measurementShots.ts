@@ -48,3 +48,54 @@ export function sampleMeasurementShots(
   }
   return counts;
 }
+
+/**
+ * Trajectory-average |amplitude_i|² across N independent runs.
+ *
+ * Background: `simulate()` collapses the state at every mid-circuit (or
+ * final) measurement. A single-trajectory run therefore reports
+ * probabilities pinned to whichever classical branch the deterministic
+ * RNG happened to fall into — ~1 on one basis state, 0 elsewhere — which
+ * is not what users mean when they read off "probabilities of the final
+ * state". The honest distribution is
+ *   P(|x⟩) = Σ_classical_outcomes P(outcome) · |⟨x|ψ_outcome⟩|²
+ * which this function estimates by running N shots with Math.random as
+ * the measurement RNG and averaging the final |amp_i|² across them.
+ *
+ * For circuits without measurements the answer equals `data.probabilities`
+ * exactly (no collapse fires), so callers should still skip this hot path
+ * when no measure gate is present — `simulate()` already returns the right
+ * thing in one shot.
+ *
+ * Cost: O(shots × circuit cost × 2^n). 1024 shots on a 10-qubit circuit
+ * finishes in well under a second.
+ */
+export function sampleAveragedAmplitudeProbabilities(
+  circuit: Circuit,
+  paramValues: ParameterValues,
+  customGates: CustomGate[],
+  shots: number,
+): number[] {
+  const n = circuit.numQubits;
+  const dim = 1 << n;
+  const acc = new Float64Array(dim);
+  if (shots <= 0) return Array.from(acc);
+  for (let s = 0; s < shots; s++) {
+    const r = simulate(circuit, paramValues, customGates, { rng: Math.random });
+    if (r.isStabilizer) {
+      // Stabilizer path doesn't expose a full statevector; bail with the
+      // single-shot probabilities (caller falls back to the regular path).
+      return r.probabilities.slice();
+    }
+    const state = r.state;
+    for (let i = 0; i < dim; i++) {
+      const re = state[2 * i];
+      const im = state[2 * i + 1];
+      acc[i] += re * re + im * im;
+    }
+  }
+  const invN = 1 / shots;
+  const out = new Array<number>(dim);
+  for (let i = 0; i < dim; i++) out[i] = acc[i] * invN;
+  return out;
+}

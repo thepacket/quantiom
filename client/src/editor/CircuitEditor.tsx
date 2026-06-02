@@ -58,6 +58,7 @@ import { ChatPanel } from "../panels/ChatPanel";
 import { EquivalencePanel } from "../panels/EquivalencePanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
 import { MeasurementCountsPanel } from "../panels/MeasurementCountsPanel";
+import { sampleAveragedAmplitudeProbabilities } from "../sim/measurementShots";
 import { TomographyPanel } from "../panels/TomographyPanel";
 import { HamiltonianPanel } from "../panels/HamiltonianPanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
@@ -421,6 +422,21 @@ export function CircuitEditor() {
   // Falls back silently to the CPU result the moment any constraint fails.
   const gpuProbs = useGPUNoisyProbabilities(steppedCircuit, paramValues, customGates, noise, true);
 
+  // For circuits with measurements: a single deterministic simulate() run
+  // collapses to one classical branch and reports a pinned distribution.
+  // Average |amp|² across N independent shots so Probabilities matches what
+  // Measurement counts reports. The work is O(shots × circuit cost); the
+  // dep array keeps this from refiring on every render.
+  const SAMPLED_SHOTS = 1024;
+  const hasMeasurements = useMemo(
+    () => steppedCircuit.gates.some((g) => g.gateId === "measure" || g.gateId === "measure_x" || g.gateId === "measure_y"),
+    [steppedCircuit],
+  );
+  const sampledProbs = useMemo<number[] | null>(() => {
+    if (!hasMeasurements) return null;
+    return sampleAveragedAmplitudeProbabilities(steppedCircuit, paramValues, customGates, SAMPLED_SHOTS);
+  }, [hasMeasurements, steppedCircuit, paramValues, customGates]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -667,7 +683,14 @@ export function CircuitEditor() {
         <ErrorBoundary label="measurement-counts">
           <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
-        <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} gpuProbabilities={gpuProbs} /></ErrorBoundary>
+        <ErrorBoundary label="probabilities">
+          <ProbabilityPanel
+            state={simState}
+            gpuProbabilities={gpuProbs}
+            sampledProbabilities={sampledProbs}
+            sampledShots={hasMeasurements ? SAMPLED_SHOTS : undefined}
+          />
+        </ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="expectation">

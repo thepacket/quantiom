@@ -10,6 +10,17 @@ type Props = {
    *  when present. Used by the WebGPU trajectory fast path in noise mode.
    *  Length must equal 2^numQubits. */
   gpuProbabilities?: number[] | null;
+  /** Optional trajectory-averaged |amp|² distribution computed by running
+   *  the circuit N independent times with a fresh RNG. Used when the
+   *  circuit has measurements, since a single deterministic-RNG run
+   *  collapses to one branch and reports a misleading single-state
+   *  distribution. Takes precedence over `gpuProbabilities` when both
+   *  are present (a circuit with measurements wouldn't fit the GPU
+   *  path anyway, but the order is fixed for predictability). */
+  sampledProbabilities?: number[] | null;
+  /** Number of shots used to build `sampledProbabilities` — surfaced in
+   *  a small note so users know what they're looking at. */
+  sampledShots?: number;
 };
 type Mode = "exact" | "shots";
 
@@ -35,14 +46,24 @@ function loadInitialShots(): number {
   return 1024;
 }
 
-export function ProbabilityPanel({ state, gpuProbabilities }: Props) {
+export function ProbabilityPanel({ state, gpuProbabilities, sampledProbabilities, sampledShots }: Props) {
   const collapsed = usePanelCollapsed();
   const data = dataOf(state);
   const [mode, setMode] = useState<Mode>(loadInitialMode);
   const [shots, setShots] = useState<number>(loadInitialShots);
-  const effectiveProbs = gpuProbabilities && data && gpuProbabilities.length === data.probabilities.length
-    ? gpuProbabilities
-    : data?.probabilities ?? null;
+  const dim = data?.probabilities.length ?? 0;
+  const effectiveProbs =
+    sampledProbabilities && sampledProbabilities.length === dim
+      ? sampledProbabilities
+      : gpuProbabilities && gpuProbabilities.length === dim
+        ? gpuProbabilities
+        : data?.probabilities ?? null;
+  const probSource: "sampled" | "gpu" | "exact" =
+    sampledProbabilities && sampledProbabilities.length === dim
+      ? "sampled"
+      : gpuProbabilities && gpuProbabilities.length === dim
+        ? "gpu"
+        : "exact";
   // Bumping this nonce forces a fresh sample without changing other deps.
   const [sampleNonce, setSampleNonce] = useState(0);
 
@@ -134,8 +155,13 @@ export function ProbabilityPanel({ state, gpuProbabilities }: Props) {
             </div>
           )}
           <ProbabilityChart data={data} probs={effectiveProbs ?? data.probabilities} mode={mode} counts={counts} shots={shots} />
-          {gpuProbabilities && (
-            <div className="prob__note">WebGPU: {gpuProbabilities.length} bins from trajectory average</div>
+          {probSource === "sampled" && (
+            <div className="prob__note">
+              Averaged across {sampledShots ?? "?"} trajectory shots (circuit has measurements — single-shot |amp|² would be pinned to one collapse branch).
+            </div>
+          )}
+          {probSource === "gpu" && (
+            <div className="prob__note">WebGPU: {gpuProbabilities!.length} bins from trajectory average</div>
           )}
         </>
       )}
