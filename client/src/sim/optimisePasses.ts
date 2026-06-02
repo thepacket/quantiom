@@ -59,6 +59,25 @@ const PAULI_PRODUCT: Record<string, string> = {
   zx: "y", xz: "y",
 };
 
+/**
+ * Same-gate adjacency power merges for non-involutory single-qubit gates:
+ *   T·T   → S       (T² = diag(1, e^{iπ/2}) = S)
+ *   T†·T† → S†      ((T†)² = S†)
+ *   S·S   → Z       (S² = diag(1, e^{iπ}) = Z up to ignored global phase)
+ *   S†·S† → Z       ((S†)² = Z)
+ *   √X·√X     → X
+ *   √X†·√X†   → X
+ *
+ * The biggest win is on T-count: every successful T·T merge saves one T,
+ * which the Resources panel surfaces (T is the expensive fault-tolerant
+ * primitive). T·T† → I is already handled by the dagger-pair path.
+ */
+const POWER_PRODUCT: Record<string, string> = {
+  t: "s", tdg: "sdg",
+  s: "z", sdg: "z",
+  sx: "x", sxdg: "x",
+};
+
 export type OptimiseOptions = {
   /** When true, also runs the commute-through-diagonals pass that hops
    *  rotations past CZ / RZZ / Z / S / T blockers to find merges. Disabled
@@ -119,6 +138,18 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
           if (pauliResult) {
             rewrites.push({ keepId: common.id, killId: g.id, newGateId: pauliResult });
             remove.add(g.id);
+            // Pop common so subsequent gates don't re-merge with this same
+            // stack entry — chained collapses accumulate over outer passes
+            // instead of double-rewriting one entry in a single pass.
+            for (const q of qubits) stacks[q].pop();
+            changed = true;
+            continue;
+          }
+          const powerResult = tryPowerMerge(common, g, rulesFired);
+          if (powerResult) {
+            rewrites.push({ keepId: common.id, killId: g.id, newGateId: powerResult });
+            remove.add(g.id);
+            for (const q of qubits) stacks[q].pop();
             changed = true;
             continue;
           }
@@ -131,6 +162,7 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
             mergedParams: mergeRotationParams(common, g),
           });
           remove.add(g.id);
+          for (const q of qubits) stacks[q].pop();
           changed = true;
           continue;
         }
@@ -247,6 +279,17 @@ function tryCancel(a: PlacedGate, b: PlacedGate, rules: Record<string, number>):
     return true;
   }
   return false;
+}
+
+function tryPowerMerge(a: PlacedGate, b: PlacedGate, rules: Record<string, number>): string | null {
+  if (a.controls.length !== 0 || b.controls.length !== 0) return null;
+  if (a.targets.length !== 1 || b.targets.length !== 1) return null;
+  if (a.gateId !== b.gateId) return null;
+  const result = POWER_PRODUCT[a.gateId];
+  if (!result) return null;
+  rules[`${a.gateId}·${a.gateId} → ${result}`] =
+    (rules[`${a.gateId}·${a.gateId} → ${result}`] ?? 0) + 1;
+  return result;
 }
 
 function tryPauliCollapse(a: PlacedGate, b: PlacedGate, rules: Record<string, number>): string | null {
