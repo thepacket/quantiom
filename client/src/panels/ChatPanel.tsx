@@ -53,7 +53,6 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
   const [streaming, setStreaming] = useState<boolean>(false);
   const [streamBuf, setStreamBuf] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  const [attachCircuit, setAttachCircuit] = useState<boolean>(true);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -78,15 +77,14 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
     if (!model) { setError("Pick a model (Settings)"); return; }
     setError(null);
 
-    // Build the user content: optionally include the current QASM.
-    let userContent = text;
-    if (attachCircuit) {
-      const qasm = emitQasm3(circuit);
-      userContent =
-        `Current circuit (OpenQASM 3, ${circuit.numQubits} qubits, ` +
-        `${circuit.gates.length} gates):\n\n\`\`\`qasm\n${qasm}\n\`\`\`\n\n` +
-        `User message:\n${text}`;
-    }
+    // Always prefix the user's message with the current circuit's QASM —
+    // the model needs context to give grounded answers; cheaper than
+    // making the user remember to re-attach.
+    const qasm = emitQasm3(circuit);
+    const userContent =
+      `Current circuit (OpenQASM 3, ${circuit.numQubits} qubits, ` +
+      `${circuit.gates.length} gates):\n\n\`\`\`qasm\n${qasm}\n\`\`\`\n\n` +
+      `User message:\n${text}`;
 
     const userMsg: ChatMessage = { role: "user", content: userContent };
     const msgs: ChatMessage[] = [
@@ -120,7 +118,7 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
         setStreamBuf("");
       },
     });
-  }, [input, streaming, apiKey, model, attachCircuit, circuit, history, onLoadInNewTab]);
+  }, [input, streaming, apiKey, model, circuit, history, onLoadInNewTab]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -170,10 +168,6 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
         <button className="chat__toggle" onClick={() => setOpen(false)} title="Hide chat">▾</button>
         <span className="chat__title">AI chat</span>
         <ModelPicker model={model} onPick={setModel} apiKey={apiKey} />
-        <label className="chat__attach" title="Attach the current circuit's QASM 3 to your message">
-          <input type="checkbox" checked={attachCircuit} onChange={(e) => setAttachCircuit(e.target.checked)} />
-          attach circuit
-        </label>
         <button className="chat__btn" onClick={() => setShowSettings((s) => !s)} title="API key & options">
           ⚙
         </button>
