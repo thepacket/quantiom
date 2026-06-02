@@ -351,9 +351,6 @@ export function CircuitEditor() {
 
   const [customGates, setCustomGates] = useState<CustomGate[]>(() => loadCustomGates());
   const [noise, setNoise] = useState<NoiseModel>(() => loadNoise());
-  const [presentation, setPresentation] = useState<boolean>(() => {
-    try { return localStorage.getItem("quantiom:presentation") === "1"; } catch { return false; }
-  });
   const [findQuery, setFindQuery] = useState<string>("");
 
   useEffect(() => {
@@ -364,9 +361,11 @@ export function CircuitEditor() {
     saveNoise(noise);
   }, [noise]);
 
+  // Best-effort cleanup of the now-removed presentation-mode key so old
+  // browsers don't carry around dead state.
   useEffect(() => {
-    try { localStorage.setItem("quantiom:presentation", presentation ? "1" : "0"); } catch { /* storage may be blocked */ }
-  }, [presentation]);
+    try { localStorage.removeItem("quantiom:presentation"); } catch { /* ignore */ }
+  }, []);
 
   // Auto-load circuit from URL hash (#c=<gzip+base64url>) once on mount.
   // Opens shared links into a new tab so the user doesn't lose their work.
@@ -464,7 +463,7 @@ export function CircuitEditor() {
   }, [dispatch, selectedGateId, setSelectedGateId, t]);
 
   return (
-    <div className={presentation ? "editor editor--presentation" : "editor"}>
+    <div className="editor">
       <header className="app__header">
         <div className="app__header-left">
           <h1>Quantiom</h1>
@@ -524,12 +523,6 @@ export function CircuitEditor() {
               }}
             />
             <button onClick={onSaveAsGate} title="Save the current circuit as a reusable custom gate">Save as gate</button>
-            <button
-              onClick={() => setPresentation((p) => !p)}
-              title={presentation ? "Exit presentation mode" : "Hide palette/inspector/QASM for screenshots"}
-            >
-              {presentation ? "Exit present" : "Present"}
-            </button>
             <input
               type="search"
               className="editor__find"

@@ -91,14 +91,6 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__model-name { font-size: 16px; color: var(--fg); }
 .chat__model-id { font-size: 14px; color: var(--muted); font-family: ui-monospace, monospace; }
 .chat__model-none { padding: 12px; color: var(--muted); font-size: 15px; text-align: center; }
-/* Presentation mode hides the gate palette and right-side panels so the
-   canvas + key visualizers get the screen. Inspector inside editor__center
-   collapses too; QasmPanel hides since it's in editor__right. */
-.editor--presentation { grid-template-columns: 0 1fr 0; }
-.editor--presentation .palette,
-.editor--presentation .editor__right,
-.editor--presentation .editor__splitter,
-.editor--presentation .inspector { display: none; }
 .editor__right { border-left: 1px solid var(--border); background: var(--panel); overflow: auto; min-width: 0; }
 /* Seven grid rows for editor__center's children:
    TabStrip (auto) · toolbar (auto) · StepBar (auto) · canvas (1fr — grows

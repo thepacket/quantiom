@@ -162,9 +162,6 @@ them is the maintainer's.
   - **Find** — toolbar search box; matches by gate id, `qN` /
     user-renamed qubit name, or parameter substring; matching gates
     glow with a yellow outline on the canvas.
-  - **Present** — toggle that hides the palette, Inspector, and the
-    right-side panel column so the canvas + key visualizers get the
-    whole window for screenshots. Setting persists across reloads.
 - **Undo / redo** — Cmd/Ctrl + Z, Cmd/Ctrl + Shift + Z (or Ctrl + Y);
   100 entries; consecutive parameter or QASM edits coalesce within
   500 ms.
