@@ -2,9 +2,9 @@
 
 ## What this is
 
-Quantum-computing circuit editor, simulator, and visualizer aimed at
-users **already comfortable with QC concepts**. A serious tool, not a
-vulgarizer. IBM Quantum Composer is the floor.
+Quantum-computing circuit editor, simulator, workstation, and
+visualizer aimed at users **already comfortable with QC concepts**.
+A serious tool, not a vulgarizer. IBM Quantum Composer is the floor.
 
 ## Product principles
 
@@ -12,29 +12,36 @@ vulgarizer. IBM Quantum Composer is the floor.
   inline math and formal derivations alongside what the user builds —
   not guided lesson paths.
 - **Don't simplify the editor to accommodate beginners.** Advanced
-  features are expected: arbitrary-angle rotations, custom gates,
-  arbitrary unitary matrices, classical registers, mid-circuit
-  measurement, conditional gates, anti-controls, barriers, subroutines,
-  OpenQASM 3 round-trip.
-- **Visualizers are peer panels**, not the headline. Same update cadence
-  and screen-space rights as statevector / probabilities / Bloch.
+  features are expected: arbitrary-angle rotations, arbitrary unitary
+  matrices, custom gates, classical registers, mid-circuit
+  measurement, conditional gates, anti-controls, barriers,
+  subroutines, multi-circuit tabs, OpenQASM 3 round-trip, six SDK
+  exports, transpilation, routing, Trotter circuit synthesis, ZNE,
+  process tomography.
+- **Visualizers are peer panels**, not the headline. Same update
+  cadence and screen-space rights as statevector / probabilities /
+  Bloch.
 - **Default state must be fast.** Disabled or collapsed features must
-  cost nothing per frame. Noise mode, autodiff optimisation, equivalence
-  checks, syndrome sampling — all opt-in, all zero-cost when the user
-  isn't using them.
+  cost nothing per frame. Noise mode, optimisation diagnostics,
+  equivalence checks, syndrome sampling, transpile / route / record —
+  all opt-in, all zero-cost when the user isn't using them.
 - **Browser-native, research-grade.** No install, no account. Real
-  hardware integration is out of scope for the in-browser tool — Qiskit
-  export covers the "I want to run this on a QPU" path.
+  hardware integration is out of scope for the in-browser tool — the
+  six code exports cover the "I want to run this on a QPU" path.
 
 ## Architecture (current)
 
 Everything runs in the browser. The Python server is just a static
 host plus `/api/health`.
 
-- `client/` — Vite + React + TypeScript. UI, all three simulators,
-  parameter expression evaluator, OpenQASM 3 round-trip, Qiskit
-  codegen, share links, noise model, autodiff optimiser, equivalence
-  checker.
+- `client/` — Vite + React + TypeScript. Multi-tab editor, three
+  simulators, parameter expression evaluator, OpenQASM 3 round-trip,
+  six SDK emitters, share links, noise model (incl. T1/T2, crosstalk,
+  custom Kraus, IBM importer), Adam optimiser, ZNE / landscape /
+  barren-plateau diagnostics, peephole optimisation passes,
+  transpiler, greedy SWAP router, Hamiltonian → Trotter builder,
+  process tomography with Hinton view, equivalence checker, WebM
+  recorder.
 - `client/src/sim/` — the simulator core.
   - `complex.ts`: Complex helpers (`[re, im]` tuples for matrices).
   - `expr.ts`: parameter expression evaluator. Greek glyphs map to
@@ -46,46 +53,122 @@ host plus `/api/health`.
   - `apply.ts`: generic k-qubit gate application on a `Float64Array`
     state with interleaved re/im. O(d · 2ⁿ) per gate.
   - `simulate.ts`: top-level `simulate(circuit, paramValues,
-    customGates, options?)`. Cap `MAX_QUBITS = 20`. Routes Clifford-only
-    circuits (n > 16) to the tableau path. Optional `startIndex` for
-    computing per-column unitary actions (used by the equivalence checker).
+    customGates, options?)`. Cap `MAX_QUBITS = 20`. Routes
+    Clifford-only circuits (n > 16) to the tableau path. Optional
+    `startIndex` for computing per-column unitary actions (used by
+    equivalence checker, tomography); optional `rng` to override the
+    deterministic seed for measurement sampling (used by measurement-
+    shots). Implements the `initialize(state)` gate (basis-state
+    labels and amplitude tuples like `(1/sqrt(2), 0, cos(t), sin(t))`).
   - `stabilizer.ts`: Aaronson-Gottesman tableau simulator. H/S/CX
-    rules follow §4 of `arXiv:quant-ph/0406196` verbatim; X/Y/Z/CZ/CY/
-    SWAP/√X/√X† compose from those. Cap `MAX_QUBITS_STABILIZER = 1024`.
-    `measureZ` implements §4.1–4.2 with rowsum phase tracking.
-    `sampleSyndromes` runs N shots for the Syndromes panel.
+    rules follow §4 of `arXiv:quant-ph/0406196` verbatim;
+    X/Y/Z/CZ/CY/SWAP/√X/√X† compose from those. Cap
+    `MAX_QUBITS_STABILIZER = 1024`. `measureZ` implements §4.1–4.2
+    with rowsum phase tracking. `sampleSyndromes` runs N shots for
+    the Syndromes panel.
   - `simulateNoisy.ts`: trajectory simulator with stochastic Pauli
-    depolarising + amplitude/phase damping. Per-trajectory measurement
-    sampling. `noisyPauliExpectation` re-runs trajectories for the
-    Expectation panel's averaged ⟨P⟩.
+    depolarising + amplitude/phase damping + crosstalk + user-defined
+    Kraus channels. Per-trajectory measurement sampling.
+    `noisyPauliExpectation` re-runs trajectories for the Expectation
+    panel's averaged ⟨P⟩. Optional `startIndex` (mirroring `simulate`)
+    used by noisy tomography.
   - `noise.ts`: `NoiseModel` shape + `loadNoise/saveNoise` (storage
     key `quantiom:noise:v2`) + `rateFor(model, kind, q)` per-qubit
-    lookup + `importIbmBackend(jsonString)`.
+    lookup + `importIbmBackend(jsonString)` (extracts T1/T2/sx
+    err/cx err/readout/coupling map; converts T1/T2 to per-gate
+    damping via the median sx gate length). Custom Kraus operators
+    persisted as numeric float arrays.
   - `measure.ts`: `measureZ/X/Y`, `reset`, `mulberry32`, `fnv1a`. The
     seeded RNG keeps measurement outcomes stable across re-renders.
-  - `expectation.ts`: Pauli expectations via in-place gate application
-    + inner product.
+  - `measurementShots.ts`: `sampleMeasurementShots(circuit, ...)` —
+    runs N independent simulations with Math.random for the
+    measurement RNG, returns classical-register bitstring histogram.
+  - `expectation.ts`: Pauli expectations via in-place gate
+    application + inner product.
   - `density.ts`: reduced density matrix via partial trace.
   - `sample.ts`: shot sampling from a probability distribution.
-  - `resources.ts`: gate-count breakdown, T-count, parallel depth,
+  - `resources.ts`: gate-count breakdown, T-count, **T-depth**
+    (distinct columns containing T/T†), CX count, parallel depth,
     distinct qubits, free-symbol count.
-  - `optimize.ts`: parameter-shift gradient descent on the Expectation
-    panel. Central finite differences + plain SGD.
+  - `optimize.ts`: parameter-shift gradient descent. `optimizeExpectation`
+    supports Adam (default) and SGD; `zneFit` runs at ×1/×2/×3 noise
+    scales and linearly fits ⟨P⟩(γ→0); `computeLandscape` sweeps
+    1–2 symbols on a grid; `barrenPlateauDiagnostic` reports gradient
+    variance over random parameter samples.
+  - `optimisePasses.ts`: peephole rewriter — adjacent self-inverse
+    cancellation, dagger-pair cancellation, same-axis rotation merge.
+    Iterates to a fixed point (capped at 50 passes); reports rule
+    counts.
   - `equivalence.ts`: full-unitary (n ≤ 8) or sampled-column (n > 8)
-    comparison between two circuits, factoring out global phase.
+    comparison between two circuits, factoring out global phase. Also
+    computes process fidelity F = |Tr(U_A† U_B)/2ⁿ|² and the trace-
+    distance bound √(1 − F).
+  - `transpile.ts`: three target gate sets — Clifford+T (textbook
+    6-CX + 7-T Toffoli), IBM heavy-hex {RZ, SX, CX} (5-pulse U3),
+    Rigetti {RZ, RX(±π/2), CZ}. Reports gate counts and T-count
+    before/after.
+  - `router.ts`: greedy SWAP router. Maintains logical→physical
+    mapping; for each 2q gate, BFS shortest path on coupling graph,
+    inserts SWAPs to bring qubits adjacent, applies the gate, commits
+    the new mapping. Plus `countConnectivityViolations` for the
+    Resources panel.
+  - `tomography.ts`: process tomography. Builds U column-by-column via
+    `simulate`, decomposes into Pauli basis (β_P = Tr(P† U)/2ⁿ),
+    forms χ = β β†. Capped at 4 qubits. Optional noise mode routes
+    through `simulateNoisy` for the trajectory-averaged "average
+    unitary" approximation.
+  - `trotter.ts`: Pauli-sum parser and first-order Trotter circuit
+    builder. Each multi-qubit Pauli term decomposes via basis change
+    (H/S†H/I) → CNOT staircase → Rz(2hδ) → undo. Presets for TFIM,
+    XXZ, H₂, Heisenberg.
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
-    anti-controls and `if (c[k] == v) …` wrappers for conditional gates.
+    anti-controls and `if (c[k] == v) …` wrappers for conditional
+    gates.
   - `parse.ts`: hand-written parser. Modifier-chain walker handles
     `(neg)ctrl(n) @ …`. Multi-statement lines split on top-level `;`.
-  - `emitQiskit.ts`: Qiskit Python codegen. Walks the same IR.
+    Handles `if (c[k] == v) <stmt>;`. Compatible with OpenQASM 2
+    (`qreg` / `creg` / `include "qelib1.inc"`).
+  - `emitQiskit.ts`: Qiskit Python codegen.
+  - `emitCirq.ts`: Cirq codegen (LineQubit, sympy.Symbol, decomposed U3).
+  - `emitBraket.ts`: Amazon Braket SDK codegen (FreeParameter).
+  - `emitQSharp.ts`: Microsoft Q# codegen.
+  - `emitPyQuil.ts`: PyQuil (Rigetti) codegen.
+  - `emitPytket.ts`: pytket (Quantinuum) codegen, with half-turn
+    angle convention.
 - `client/src/editor/`
-  - `state.ts`: undo/redo reducer with consecutive-keystroke coalescing.
-  - `shareLink.ts`: gzip + base64url URL-hash encoding for the circuit IR.
-  - `customGates.ts`: user-defined custom gate blocks; `expandCustomGates`
-    inlines references at simulate time.
+  - `state.ts`: undo/redo reducer with consecutive-keystroke
+    coalescing. Reducer actions include `compact-columns`,
+    `delete-range`, `duplicate-range` for the toolbar.
+  - `tabs.ts`: multi-tab state hook (`useTabs`). One reducer manages
+    `{ tabs, activeId }` with per-tab versioned history + per-tab UI
+    state (selected gate, picked step, paramValues). Storage key
+    `quantiom:tabs:v1`; migrates legacy `quantiom:circuit:v1`.
+  - `TabStrip.tsx`: pill UI for tabs; drag-to-reorder, double-click
+    to rename, close button.
+  - `shareLink.ts`: gzip + base64url URL-hash encoding for the
+    circuit IR.
+  - `customGates.ts`: user-defined custom gate blocks;
+    `expandCustomGates` inlines references at simulate time.
+  - `inverse.ts`: per-gate dagger rules; `inverseGates(circuit, lo,
+    hi)` returns the reversed-and-daggered gates appended to the
+    circuit. Powers the toolbar's "Append U†" button.
+  - `recordAnimation.ts`: SVG → canvas → MediaRecorder pipeline.
+    Sweeps `t` across [0, 2π) over N frames, dumps a WebM video.
+- `client/src/panels/` (collapsible, persisted)
+  - `StatevectorPanel`, `ProbabilityPanel`, `BlochPanel`,
+    `PhaseDiskPanel`, `ExpectationPanel` (with the Optimise +
+    Landscape + Plateau + ZNE tool row), `DensityPanel`, `NoisePanel`
+    (incl. coupling-graph SVG view + custom Kraus editor),
+    `ResourcePanel` (T-depth + CX count + connectivity violations),
+    `EquivalencePanel` (file + cross-tab + F + trace distance),
+    `SyndromePanel`, `MeasurementCountsPanel`, `TomographyPanel`
+    (heatmap + Hinton + noise toggle), `HamiltonianPanel`,
+    `QasmPanel`, `ParameterPanel`.
+  - `CouplingMapView.tsx`: shared SVG render of an adjacency list as
+    a node-link graph (circular layout ≤ 24 qubits, grid above).
 - `server/` — FastAPI shell: `/api/health` + static-file mount.
-- `examples/` — 62 hand-written OpenQASM 3 example circuits imported
+- `examples/` — 67 hand-written OpenQASM 3 example circuits imported
   into the client via Vite `?raw`.
 
 ## Conventions
@@ -94,36 +177,42 @@ host plus `/api/health`.
 - Big-endian basis: qubit 0 is the MSB of basis index.
 - The Float64Array state has `re` at even indices and `im` at odd;
   size is `2 · 2ⁿ`.
-- Greek letter ↔ ASCII map in `expr.ts` matches the inspector's display
-  function in [client/src/panels/ParameterPanel.tsx](client/src/panels/ParameterPanel.tsx).
-- The OpenQASM 3 emitter/parser pair preserves the symbolic look of the
-  parameter expressions; it does not evaluate them.
+- Greek letter ↔ ASCII map in `expr.ts` matches the inspector's
+  display function in
+  [client/src/panels/ParameterPanel.tsx](client/src/panels/ParameterPanel.tsx).
+- The OpenQASM 3 emitter/parser pair preserves the symbolic look of
+  the parameter expressions; it does not evaluate them.
 - **Circuit name** is an optional field on the IR (`Circuit.name`).
   Set by the FileMenu when a circuit is loaded (example label or file
   basename) and rendered in the centre of the app header. Manual edits
   preserve the name; Clear leaves it undefined ("Untitled").
 - **Version** in the header is built from `package.json` semver plus
-  `__GIT_COMMITS__` and the short `__GIT_SHA__` injected at build time
-  via `vite.config.ts`. The Dockerfile installs git and copies `.git`
-  in so this works inside the production image.
+  `__GIT_COMMITS__` and the short `__GIT_SHA__` injected at build
+  time via `vite.config.ts`. The Dockerfile installs git and copies
+  `.git` in so this works inside the production image.
 - **Probabilities panel** has two modes — `exact` (truth) and `shots`
-  (sampled). The sampler is in [client/src/sim/sample.ts](client/src/sim/sample.ts);
-  it normalises the exact probabilities, builds a cumulative
-  distribution, and binary-searches per shot. Mode and shot count
-  persist in localStorage. Real hardware always behaves like `shots`.
-- **Default-fast invariant**: every new feature must either run only on
-  user click (Optimise, Compare, Sample syndromes), be opt-in (Noise
-  toggle), or short-circuit when the circuit doesn't use the feature
-  (measurement / condition allocations only when present; stabilizer
-  routing only when Clifford-only + n > 16). The bare gate-application
-  hot path on a Clifford-free, measurement-free, parameter-free circuit
-  is byte-identical to the early-Tier-0 version.
-- **Panel collapse propagation**: `PanelShell` publishes its collapsed
-  state via `usePanelCollapsed()`; expensive `useMemo` bodies
-  short-circuit when collapsed. `SimResult` exposes `amplitudes`,
-  `probabilities`, `blochVectors` as lazy getters that compute on first
-  access and memoise.
-- **Storage keys**: `quantiom:circuit:v1`, `quantiom:custom-gates:v1`,
+  (sampled). The sampler is in
+  [client/src/sim/sample.ts](client/src/sim/sample.ts); it normalises
+  the exact probabilities, builds a cumulative distribution, and
+  binary-searches per shot.
+- **Measurement-counts panel** is the dynamic-circuit equivalent —
+  runs N full simulations with Math.random as the measurement RNG,
+  tabulates classical-register bitstrings.
+- **Default-fast invariant**: every new feature must either run only
+  on user click (Optimise, Landscape, Plateau, ZNE, Compare, Sample
+  syndromes, Sample counts, Compute χ, Route, Transpile, Optimise
+  circuit, Append U†, Compact, Record), be opt-in (Noise toggle,
+  custom Kraus, crosstalk), or short-circuit when the circuit doesn't
+  use the feature. The bare gate-application hot path on a
+  Clifford-free, measurement-free, parameter-free circuit is byte-
+  identical to the early-Tier-0 version.
+- **Panel collapse propagation**: `PanelShell` publishes its
+  collapsed state via `usePanelCollapsed()`; expensive `useMemo`
+  bodies short-circuit when collapsed. `SimResult` exposes
+  `amplitudes`, `probabilities`, `blochVectors` as lazy getters that
+  compute on first access and memoise.
+- **Storage keys**: `quantiom:tabs:v1` (with legacy
+  `quantiom:circuit:v1` migration), `quantiom:custom-gates:v1`,
   `quantiom:noise:v2`, `quantiom:panel-collapsed:v1`,
   `quantiom:probabilities-mode`, `quantiom:probabilities-shots`.
 
@@ -142,9 +231,17 @@ host plus `/api/health`.
 - **GPU / WebGPU.** Engineering effort vs the n ≤ 20 ceiling doesn't
   pencil; researchers needing GPU go to qsim/cuQuantum. The Clifford
   fast path covers the "big n" niche.
-- **Real hardware backend.** Multi-week vendor integration (auth,
-  queue, billing). The Qiskit Python export covers the "I want to run
-  on a QPU" workflow.
+- **Real hardware backend integration.** Multi-week vendor work (auth,
+  queue, billing). The six SDK exports cover the "I want to run on a
+  QPU" workflow.
+- **Pulse-level / OpenPulse.** Different field; out of scope.
+- **Continuous-variable, qudits, topological, networks, annealing.**
+  Different paradigms; out of scope.
+- **MPS / tensor-network simulation.** Real engineering project for a
+  niche use case.
+- **Solovay–Kitaev / Ross–Selinger** exact rotation approximation in
+  Clifford+T transpilation. Its own research project; we currently
+  pass arbitrary rotations through with a warning.
 
 ## Earlier architecture (gone)
 

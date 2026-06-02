@@ -1,22 +1,28 @@
 # Quantiom
 
 **A browser-native research-grade quantum circuit editor, simulator,
-and visualizer.**
+workstation, and visualizer.**
 
-Quantiom builds circuits visually, runs them through a pure-TypeScript
-`Float64Array` statevector simulator (≤ 20 qubits), a Stim-style
-Aaronson-Gottesman tableau (Clifford + measurements, scaling to
-thousands of qubits), or a quantum-trajectory noise simulator with
-calibrated NISQ channels — and visualizes the state through Bloch
-spheres, phase disks, exact and shot-sampled probability histograms,
-reduced density matrices, ⟨P⟩ Pauli expectations, and resource
-estimates. Free parameters become live sliders, an animation clock
-drives them at 15 fps, and the Expectation panel will gradient-descend
-them to minimise ⟨H⟩ for VQE-style loops. Noise can be calibrated by
-importing an IBM `BackendProperties` JSON snapshot (T1, T2, sx error,
-cx error, readout error per qubit). Circuits round-trip OpenQASM 3,
-export to a Qiskit Python script, and serialize into a shareable URL
-hash.
+Quantiom is a multi-tab editor over a 55-gate palette, three
+simulators (pure-TypeScript `Float64Array` statevector ≤ 20 qubits,
+Stim-style Aaronson–Gottesman tableau ≤ 1024 qubits, and a quantum-
+trajectory noise simulator with calibrated NISQ channels), and a
+column of researcher-grade panels. Free parameters become live
+sliders, an animation clock drives them, an Adam optimiser will
+gradient-descend them to minimise ⟨H⟩ for VQE/QAOA/QML loops, and a
+peephole pass + a transpiler + a coupling-graph router can rewrite
+the resulting circuit to a target hardware native gate set. A Pauli-
+sum Hamiltonian editor emits a Trotter circuit ready to optimise;
+zero-noise extrapolation, an optimisation landscape sweep, and a
+barren-plateau diagnostic close the NISQ research loop. Process
+tomography reconstructs the χ matrix in heatmap or Hinton view;
+equivalence-checking compares two open tabs with process fidelity and
+trace distance. Noise can be calibrated by importing an IBM
+`BackendProperties` JSON snapshot (T1, T2, sx / cx errors, readout
+errors, coupling map). Circuits round-trip OpenQASM 3 (and parse
+OpenQASM 2), export to **Qiskit · Cirq · Braket · Q# · PyQuil ·
+pytket**, serialize into a shareable URL hash, and the t-animation can
+be recorded as a WebM video.
 
 For users already comfortable with quantum-computing concepts. IBM
 Quantum Composer is the floor, not the ceiling.
@@ -42,32 +48,45 @@ them is the maintainer's.
 ## Shape
 
 - **client/** — Vite + React + TypeScript. UI, simulators, parameter
-  expression evaluator, OpenQASM 3 round-trip, Qiskit codegen, share
-  links, noise model, autodiff optimiser, equivalence checker.
-- **server/** — minimal FastAPI app whose only job is `/api/health` for
-  Fly's checks and serving the built client as static files.
-- **examples/** — 62 hand-written OpenQASM 3 example circuits.
+  expression evaluator, OpenQASM 3 round-trip, six SDK emitters,
+  share links, noise model, autodiff optimiser, transpiler, router,
+  Trotter / Hamiltonian builder, tomography, equivalence checker.
+- **server/** — minimal FastAPI app whose only job is `/api/health`
+  for Fly's checks and serving the built client as static files.
+- **examples/** — 67 hand-written OpenQASM 3 example circuits,
+  searchable.
 
 ## Editor
 
+- **Multi-circuit tabs.** A tab strip below the header keeps multiple
+  circuits open with per-tab undo history, parameter values, selected
+  gate, and step-through position. Shared across tabs: the custom-gate
+  palette and the noise model. Drag a pill to reorder, double-click to
+  rename, × to close (confirms when dirty), + for a fresh tab,
+  Duplicate to clone the active tab. ⌘/Ctrl+1..9 jumps to tab N;
+  ⌘/Ctrl+T opens a new one.
 - **55-gate palette** across 13 categories, with category-coloured
   borders, search box, and collapsible category groups:
   - Identity & Pauli (I, X, Y, Z)
   - Clifford + T (H, S, S†, √X, √X†, T, T†)
   - Phase & Rotation (P, RX, RY, RZ)
-  - General U (U, U1, U2, U3, **`u_arb`** — arbitrary 2×2, **`u_arb_2`** — arbitrary 4×4)
+  - General U (U, U1, U2, U3, **`u_arb`** — arbitrary 2×2,
+    **`u_arb_2`** — arbitrary 4×4)
   - Two-qubit Clifford (CX, CY, CZ, CH, C√X, C√X†, SWAP, iSWAP, DCX, ECR)
   - Controlled rotations (CRX, CRY, CRZ, CP, CU, CU1, CU3)
   - Ising / native (RXX, RYY, RZZ, RZX, XX+YY, XX−YY)
   - Three-qubit (CCX, CCZ, CSWAP, RCCX, RC3X)
   - Multi-controlled (C3X, C4X, MCX, MCP, MCU — variable arity)
-  - State prep (|0⟩, |1⟩, |+⟩, |−⟩, |i⟩, |−i⟩, Initialize)
+  - State prep (|0⟩, |1⟩, |+⟩, |−⟩, |i⟩, |−i⟩, Initialize — arbitrary
+    1-qubit amplitude tuples and basis-state labels)
   - Non-unitary (Measure Z/X/Y, Reset)
   - Control flow (if, switch, while, box)
   - Markers (barrier, delay)
 - **Canvas** — unbounded qubits and columns; SVG rendering. Distinct
-  visuals for the CNOT ⊕, SWAP ×, measure meter, reset, state-prep,
-  barrier, delay; per-category coloured gate strokes.
+  visuals for CNOT ⊕, SWAP ×, measure meter, reset, state-prep,
+  barrier, delay; per-category coloured gate strokes. **Hover any
+  gate** for a tooltip with name, qubits, column, parameters, and any
+  classical condition.
 - **Drag and drop**
   - Palette → cell: place a new gate.
   - Placed gate → cell: move the whole gate; column auto-bumps on
@@ -76,9 +95,10 @@ them is the maintainer's.
     reassigns just that role.
 - **Inspector** — column, controls, targets, classical bits, parameter
   expressions (free-form: `π/2`, `θ`, `2*t + π/4`, `sin(t)`); per-control
-  **anti-control** toggle (●/○); compact Re/Im **matrix entry grid** for
-  `u_arb` (2×2) and `u_arb_2` (4×4); per-gate **classical condition**
-  picker (`fire only if c[k] == v`).
+  **anti-control** toggle (●/○); compact Re/Im **matrix entry grid**
+  for `u_arb` (2×2) and `u_arb_2` (4×4); per-gate **classical
+  condition** picker (`fire only if c[k] == v`); **Step here** button
+  freezes the simulator one column before the selected gate.
 - **Step-through inspector** — slider above the canvas (⏮ ◀ ▶ ⏭)
   freezes the simulation at any column for gate-by-gate debugging;
   default "follow the end" so the sim shows the final state.
@@ -86,17 +106,46 @@ them is the maintainer's.
   circuit as a reusable block; the new tile appears under a pink
   "Your gates" category in the palette. Right-click to delete.
   Persisted in localStorage.
+- **Toolbar actions**
+  - **Compact** — ASAP-repacks columns; pulls every gate as far left
+    as it can go without collision.
+  - **Append U†** — appends the inverse of the current circuit
+    (reverses order, daggers each gate). Self-inverse gates pass; S↔S†
+    / T↔T† / √X↔√X† / C√X↔C√X† swap; rotations negate; U(θ,φ,λ)†
+    swaps & negates the angles. Measurements / state-prep / arbitrary
+    matrices can't be inverted automatically and are confirmed before
+    being omitted.
+  - **Optimise** — peephole pass: cancel adjacent inverses, merge same-
+    axis rotations (`Rz(a)·Rz(b) → Rz(a+b)`), iterate to a fixed point;
+    reports rules fired.
+  - **Transpile…** — three target gate sets:
+    - Clifford + T: {H, S, T, CX} with the textbook 6-CX + 7-T Toffoli.
+    - IBM heavy-hex: {RZ, SX, CX} with the canonical 5-pulse U3.
+    - Rigetti: {RZ, RX(±π/2), CZ}.
+  - **Route** (appears when a coupling map is imported) — greedy SWAP
+    router that walks the circuit, BFS-finds shortest paths on the
+    coupling graph, and inserts SWAPs to satisfy connectivity.
+    Reports SWAPs added and the gate-count delta.
+  - **Record** (appears when `t` is a free symbol) — captures one
+    period of the t-animation as a WebM video using
+    `MediaRecorder` + canvas captureStream. 3 seconds at 30 fps.
+  - **Select…** — popover with column range inputs and Duplicate /
+    Delete buttons. Clones or removes all gates in `[from, to]`.
+  - **History…** — multi-step undo / redo: "back 5/10/25/100" or
+    matching forward jumps in one click.
 - **Undo / redo** — Cmd/Ctrl + Z, Cmd/Ctrl + Shift + Z (or Ctrl + Y);
-  100 entries; consecutive parameter or QASM edits coalesce within 500 ms.
-- **Auto-save** to `localStorage`; circuit restores on refresh.
-- **File menu** — Open `.qasm`, Download `.qasm`, Download `.py` (Qiskit),
-  Export SVG, Share link, or pick from the bundled **Examples** dropdown
-  (62 circuits, 8 categories).
+  100 entries; consecutive parameter or QASM edits coalesce within
+  500 ms.
+- **Auto-save** to `localStorage`; tabs restore on refresh.
+- **File menu** — Open `.qasm`, Download `.qasm`, **Examples…**
+  (typeahead search across 67 circuits), **Export…** popover
+  (Qiskit / Cirq / Braket / Q# / PyQuil / pytket / SVG), Share link.
+  Opening a file or example creates a new tab so your current work
+  stays.
 - **Dark theme** throughout.
-- **Title bar** — the current circuit's name is shown centered at the top.
-  Loading from Examples uses the example label; opening a `.qasm` from
-  disk uses the filename. The Quantiom logo on the left shows the
-  running build's semver, commit count, and short git SHA.
+- **Title bar** — the current circuit's name is shown centered. The
+  Quantiom logo on the left shows the running build's semver, commit
+  count, and short git SHA.
 
 ## Simulators
 
@@ -111,52 +160,65 @@ parts. Gate application is in-place. No server round-trips, no GIL.
 - **Unbounded gate count** — each gate is O(d · 2ⁿ) where d = 2ᵏ for a
   k-qubit gate. A 12-qubit Hadamard-on-each finishes in milliseconds.
 - **Parameter expressions** — JIT-compiled with a small `new Function`
-  evaluator. Greek letters (π, θ, φ, λ, γ, β, τ, α, δ, ω) and standard
-  math functions (`sin`, `cos`, `tan`, `sqrt`, `exp`, `ln`) are
-  recognised; everything else becomes a free variable that you set via
-  the Parameters panel.
-- **Mid-circuit measurement** — measurements sample an outcome from the
-  qubit's marginal, project onto the matching subspace, renormalise, and
-  write the bit to the classical register. Subsequent gates carrying a
-  `condition` execute only when the matching classical bit holds the
-  expected value. Deterministically seeded per (gates, params) so
-  re-renders don't shuffle.
+  evaluator. Greek letters (π, θ, φ, λ, γ, β, τ, α, δ, ω) and
+  standard math functions (`sin`, `cos`, `tan`, `sqrt`, `exp`, `ln`)
+  are recognised; everything else becomes a free variable that you
+  set via the Parameters panel.
+- **Mid-circuit measurement** — measurements sample an outcome from
+  the qubit's marginal, project onto the matching subspace,
+  renormalise, and write the bit to the classical register.
+  Subsequent gates carrying a `condition` execute only when the
+  matching classical bit holds the expected value. Deterministically
+  seeded per (gates, params) so re-renders don't shuffle.
+- **Per-column input** — `simulate()` accepts a `startIndex` so
+  equivalence-checking and tomography can build the full unitary
+  column by column.
 
 ### Stabilizer / Clifford fast path
 
-Aaronson-Gottesman tableau (`arXiv:quant-ph/0406196`). Auto-detected for
-Clifford-only circuits (`{H, S, S†, √X, √X†, X, Y, Z, CX, CY, CZ, SWAP,
-measure, reset}`) when n > 16 — sub-threshold Clifford circuits stay on
-the statevector path so the user still sees full amplitudes.
+Aaronson–Gottesman tableau (`arXiv:quant-ph/0406196`). Auto-detected
+for Clifford-only circuits (`{H, S, S†, √X, √X†, X, Y, Z, CX, CY, CZ,
+SWAP, measure, reset}`) when n > 16 — sub-threshold Clifford circuits
+stay on the statevector path.
 
-- **1024-qubit cap** — 2n × (2n+1) bytes of tableau, ≈ 2 MB at n = 1024.
+- **1024-qubit cap** — 2n × (2n+1) bytes of tableau, ≈ 2 MB at n =
+  1024.
 - **O(n²) per gate** — H, S, CNOT update generators in linear time.
 - **Bloch from the tableau** — per-qubit GF(2) elimination on the
   stabilizer rows extracts the exact reduced single-qubit state.
-- **Aaronson-Gottesman measurement** — §4.1–4.2 random/deterministic
+- **Aaronson–Gottesman measurement** — §4.1–4.2 random/deterministic
   branching with the rowsum phase-tracking trick.
 
 ### Noise mode (quantum trajectories)
 
-Opt-in. Disabled by default; switching off restores the bare statevector
-path with zero overhead. When on:
+Opt-in. Disabled by default; switching off restores the bare
+statevector path with zero overhead. When on:
 
 - **Stochastic Pauli depolarising channels** — 1-qubit on single-qubit
   gates, 2-qubit (15 non-identity Pauli pairs) on two-qubit gates,
   per-qubit at the 2-qubit rate on larger gates.
 - **Amplitude damping (T1)** and **phase damping (T2)** via
   state-conditional jump operators.
-- **Trajectory averaging** — runs T independent simulations (default 256,
-  presets up to 4 096), averages probabilities and Bloch vectors.
+- **Crosstalk** — when a 2-qubit gate fires, every coupled neighbour
+  (per the imported coupling graph) receives 1-qubit depolarising at
+  the crosstalk rate. Models the spectator-qubit error researchers
+  see on superconducting devices.
+- **Readout bit-flip** at measurement.
+- **Custom 1-qubit Kraus channels** — up to 4 operators entered as
+  2×2 complex matrices. Applied via state-conditional sampling after
+  every 1-qubit gate. Trace-preservation is the user's responsibility;
+  rescaling keeps the state normalised.
+- **Trajectory averaging** — runs T independent simulations (default
+  256, presets up to 4 096), averages probabilities and Bloch vectors.
 - **Per-qubit rate overrides** — a `perQubit` array with optional
   1-qubit depolarising / γ_AD / γ_PD / readout values shadows the
   globals per qubit.
 - **IBM `BackendProperties` importer** — load a `backend.properties()
   .to_dict()` JSON snapshot and Quantiom populates per-qubit T1, T2,
-  sx-error, cx-error, and readout-error using the device's median sx
-  gate time to convert T1/T2 into per-gate damping probabilities. A
-  `source` field shows up in the panel ("ibmq_kyiv @ 2026-05-12") so
-  you know which snapshot is active.
+  sx-error, cx-error, readout-error, plus the device's coupling map
+  (extracted from `coupling_map` or inferred from the cx/cz/ecr gate
+  entries). A `source` field shows up in the panel ("ibmq_kyiv @
+  2026-05-12") so you know which snapshot is active.
 
 The simulator code lives in [client/src/sim/](client/src/sim/):
 [complex.ts](client/src/sim/complex.ts), [expr.ts](client/src/sim/expr.ts),
@@ -191,99 +253,142 @@ nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
   modes:
   - **exact** (default): each bar is `|amplitude|²`.
   - **shots**: samples N measurement outcomes from the exact
-    distribution and shows the empirical histogram, the way real
-    quantum hardware behaves. Presets 100, 1 024, 8 192, 100 000, a
-    **↻ resample** button, and the exact distribution overlaid as a
-    dashed accent outline behind the sampled bars. Mode and shot
-    count persist in localStorage.
+    distribution and shows the empirical histogram. Presets 100,
+    1 024, 8 192, 100 000, a **↻ resample** button, and the exact
+    distribution overlaid as a dashed accent outline behind the
+    sampled bars.
 - **Bloch spheres** — one axonometric sphere per qubit with axis
   labels (`|0⟩, |1⟩, |+⟩, |−⟩, |±i⟩`), state-vector arrow, and a `|r|`
   purity readout.
 - **Phase disks** — per-qubit visualisation of the off-diagonal
-  ρ_q[0,1] = (r_x + i r_y) / 2 in the complex plane. Complements the
-  Bloch panel by isolating the X-Y phase information.
+  ρ_q[0,1] = (r_x + i r_y) / 2 in the complex plane.
 - **Expectation ⟨P⟩** — pick a Pauli (`I, X, Y, Z`) per qubit, get a
   live ⟨ψ|P|ψ⟩ readout. In noise mode the value is trajectory-averaged
-  with a "avg of N trajectories" tag. When the circuit has free
-  parameter symbols, an **Optimise** subsection appears: pick which
-  symbols to vary, minimise or maximise, set steps and learning rate,
-  click Run. Quantiom runs central finite differences for the
-  gradient and plain gradient descent in the browser, then pushes the
-  optimised parameters back into the sliders.
+  with a "avg of N trajectories" tag. The panel grows three layers
+  for parameterised circuits:
+  - **Optimise** — pick which free symbols to vary, minimise or
+    maximise, set steps and learning rate, choose **Adam** (default)
+    or **SGD**. Quantiom runs central finite differences for the
+    gradient and Adam/SGD descent in the browser, pushing optimised
+    parameters back into the sliders. A loss sparkline plots ⟨P⟩ over
+    the trajectory.
+  - **Landscape** — for 1 or 2 picked symbols, sweep across [-π, π]
+    on a 64-point line or 32×32 grid and render. 1D draws as a curve;
+    2D as a diverging-colormap heatmap.
+  - **Barren plateau** — sample 100 random parameter points,
+    compute the central-difference gradient at each, report
+    Var(∂⟨P⟩/∂θ) per symbol.
+  - **ZNE** (visible when noise is on) — runs the circuit at noise
+    rates ×1, ×2, ×3 (scaling depolarising / damping / readout /
+    crosstalk and per-qubit overrides), linearly fits ⟨P⟩(γ), reports
+    γ=0 extrapolated value.
 - **Reduced density matrix** — pick a qubit subset (≤ 4), see the
   2^|S| × 2^|S| matrix and `Tr(ρ²)` purity. Default-collapsed.
 - **Resources** — total gates, 1-qubit / 2-qubit / multi-qubit
-  breakdown, T-count and T-fraction, parallel depth, longest-qubit
-  length, distinct qubits, free-symbol count, plus a Clifford-only
-  flag when the circuit would route to the tableau path.
-- **Noise model** — enable toggle, sliders for 1q depolarising, 2q
-  depolarising, amplitude damping γ, phase damping γ, readout bit-flip;
-  trajectory count with 64 / 256 / 1024 / 4096 presets; **Import IBM
-  BackendProperties .json** button; editable per-qubit rate table.
-- **Equivalence check** — load a comparison `.qasm`, click Compare:
-  for n ≤ 8 Quantiom computes both full 2ⁿ × 2ⁿ unitaries column by
-  column and compares entrywise (exact); for n > 8 it samples 16
-  random basis-state columns. Reports max amplitude deviation, the
-  factored-out global phase, and (on mismatch) the basis index where
-  the largest deviation occurred.
+  breakdown, **T-count and T-depth** (parallel T-layer count) and
+  CX count, parallel depth, longest-qubit length, distinct qubits,
+  free-symbol count, plus a Clifford-only flag and (when a coupling
+  map is imported) a connectivity-violation count.
+- **Noise model** — enable toggle; sliders for 1q depolarising, 2q
+  depolarising, amplitude damping γ, phase damping γ, readout
+  bit-flip, crosstalk; trajectory count with 64 / 256 / 1024 / 4096
+  presets; **Import IBM BackendProperties .json** button; editable
+  per-qubit rate table; a free-form **Custom 1q Kraus channel** editor
+  (up to 4 operators); **coupling-graph view** drawn as a small SVG.
+- **Equivalence check** — load a comparison `.qasm` OR pick another
+  open tab from a dropdown. For n ≤ 8, computes both full 2ⁿ × 2ⁿ
+  unitaries column by column and compares entrywise (exact); for
+  n > 8 samples 16 random basis-state columns. Reports verdict, max
+  amplitude deviation, factored global phase, **process fidelity
+  F = |Tr(U_A† U_B)/2ⁿ|²**, and **trace distance ≤ √(1 − F)** (Fuchs–
+  van de Graaf bound).
 - **Syndromes (Clifford shots)** — for Clifford-only circuits with
   measurements, click Sample to run the tableau N times and tabulate
-  classical bitstring histograms. Presets 100, 1 024, 8 192, 100 000.
-  Stim-style QEC decoder benchmarks, in a browser tab.
+  classical bitstring histograms. Stim-style QEC decoder benchmarks
+  in a browser tab.
+- **Measurement counts** — for any circuit with measurements, samples
+  N independent runs (each with Math.random as the measurement RNG)
+  and tabulates the classical-register bitstring histogram — the
+  dynamic-circuit equivalent of the Probabilities shots mode.
+- **Process tomography (χ matrix)** — for circuits of ≤ 4 qubits,
+  reconstructs the χ matrix in the Pauli basis by building the full
+  unitary column by column then Pauli-decomposing β_P = Tr(P† U)/2ⁿ.
+  Two views — heatmap and **Hinton diagram** (square side ∝ √|χ|;
+  light = positive Re, dark = negative). Optional **noise toggle**
+  routes through trajectories so the reconstructed χ approximates the
+  noisy "average unitary." For n = 1 the panel reports the closest
+  matching named gate and its process fidelity.
+- **Hamiltonian → Trotter circuit** — paste a Pauli-sum Hamiltonian
+  (e.g. `0.5 * II + 0.3 * XX - 0.2 * YZ`), pick step count and time
+  step δ, generate a first-order Trotter circuit and open it in a new
+  tab. Each term decomposes the textbook way: basis change → CNOT
+  staircase → Rz(2hδ) → undo. Presets for TFIM, XXZ, H₂, Heisenberg.
 - **OpenQASM 3** — editable textarea with line numbers. Edits
   debounce-parse and replace the circuit IR on every successful parse;
   failures surface inline with line numbers. Round-trips cleanly with
   the canvas, including anti-controls via `negctrl @` modifier chains
-  and conditional gates via `if (c[k] == v) …` wrappers.
+  and conditional gates via `if (c[k] == v) …` wrappers. Multi-
+  statement lines split correctly. OpenQASM 2 (`qreg` / `creg` /
+  `include "qelib1.inc"`) parses transparently.
 
 Each panel is wrapped in its own React error boundary; a render-phase
 crash in one panel does not break the others.
 
 ## Researcher workflows
 
-- **Parameter optimisation (VQE / QAOA)** — pick an observable in
-  Expectation, click Optimise; Quantiom gradient-descends in the
-  browser. Works with noise enabled (trajectory-averaged gradients).
-- **Calibrated noise comparison** — import an IBM `BackendProperties`
-  snapshot, run any circuit, compare against actual hardware output.
-- **QEC decoder benchmarks** — build a stabilizer code with ancillas,
-  add a syndrome-extraction sequence, sample 10 k shots, eyeball the
-  syndrome distribution; works up to ~1 000 qubits on the Clifford
-  path.
-- **Compiler equivalence checking** — "did my optimisation pass
-  preserve the unitary?" Load both and compare.
-- **Resource estimation** — read T-count, two-qubit count, and
-  parallel depth straight from the IR.
-- **Dynamic circuits** — mid-circuit measurement + classical
-  conditioning works end-to-end (teleportation, adaptive QEC, …).
-- **Notebook export** — Download `.py` produces a self-contained
-  `QuantumCircuit(...)` script for direct paste into a Jupyter cell.
-- **Collaboration** — **Share** copies a URL with the entire circuit
-  encoded in the hash fragment (`#c=<gzip+base64url>`). Hashes never
-  hit the server. Paste the link in chat; the recipient sees your
-  circuit instantly.
+- **VQE / QAOA / QML loops**: paste a Hamiltonian (or build an ansatz
+  on the canvas), pick an observable in Expectation, click Optimise.
+  Plateau and Landscape sub-tools warn about un-trainable initialisations.
+- **Calibrated noise comparison**: import an IBM `BackendProperties`
+  snapshot, run a circuit, compare against actual hardware output.
+- **Zero-noise extrapolation**: with noise on, click ZNE to run at
+  three rates and read the noise-free estimate.
+- **QEC decoder benchmarks**: build a stabilizer code with ancillas,
+  add a syndrome-extraction sequence, sample 10 k shots on the
+  Clifford path — up to ~1 000 qubits.
+- **Compiler / equivalence research**: rewrite via Optimise, then
+  Transpile, then Route; compare the result to the original with
+  Equivalence check across two tabs. Process fidelity reports the
+  exact cost of each pass.
+- **Dynamic circuits**: mid-circuit measurement + classical
+  conditioning works end-to-end (teleportation with feedback,
+  repeat-until-success, adaptive QEC). Measurement counts panel gives
+  the bitstring histogram per the textbook.
+- **Process tomography**: reconstruct χ for any ≤ 4-qubit subroutine,
+  toggle noise on, switch between heatmap and Hinton view.
+- **Notebook export**: Download to **Qiskit, Cirq, Braket, Q#,
+  PyQuil, or pytket** — full Python script with parameter declarations,
+  ready to paste into a Jupyter cell.
+- **Collaboration**: **Share** copies a URL with the entire circuit
+  encoded in the hash fragment. Hashes never hit the server. Paste
+  in chat; recipient sees your circuit instantly.
+- **Animation export**: when `t` is a free parameter, **Record** dumps
+  one period as a 3-second WebM video — paper / slide-ready.
+- **Resource estimation**: read T-count, T-depth, CX count,
+  parallel depth, connectivity-violation count straight from the IR.
 
 ## Examples
 
-The Examples dropdown bundles 62 hand-written circuits grouped by
-topic:
+The Examples picker is a typeahead search across 67 hand-written
+circuits in 8 categories:
 
-- **Intro** — coin flip, Walsh–Hadamard, magic state `|H⟩ = T|+⟩`.
+- **Intro** — coin flip, Walsh–Hadamard, magic state.
 - **Entanglement** — Bell, GHZ (incl. 8q / 12q / 16q), W state, linear
   cluster, phased Schrödinger cat.
-- **Protocols** — teleportation, entanglement swapping, superdense
-  coding, phase kickback, CHSH inequality, BB84.
+- **Protocols** — teleportation (static + **dynamic with classical
+  feedback**), entanglement swapping, superdense coding, phase
+  kickback, CHSH, BB84, **repeat-until-success**.
 - **Algorithms** — Deutsch (1-bit), Deutsch–Jozsa (incl. 6q),
-  Bernstein–Vazirani (6q, 8q), Simon (s = 11), Grover (1, 2, 4q, 5q),
+  Bernstein–Vazirani (6q, 8q), Simon, Grover (1, 2, 4q, 5q),
   QFT (5q, 8q), inverse QFT, QPE, amplitude amplification, Hadamard
   cascade 8 / 12 / 16q, quantum-walk step.
-- **Arithmetic & ECC** — half adder, Cuccaro 3+3-bit ripple-carry
-  adder, bit-flip code, Steane [[7,1,3]] encoder, 5-qubit perfect
-  code.
+- **Arithmetic & ECC** — half adder, Cuccaro 3+3-bit adder, bit-flip
+  code, Steane [[7,1,3]] encoder, 5-qubit perfect code.
 - **Hamiltonian dynamics** — Ising-6 Trotter, XY-4 Trotter.
 - **Decompositions** — Toffoli → Clifford + T.
-- **Variational** — QAOA on a triangle, hardware-efficient ansatz,
-  VQE-2L, VQE-6L.
+- **Variational** — QAOA triangle / kite / **square depth-2**,
+  hardware-efficient 2-layer / 6-layer, **Real Amplitudes**,
+  **UCCSD-lite**.
 - **Animation** — Rabi + Larmor, QFT of evolving state, phase
   fountain, Ising Trotter, multi-frequency cascade, dense swirl
   (deep-swirl-8 with ~100 gates).
@@ -293,13 +398,25 @@ topic:
 - **OpenQASM 3** round-trip with anti-controls (`negctrl @`),
   conditional gates (`if (c[k] == v) …`), the `ctrl(n) @` modifier
   chain, and multi-statement lines.
-- **Qiskit Python** export — `qc = QuantumCircuit(...)` with parameter
-  declarations, `ctrl_state=` for anti-controls, and the same
-  state-prep / measurement decompositions.
+- **OpenQASM 2** import — `qreg` / `creg` / `include "qelib1.inc"` /
+  `OPENQASM 2.0;` all parse via the QASM 3 parser's compatibility
+  paths.
+- **Six SDK code exports** for the dominant ecosystems:
+  - **Qiskit** Python — IBM
+  - **Cirq** — Google
+  - **Amazon Braket** SDK — AWS
+  - **Q#** — Microsoft
+  - **PyQuil** — Rigetti
+  - **pytket** — Quantinuum
+  Each walks the same IR with target-specific syntax. Free symbols
+  carry through as named parameters so a Quantiom ansatz lands as a
+  parameterised circuit on the other side.
 - **Share link** — full circuit IR → JSON → gzip → base64url → URL
   hash fragment. Zero server cost; hashes never hit the wire.
 - **SVG export** of the canvas with embedded gate CSS and dark theme,
   for papers and slides.
+- **WebM video export** of the t-animation (canvas captureStream +
+  MediaRecorder, VP9 / VP8 fallback, default 3 s at 30 fps).
 
 ## Dev
 
