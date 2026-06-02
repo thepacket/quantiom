@@ -38,10 +38,12 @@ function findMatches(circuit: Circuit, query: string): Set<string> | undefined {
   return matched;
 }
 import { decodeCircuitFromHash } from "./shareLink";
+import { parseQasm3 } from "../qasm/parse";
 import { inverseGates } from "./inverse";
 import { transpile, type TranspileTarget } from "../sim/transpile";
 import { routeCircuit } from "../sim/router";
 import { optimiseCircuit } from "../sim/optimisePasses";
+import { randomCliffordCircuit } from "../sim/randomClifford";
 import { compileForDevice } from "../sim/compile";
 import { recordAnimationWebM } from "./recordAnimation";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
@@ -192,6 +194,7 @@ function TransformMenu({
   onTranspile,
   onCompile,
   onRoute,
+  onRandomClifford,
 }: {
   hasCoupling: boolean;
   onCompact: () => void;
@@ -200,6 +203,7 @@ function TransformMenu({
   onTranspile: (t: TranspileTarget) => void;
   onCompile: (t: TranspileTarget) => void;
   onRoute: () => void;
+  onRandomClifford: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement | null>(null);
@@ -235,6 +239,10 @@ function TransformMenu({
             <button className="examples-picker__item" onClick={() => { setOpen(false); onOptimise(); }}>
               <span>Optimise</span>
               <span className="export-picker__hint">peephole rewrites</span>
+            </button>
+            <button className="examples-picker__item" onClick={() => { setOpen(false); onRandomClifford(); }}>
+              <span>Random Clifford…</span>
+              <span className="export-picker__hint">new tab; tableau fast-path test</span>
             </button>
             <div className="examples-picker__cat-label">Transpile to native →</div>
             {targets.map((tg) => (
@@ -506,6 +514,58 @@ export function CircuitEditor() {
     return () => window.removeEventListener("keydown", onKey);
   }, [dispatch, selectedGateId, setSelectedGateId, t]);
 
+  // Drag-and-drop QASM (.qasm/.qasm3) and JSON IR (.json) imports onto the
+  // editor. Each dropped file opens in its own new tab. Falls back to a
+  // plain alert on parse failure; the user already has the file on disk.
+  useEffect(() => {
+    const onDragOver = (e: DragEvent) => {
+      if (!e.dataTransfer) return;
+      const hasFiles = Array.from(e.dataTransfer.items ?? []).some((it) => it.kind === "file");
+      if (!hasFiles) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    };
+    const onDrop = async (e: DragEvent) => {
+      const files = Array.from(e.dataTransfer?.files ?? []);
+      if (files.length === 0) return;
+      e.preventDefault();
+      for (const f of files) {
+        const name = f.name.replace(/\.(qasm3?|json)$/i, "");
+        const text = await f.text();
+        if (/\.json$/i.test(f.name)) {
+          try {
+            const data = JSON.parse(text);
+            if (
+              data && typeof data === "object"
+              && typeof data.numQubits === "number"
+              && Array.isArray(data.gates)
+            ) {
+              t.newTab({ ...data, name }, name);
+              continue;
+            }
+            window.alert(`Drop failed: ${f.name} doesn't look like a Quantiom JSON IR.`);
+          } catch {
+            window.alert(`Drop failed: ${f.name} isn't valid JSON.`);
+          }
+          continue;
+        }
+        // Treat anything else as QASM (lenient — OpenQASM files have varied extensions).
+        const result = parseQasm3(text);
+        if (!result.ok) {
+          window.alert(`Drop failed parsing ${f.name} (line ${result.line}): ${result.error}`);
+          continue;
+        }
+        t.newTab({ ...result.circuit, name }, name);
+      }
+    };
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("drop", onDrop);
+    return () => {
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("drop", onDrop);
+    };
+  }, [t]);
+
   return (
     <div className="editor">
       <header className="app__header">
@@ -567,6 +627,35 @@ export function CircuitEditor() {
               }}
             />
             <button onClick={onSaveAsGate} title="Save the current circuit as a reusable custom gate">Save as gate</button>
+            <button
+              onClick={() => {
+                // Append a measure gate on every qubit. Auto-allocate clbits
+                // when there aren't enough. Place all in the same column,
+                // immediately after the highest existing column.
+                const n = circuit.numQubits;
+                if (n === 0) return;
+                const needClbits = n - circuit.numClbits;
+                for (let i = 0; i < needClbits; i++) dispatch({ type: "add-clbit" });
+                const startCol = circuit.gates.reduce((m, g) => Math.max(m, g.column), -1) + 1;
+                for (let q = 0; q < n; q++) {
+                  dispatch({
+                    type: "place-gate",
+                    gate: {
+                      id: `m_${Date.now()}_${q}`,
+                      gateId: "measure",
+                      controls: [],
+                      targets: [q],
+                      clbits: [q],
+                      params: [],
+                      column: startCol,
+                    },
+                  });
+                }
+              }}
+              title="Append a measure on every qubit (auto-allocates classical bits)"
+            >
+              Measure all
+            </button>
             <input
               type="search"
               className="editor__find"
@@ -646,6 +735,22 @@ export function CircuitEditor() {
                   `  SWAPs added:   ${result.swapsInserted}\n` +
                   `  total gates:   ${circuit.gates.length} → ${result.circuit.gates.length}`,
                 );
+              }}
+              onRandomClifford={() => {
+                const raw = window.prompt(
+                  "Random Clifford circuit — enter qubits, depth (e.g. \"6, 30\")",
+                  `${Math.max(circuit.numQubits, 4)}, 30`,
+                );
+                if (!raw) return;
+                const parts = raw.split(/[, ]+/).map((s) => parseInt(s.trim(), 10));
+                const n = Number.isFinite(parts[0]) && parts[0] > 0 ? parts[0] : 4;
+                const depth = Number.isFinite(parts[1]) && parts[1] > 0 ? parts[1] : 30;
+                if (n > 1024) {
+                  window.alert("Max 1024 qubits (stabilizer cap).");
+                  return;
+                }
+                const c = randomCliffordCircuit({ numQubits: n, depth });
+                t.newTab(c, c.name);
               }}
             />
             {simState.kind === "ready" && simState.data.freeSymbols.includes("t") && (

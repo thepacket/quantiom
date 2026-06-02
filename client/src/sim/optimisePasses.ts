@@ -157,6 +157,17 @@ export function optimiseCircuit(circuit: Circuit): OptimiseResult {
     gates = result.gates;
   }
 
+  // Post-pass: commute-through-diagonals merge. Rz/P/U1/CP/CRZ rotations
+  // on the same qubit can hop past any other diagonal gate (Z, S, T, CZ,
+  // RZZ, …) to find a same-id same-qubit partner to merge with. We do this
+  // after the main passes so it picks up only the "leftovers" not caught by
+  // simple adjacency.
+  for (let i = 0; i < 50; i++) {
+    const result = commuteDiagonalMerge(gates, rulesFired);
+    if (!result.changed) break;
+    gates = result.gates;
+  }
+
   // ASAP re-pack columns.
   const nextColQ = new Array<number>(circuit.numQubits).fill(0);
   const nextColC = new Array<number>(circuit.numClbits).fill(0);
@@ -328,6 +339,96 @@ function fuseHCXH(
     next.push(g);
   }
   return { gates: next, changed };
+}
+
+/**
+ * Diagonal gates in the computational basis commute pairwise even on
+ * overlapping qubits. That lets a same-id rotation pair separated *only* by
+ * other diagonals merge: e.g. `Rz(a) · CZ · Rz(b)` on the same qubit becomes
+ * `CZ · Rz(a + b)`.
+ *
+ * To stay safe we only merge rotations from a clean class (rz, p, u1, crz,
+ * cp, cu1, rzz). All listed gates are diagonal, so the "diagonal class"
+ * acts as both the rotation to merge and the blocker that's allowed to
+ * sit between two same-id rotations.
+ */
+const DIAGONAL_GATES = new Set([
+  "i", "z", "s", "sdg", "t", "tdg", "rz", "p", "u1",
+  "cz", "cp", "cu1", "crz", "rzz",
+]);
+const DIAGONAL_ROTATIONS = new Set(["rz", "p", "u1", "crz", "cp", "cu1", "rzz"]);
+
+function isDiagonalForQubit(g: PlacedGate, q: number): boolean {
+  if (g.controlStates?.some((s) => !s)) return false;
+  if (g.condition) return false;
+  const qs = [...g.controls, ...g.targets];
+  if (!qs.includes(q)) return true; // doesn't touch q at all — trivially commutes
+  return DIAGONAL_GATES.has(g.gateId);
+}
+
+function commuteDiagonalMerge(
+  gates: PlacedGate[],
+  rules: Record<string, number>,
+): { gates: PlacedGate[]; changed: boolean } {
+  const sorted = [...gates].sort(
+    (a, b) => a.column - b.column || a.id.localeCompare(b.id),
+  );
+  const remove = new Set<string>();
+  const mergedById = new Map<string, string[]>();
+  let changed = false;
+
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    if (remove.has(g.id)) continue;
+    if (!DIAGONAL_ROTATIONS.has(g.gateId)) continue;
+    if (g.condition || g.controlStates?.some((s) => !s)) continue;
+    const qubits = [...g.controls, ...g.targets];
+
+    // Walk backwards through earlier gates. Find the nearest predecessor
+    // that's a same-id, same-qubit-set rotation we can commute through.
+    for (let j = i - 1; j >= 0; j--) {
+      const prev = sorted[j];
+      if (remove.has(prev.id)) continue;
+      // Does prev touch any of g's qubits?
+      const prevQs = [...prev.controls, ...prev.targets];
+      const overlap = prevQs.some((pq) => qubits.includes(pq));
+      if (!overlap) continue; // independent, keep walking
+      // If prev is the same gate id on the same qubit set with same controls/targets
+      // → merge.
+      if (
+        prev.gateId === g.gateId
+        && sameQubitSet(prev, g)
+        && !prev.condition
+        && !prev.controlStates?.some((s) => !s)
+      ) {
+        const prevParams = mergedById.get(prev.id) ?? prev.params;
+        const merged = prevParams.map((p, k) => combineExpr(p, g.params[k] ?? ""));
+        mergedById.set(prev.id, merged);
+        remove.add(g.id);
+        rules[`commute-merge ${g.gateId}`] =
+          (rules[`commute-merge ${g.gateId}`] ?? 0) + 1;
+        changed = true;
+        break;
+      }
+      // Can we commute g past prev? Only if prev is diagonal on every qubit
+      // g touches that prev also touches.
+      const stillCommutes = qubits.every((q) => isDiagonalForQubit(prev, q));
+      if (!stillCommutes) break;
+    }
+  }
+
+  if (!changed) return { gates, changed: false };
+  const next: PlacedGate[] = [];
+  for (const g of gates) {
+    if (remove.has(g.id)) continue;
+    const mergedParams = mergedById.get(g.id);
+    if (mergedParams) {
+      next.push({ ...g, id: newGateId(), params: mergedParams });
+      continue;
+    }
+    next.push(g);
+  }
+  return { gates: next, changed: true };
 }
 
 function pushAll(stacks: PlacedGate[][], g: PlacedGate): void {

@@ -4,13 +4,20 @@ import { cmul, neg } from "./complex";
 /**
  * ⚠️ WORK IN PROGRESS — NOT WIRED INTO THE UI.
  *
- * Status as of last commit: passes on identity and pure single-axis
- * interactions (exp(iα XX), etc.) but does **not** yet handle CNOT, SWAP,
- * or generic Haar-random unitaries. The brute-force permutation + sign
- * search finds a "best" residual around 0.15-0.36 for these cases — close
- * but not converged. Cause is somewhere in the magic-basis convention vs.
- * eigenvalue-position assignment; needs a known-good reference to align
- * against. Tests live in `client/scripts/test-kak.ts` (run with
+ * Status: passes identity, SWAP, pure single-axis interactions (exp(iα XX)).
+ * Still fails on CNOT and most Haar-random unitaries — the simultaneous-
+ * diagonalisation path can't pin down eigenvectors inside degenerate
+ * eigenvalue blocks (e.g. CNOT's Weyl coords (π/4, 0, 0) produce a doubled
+ * spectrum), and the brute-force perm × sign mask doesn't reach into the
+ * extra SO(k) freedom that lives there. Sign-mask now correctly encodes
+ * the √(e^{2iθ}) = ±e^{iθ} ambiguity (was wrongly doing θ → -θ before).
+ * Polar-projection of the candidate O_L onto O(4) added as a soft repair.
+ *
+ * Next-session move: handle degenerate blocks explicitly by extracting all
+ * candidate orthonormal bases within the block (e.g. Givens-rotation sweep
+ * inside each degenerate sub-block) before the perm/sign search, or pivot
+ * to a Tucci-style algorithm that doesn't require Autonne-Takagi.
+ * Tests live in `client/scripts/test-kak.ts` (run with
  * `npx tsx scripts/test-kak.ts`).
  *
  * Until correctness is verified end-to-end, this file is dead code: the
@@ -306,45 +313,44 @@ export function decomposeKAK4x4(U: Complex[][]): KakResult | null {
 
   for (const perm of PERMS_4) {
     for (let mask = 0; mask < 16; mask++) {
-      const signs: number[] = [
-        (mask & 1) ? -1 : 1,
-        (mask & 2) ? -1 : 1,
-        (mask & 4) ? -1 : 1,
-        (mask & 8) ? -1 : 1,
+      // Sign ambiguity: D² has eigenvalues e^{2iθ_k}; D has ±e^{iθ_k}.
+      // sign = -1 means we use -e^{iθ_k} = e^{i(θ_k + π)} instead.
+      const signFlips: number[] = [
+        (mask & 1) ? 1 : 0,
+        (mask & 2) ? 1 : 0,
+        (mask & 4) ? 1 : 0,
+        (mask & 8) ? 1 : 0,
       ];
-      // Extract (α, β, γ) from the permuted, signed phases.
-      // The 4 magic-basis eigenvalues of K(α, β, γ) under this code's
-      // magic-basis convention are {α − β + γ, α + β − γ, −α − β − γ,
-      // −α + β + γ}. With perm assigning phaseHalf[perm[k]] to slot k,
-      // the inversion is:
-      //   α = (ph[0] + ph[1]) / 2
-      //   β = (ph[1] + ph[3]) / 2
-      //   γ = (ph[0] + ph[3]) / 2
-      // Sign mask flips individual phases (√-of-e^{2iθ} ambiguity).
-      const ph = perm.map((idx, k) => phaseHalf[idx] * signs[k]);
-      const alpha = (ph[0] + ph[1]) / 2;
-      const beta = (ph[1] + ph[3]) / 2;
-      const gamma = (ph[0] + ph[3]) / 2;
-      // Rebuild F = diag(e^{i·phase}) in the *original* eigenvector order
-      // (so multiplying by F^{-1} from the right of Um·R gives O_L).
-      const FinvDiag: Complex[] = phaseHalf.map((p, k) => {
-        // Find which permutation slot this phase ended up in to know its sign.
-        const slot = perm.indexOf(k);
-        const eff = p * signs[slot];
-        return [Math.cos(-eff), Math.sin(-eff)];
-      });
+      // Effective θ_k per eigenvector slot k = phaseHalf[k] + π·flip[k].
+      // After permutation we have the *assigned* phases per Weyl-chamber
+      // slot s: thAssigned[s] = thEff[perm[s]].
+      const thEff = phaseHalf.map((p, k) => p + Math.PI * signFlips[k]);
+      const ph = perm.map((idx) => thEff[idx]);
+      // Inversion of {α-β+γ, -α+β+γ, α+β-γ, -α-β-γ} = {ph[0..3]}:
+      //   α = (ph[0] + ph[2]) / 2
+      //   β = (ph[1] + ph[2]) / 2
+      //   γ = (ph[0] + ph[1]) / 2
+      const alpha = (ph[0] + ph[2]) / 2;
+      const beta = (ph[1] + ph[2]) / 2;
+      const gamma = (ph[0] + ph[1]) / 2;
+      // F^{-1} in the original eigenvector basis: entry k uses θ_eff[k] = θ_k + π·flip[k].
+      const FinvDiag: Complex[] = thEff.map((eff) => [Math.cos(-eff), Math.sin(-eff)]);
       const Finv: Complex[][] = Array.from({ length: 4 }, () =>
         Array.from({ length: 4 }, () => [0, 0] as Complex),
       );
       for (let k = 0; k < 4; k++) Finv[k][k] = FinvDiag[k];
       const OLc = matMul(Um, matMul(Rc, Finv));
-      // OL must be real; check imaginary parts.
-      let imSq = 0;
-      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) imSq += OLc[i][j][1] * OLc[i][j][1];
-      if (imSq > 1e-6) continue;
-      const OLreal: number[][] = OLc.map((row) => row.map((e) => e[0]));
-      // det must be +1 (proper rotation in SO(4)).
-      if (det4(OLreal) < 0.5) continue;
+      // OL must be in SO(4). With degenerate eigenvalues the diagonalisation
+      // is only defined up to a unitary inside each degenerate block, so OLc
+      // may have non-trivial imaginary parts. Polar-project the real part
+      // onto O(4) and let the residual check decide if this candidate works.
+      const OLrealRaw: number[][] = OLc.map((row) => row.map((e) => e[0]));
+      const OLreal = polarOrthogonalise(OLrealRaw);
+      if (!OLreal) continue;
+      if (det4(OLreal) < 0) {
+        // det -1 → flip first column to land in SO(4).
+        for (let i = 0; i < 4; i++) OLreal[i][0] = -OLreal[i][0];
+      }
       const lTensor = magicToTensor(OLreal);
       const rTensor = magicToTensor(ORreal);
       if (!lTensor || !rTensor) continue;
@@ -487,6 +493,25 @@ function magicToTensor(O: number[][]): { V1: Complex[][]; V2: Complex[][] } | nu
     V2[b][c2] = cmul(T[2 * a0 + b][2 * c10 + c2], v1Inv);
   }
   return { V1, V2 };
+}
+
+/**
+ * Polar projection: given a real 4×4 matrix M, return the nearest orthogonal
+ * matrix Q via Q = U V^T where M = U Σ V^T is the SVD. Implemented by
+ * eigendecomposing M^T M (symmetric PSD) → Σ², V; then U = M V Σ^{-1}.
+ * Returns null if M is singular.
+ */
+function polarOrthogonalise(M: number[][]): number[][] | null {
+  const MtM = realMul(realTranspose(M), M);
+  const { D, V } = jacobiEigen(MtM);
+  const sigma = D.map((d) => Math.sqrt(Math.max(d, 0)));
+  for (const s of sigma) if (s < 1e-9) return null;
+  const sigmaInv = sigma.map((s) => 1 / s);
+  // U = M · V · diag(sigmaInv)
+  const MV = realMul(M, V);
+  const U: number[][] = MV.map((row) => row.map((v, j) => v * sigmaInv[j]));
+  // Q = U · V^T
+  return realMul(U, realTranspose(V));
 }
 
 function cinv(z: Complex): Complex {

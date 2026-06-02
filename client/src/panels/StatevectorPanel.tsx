@@ -33,16 +33,71 @@ export function StatevectorPanel({ state }: Props) {
     return terms.length ? "|psi> = " + terms.join(" + ") : "|psi> = 0";
   };
 
+  /**
+   * Download the full statevector — `csv` writes a row-per-basis CSV
+   * (basis, re, im, prob); `json` writes a JSON object with the raw amplitude
+   * array. Skipped on stabilizer/noisy paths because there's no single ket.
+   */
+  const downloadStatevector = (fmt: "csv" | "json") => {
+    if (!data || data.isStabilizer || data.isNoisy) return;
+    const rows = data.amplitudes;
+    let blob: Blob;
+    let filename: string;
+    if (fmt === "csv") {
+      const lines = ["basis,re,im,probability"];
+      for (const a of rows) {
+        lines.push(`${a.basis},${a.re},${a.im},${a.re * a.re + a.im * a.im}`);
+      }
+      blob = new Blob([lines.join("\n") + "\n"], { type: "text/csv;charset=utf-8" });
+      filename = "statevector.csv";
+    } else {
+      const obj = {
+        numQubits: data.numQubits,
+        amplitudes: rows.map((a) => ({ basis: a.basis, re: a.re, im: a.im })),
+      };
+      blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json;charset=utf-8" });
+      filename = "statevector.json";
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  };
+
+  const canExport = !!data && !data.isNoisy && !data.isStabilizer;
+
   return (
     <PanelShell
       id="statevector"
       title="Statevector"
       getCopyText={copy}
       toolbar={
-        <label className="panel__toggle">
-          <input type="checkbox" checked={hideZeros} onChange={(e) => setHideZeros(e.target.checked)} />
-          hide zeros
-        </label>
+        <>
+          <label className="panel__toggle">
+            <input type="checkbox" checked={hideZeros} onChange={(e) => setHideZeros(e.target.checked)} />
+            hide zeros
+          </label>
+          {canExport && (
+            <>
+              <button
+                onClick={() => downloadStatevector("csv")}
+                title="Download the statevector as CSV (basis, re, im, |amp|²)"
+              >
+                CSV
+              </button>
+              <button
+                onClick={() => downloadStatevector("json")}
+                title="Download the statevector as JSON"
+              >
+                JSON
+              </button>
+            </>
+          )}
+        </>
       }
     >
       {error && <div className="panel__error">{error}</div>}
