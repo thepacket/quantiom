@@ -164,6 +164,18 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
     gates = result.gates;
   }
 
+  // Post-pass: 3-CX → SWAP synthesis recognition.
+  //   CX(a,b)·CX(b,a)·CX(a,b)  →  SWAP(a,b)
+  //   CX(b,a)·CX(a,b)·CX(b,a)  →  SWAP(a,b)
+  // Fires on triples that are adjacent on *both* qubits (no intervening gate
+  // touches a or b). Saves 2 CX per match. Default-on like the H·CX·H pass
+  // — purely a collapse, no reordering, semantics preserved exactly.
+  for (let i = 0; i < 50; i++) {
+    const result = fuseSwapSynthesis(gates, rulesFired);
+    if (!result.changed) break;
+    gates = result.gates;
+  }
+
   // Post-pass (deep mode only): commute-through-diagonals merge. Rz/P/U1/
   // CP/CRZ rotations on the same qubit can hop past any other diagonal
   // gate (Z, S, T, CZ, RZZ, …) to find a same-id same-qubit partner to
@@ -343,6 +355,95 @@ function fuseHCXH(
     if (remove.has(g.id)) continue;
     if (rewriteCXtoCZ.has(g.id)) {
       next.push({ ...g, id: newGateId(), gateId: "cz" });
+      continue;
+    }
+    next.push(g);
+  }
+  return { gates: next, changed };
+}
+
+/**
+ * Detect 3-CX SWAP patterns and collapse to a single SWAP gate.
+ *
+ * The textbook identity:
+ *   CX(a,b) · CX(b,a) · CX(a,b)  =  SWAP(a,b)
+ *
+ * The mirror form CX(b,a)·CX(a,b)·CX(b,a) collapses to the same SWAP.
+ * We require all three CXs to be adjacent on BOTH qubits — i.e., no other
+ * gate touches a or b between them. That keeps the rewrite semantically
+ * sound regardless of what's happening on other qubits.
+ */
+function fuseSwapSynthesis(
+  gates: PlacedGate[],
+  rules: Record<string, number>,
+): { gates: PlacedGate[]; changed: boolean } {
+  const sorted = [...gates].sort(
+    (a, b) => a.column - b.column || a.id.localeCompare(b.id),
+  );
+  const numQ = sorted.reduce(
+    (m, g) => Math.max(m, ...g.controls, ...g.targets),
+    -1,
+  ) + 1;
+  // Per-qubit gate index lists, in time order.
+  const perQ: number[][] = Array.from({ length: numQ }, () => []);
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    for (const q of [...g.controls, ...g.targets]) {
+      if (q < numQ) perQ[q].push(i);
+    }
+  }
+
+  const isPlainCX = (g: PlacedGate) =>
+    g.gateId === "cx"
+    && g.controls.length === 1 && g.targets.length === 1
+    && !g.condition && !g.controlStates?.some((s) => !s);
+
+  const remove = new Set<string>();
+  const rewriteToSwap = new Set<string>();
+  let changed = false;
+
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    if (!isPlainCX(g)) continue;
+    if (remove.has(g.id) || rewriteToSwap.has(g.id)) continue;
+    const a = g.controls[0];
+    const b = g.targets[0];
+    if (a < 0 || b < 0 || a >= numQ || b >= numQ) continue;
+    // Find this gate's positions in both qubits' adjacency lists.
+    const listA = perQ[a]; const listB = perQ[b];
+    const posA = listA.indexOf(i); const posB = listB.indexOf(i);
+    if (posA <= 0 || posB <= 0) continue;
+    if (posA >= listA.length - 1 || posB >= listB.length - 1) continue;
+    // Adjacency on both qubits → prev and next must be the same gate
+    // indices, otherwise some other gate is interposed.
+    if (listA[posA - 1] !== listB[posB - 1]) continue;
+    if (listA[posA + 1] !== listB[posB + 1]) continue;
+    const prev = sorted[listA[posA - 1]];
+    const next = sorted[listA[posA + 1]];
+    if (!isPlainCX(prev) || !isPlainCX(next)) continue;
+    if (remove.has(prev.id) || remove.has(next.id)) continue;
+    if (rewriteToSwap.has(prev.id) || rewriteToSwap.has(next.id)) continue;
+    // Pattern: outer = CX(b, a), middle = g = CX(a, b). The mirror
+    // configuration (outer = CX(a,b), middle = CX(b,a)) is naturally caught
+    // when iteration reaches *that* middle — no need to handle both here.
+    const prevC = prev.controls[0], prevT = prev.targets[0];
+    const nextC = next.controls[0], nextT = next.targets[0];
+    if (!(prevC === b && prevT === a && nextC === b && nextT === a)) continue;
+    remove.add(prev.id);
+    remove.add(next.id);
+    rewriteToSwap.add(g.id);
+    rules["CX·CX·CX → SWAP"] = (rules["CX·CX·CX → SWAP"] ?? 0) + 1;
+    changed = true;
+  }
+
+  if (!changed) return { gates, changed };
+  const next: PlacedGate[] = [];
+  for (const g of gates) {
+    if (remove.has(g.id)) continue;
+    if (rewriteToSwap.has(g.id)) {
+      // SWAP is symmetric; pick a canonical (control,target) → (∅, [a, b]).
+      const a = g.controls[0]; const b = g.targets[0];
+      next.push({ ...g, id: newGateId(), gateId: "swap", controls: [], targets: [a, b] });
       continue;
     }
     next.push(g);
