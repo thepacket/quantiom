@@ -64,6 +64,16 @@ export type NoiseModel = {
    *  Populated by the IBM importer from the device's `coupling_map` and
    *  used by the crosstalk channel. */
   coupling?: number[][];
+  /** User-defined single-qubit Kraus channel. Each operator is a 2×2
+   *  complex matrix as a row-major array of 8 floats: [Re00, Im00, Re01,
+   *  Im01, Re10, Im10, Re11, Im11]. Applied after every 1-qubit gate on
+   *  the target qubit via state-conditional sampling. Channel should be
+   *  trace-preserving (Σ Kᵢ† Kᵢ = I) — we do not enforce this. */
+  customKraus?: {
+    enabled: boolean;
+    name: string;
+    operators: number[][];
+  };
   /** Per-qubit overrides. Length matches the circuit width when set by
    *  the importer; out-of-range qubits fall back to the global rates. */
   perQubit?: PerQubitRates[];
@@ -102,6 +112,15 @@ export function loadNoise(): NoiseModel {
       trajectories: Math.max(1, Math.min(8192, parsed.trajectories ?? DEFAULT_NOISE.trajectories)),
       perQubit: Array.isArray(parsed.perQubit) ? parsed.perQubit.map(sanitisePerQubit) : undefined,
       coupling: Array.isArray(parsed.coupling) ? parsed.coupling : undefined,
+      customKraus: parsed.customKraus && typeof parsed.customKraus === "object" && Array.isArray(parsed.customKraus.operators)
+        ? {
+            enabled: !!parsed.customKraus.enabled,
+            name: typeof parsed.customKraus.name === "string" ? parsed.customKraus.name : "custom",
+            operators: parsed.customKraus.operators
+              .filter((op: unknown) => Array.isArray(op) && (op as unknown[]).length === 8 && (op as unknown[]).every((v) => Number.isFinite(v)))
+              .map((op: number[]) => [...op]),
+          }
+        : undefined,
     };
   } catch {
     return { ...DEFAULT_NOISE };

@@ -195,6 +195,8 @@ export function NoisePanel({ noise, onChange }: Props) {
           )}
         </fieldset>
 
+        <CustomKrausEditor noise={noise} onChange={onChange} />
+
         {noise.perQubit && noise.perQubit.length > 0 && (
           <fieldset className="noise__group">
             <legend>Per-qubit rates ({noise.perQubit.length} qubits)</legend>
@@ -275,6 +277,92 @@ function PerQubitTable({
       </table>
     </div>
   );
+}
+
+function CustomKrausEditor({
+  noise,
+  onChange,
+}: {
+  noise: NoiseModel;
+  onChange: (next: NoiseModel) => void;
+}) {
+  const kraus = noise.customKraus;
+  const [text, setText] = useState(() => kraus ? formatKraus(kraus.operators) : "");
+  const [err, setErr] = useState<string | null>(null);
+
+  const toggle = (on: boolean) => {
+    if (on && !kraus) {
+      // Seed with the identity channel.
+      onChange({ ...noise, customKraus: { enabled: true, name: "custom 1q", operators: [[1, 0, 0, 0, 0, 0, 1, 0]] } });
+      setText(formatKraus([[1, 0, 0, 0, 0, 0, 1, 0]]));
+    } else if (kraus) {
+      onChange({ ...noise, customKraus: { ...kraus, enabled: on } });
+    }
+  };
+
+  const onTextChange = (t: string) => {
+    setText(t);
+    try {
+      const parsed = parseKraus(t);
+      onChange({
+        ...noise,
+        customKraus: {
+          enabled: kraus?.enabled ?? true,
+          name: kraus?.name ?? "custom 1q",
+          operators: parsed,
+        },
+      });
+      setErr(null);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  return (
+    <fieldset className="noise__group" disabled={!noise.enabled}>
+      <legend>Custom 1q Kraus channel</legend>
+      <label className="noise__enable" style={{ fontSize: 11 }}>
+        <input
+          type="checkbox"
+          checked={!!kraus?.enabled}
+          onChange={(e) => toggle(e.target.checked)}
+        />
+        <span>Apply after every 1-qubit gate</span>
+      </label>
+      <p className="noise__hint">
+        Each operator is a 2×2 complex matrix on its own line: 8 numbers,
+        row-major Re/Im pairs (Re00, Im00, Re01, Im01, Re10, Im10, Re11,
+        Im11). Should satisfy Σ Kᵢ† Kᵢ = I — not enforced.
+      </p>
+      <textarea
+        className="noise__kraus"
+        value={text}
+        onChange={(e) => onTextChange(e.target.value)}
+        rows={Math.max(2, (text.match(/\n/g) ?? []).length + 1)}
+        placeholder="1 0 0 0  0 0 0.95 0&#10;0 0 0.31 0  0 0 0 0"
+      />
+      {err && <div className="noise__import-err">✗ {err}</div>}
+    </fieldset>
+  );
+}
+
+function formatKraus(operators: number[][]): string {
+  return operators.map((op) => op.map((v) => v.toString()).join(" ")).join("\n");
+}
+
+function parseKraus(text: string): number[][] {
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const out: number[][] = [];
+  for (const line of lines) {
+    const parts = line.split(/[\s,]+/).filter(Boolean).map(Number);
+    if (parts.length !== 8 || parts.some((v) => !Number.isFinite(v))) {
+      throw new Error(`each operator needs 8 numbers (got ${parts.length})`);
+    }
+    out.push(parts);
+  }
+  if (out.length === 0) throw new Error("at least one operator required");
+  if (out.length > 4) throw new Error("at most 4 operators supported");
+  return out;
 }
 
 function PQCell({ value, onChange }: { value: number | undefined; onChange: (v: number | undefined) => void }) {

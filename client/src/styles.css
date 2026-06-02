@@ -388,6 +388,8 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .noise__coupling { display: flex; gap: 6px; align-items: baseline; font-size: 10px; padding-top: 4px; color: var(--muted); font-family: ui-monospace, monospace; }
 .noise__coupling-label { text-transform: uppercase; letter-spacing: 0.05em; font-size: 9px; }
 .noise__coupling-edges { color: var(--accent); }
+.noise__kraus { width: 100%; min-height: 36px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; font-family: ui-monospace, monospace; font-size: 10px; padding: 4px 6px; resize: vertical; }
+.noise__kraus:focus { outline: none; border-color: var(--accent); }
 
 .statevector__ket { padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow-x: auto; font-size: 15px; }
 .statevector__ket .katex-display { margin: 0; }

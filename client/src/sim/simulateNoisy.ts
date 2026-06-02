@@ -128,16 +128,19 @@ export function simulateNoisy(
         const q = involved[0];
         depolarise1(state, n, q, rateFor(noise, "oneQubitDepolarising", q));
         damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+        if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
       } else if (involved.length === 2) {
         depolarise2(state, n, involved[0], involved[1], noise.twoQubitDepolarising);
         for (const q of involved) {
           damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+          if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
         }
         applyCrosstalk(state, n, involved[0], involved[1], noise);
       } else {
         for (const q of involved) {
           depolarise1(state, n, q, noise.twoQubitDepolarising);
           damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+          if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
         }
       }
     }
@@ -199,6 +202,66 @@ export function simulateNoisy(
 }
 
 // ─── Internal: depolarising channels (stochastic Pauli) ─────────────────
+
+/**
+ * Apply a user-defined single-qubit Kraus channel to qubit q.
+ *
+ * Algorithm: for each Kraus operator Kᵢ, compute pᵢ = ||Kᵢ|ψ⟩|² by walking
+ * the state once and summing the post-application norm² over the qubit-
+ * conditioned 2D subspace. Sample one operator with probability pᵢ / Σpⱼ
+ * (renormalising in case the user-entered channel isn't strictly trace-
+ * preserving), then apply it to the state in place and rescale.
+ *
+ * Each operator is a 2×2 complex matrix passed as 8 floats in row-major
+ * order: [Re00, Im00, Re01, Im01, Re10, Im10, Re11, Im11].
+ */
+function applyCustomKraus(state: Float64Array, n: number, q: number, operators: ReadonlyArray<number[]>): void {
+  if (operators.length === 0) return;
+  const dim = 1 << n;
+  const mask = 1 << (n - 1 - q);
+  // Compute pᵢ per operator.
+  const ps = new Array<number>(operators.length).fill(0);
+  for (let i = 0; i < dim; i++) {
+    if ((i & mask) !== 0) continue;
+    const j = i | mask;
+    const a_re = state[2 * i], a_im = state[2 * i + 1];
+    const b_re = state[2 * j], b_im = state[2 * j + 1];
+    for (let k = 0; k < operators.length; k++) {
+      const K = operators[k];
+      // αʹ = K00·α + K01·β; βʹ = K10·α + K11·β  (complex multiply)
+      const ap_re = K[0] * a_re - K[1] * a_im + K[2] * b_re - K[3] * b_im;
+      const ap_im = K[0] * a_im + K[1] * a_re + K[2] * b_im + K[3] * b_re;
+      const bp_re = K[4] * a_re - K[5] * a_im + K[6] * b_re - K[7] * b_im;
+      const bp_im = K[4] * a_im + K[5] * a_re + K[6] * b_im + K[7] * b_re;
+      ps[k] += ap_re * ap_re + ap_im * ap_im + bp_re * bp_re + bp_im * bp_im;
+    }
+  }
+  let total = 0;
+  for (const p of ps) total += p;
+  if (total < 1e-12) return;
+  // Sample.
+  const r = Math.random() * total;
+  let cum = 0;
+  let chosen = operators.length - 1;
+  for (let i = 0; i < operators.length; i++) {
+    cum += ps[i];
+    if (r <= cum) { chosen = i; break; }
+  }
+  // Apply chosen in place + renormalise so the state norm is 1 again.
+  const K = operators[chosen];
+  for (let i = 0; i < dim; i++) {
+    if ((i & mask) !== 0) continue;
+    const j = i | mask;
+    const a_re = state[2 * i], a_im = state[2 * i + 1];
+    const b_re = state[2 * j], b_im = state[2 * j + 1];
+    state[2 * i] = K[0] * a_re - K[1] * a_im + K[2] * b_re - K[3] * b_im;
+    state[2 * i + 1] = K[0] * a_im + K[1] * a_re + K[2] * b_im + K[3] * b_re;
+    state[2 * j] = K[4] * a_re - K[5] * a_im + K[6] * b_re - K[7] * b_im;
+    state[2 * j + 1] = K[4] * a_im + K[5] * a_re + K[6] * b_im + K[7] * b_re;
+  }
+  const scale = 1 / Math.sqrt(ps[chosen]);
+  for (let k = 0; k < state.length; k++) state[k] *= scale;
+}
 
 /**
  * Crosstalk: when a 2-qubit gate fires between (a, b), apply 1-qubit
