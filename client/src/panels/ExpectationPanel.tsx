@@ -376,7 +376,11 @@ function DiagnosticTools({
   const [zne, setZne] = useState<{ samples: Array<{ scale: number; value: number }>; extrapolated: number } | null>(null);
   const [landscape, setLandscape] = useState<{ grid: number[][]; symbols: string[] } | null>(null);
   const [plateau, setPlateau] = useState<{ varPerSym: number[]; symbols: string[] } | null>(null);
-  const [pec, setPec] = useState<{ value: number; trajectories: number; varianceOverhead: number; locations: number } | null>(null);
+  const [pec, setPec] = useState<{
+    value: number; trajectories: number; varianceOverhead: number;
+    channels: { oneQDepol: number; phaseDamping: number; twoQDepol: number };
+    uninverted: string[];
+  } | null>(null);
 
   const runPec = () => {
     if (!ctx.noise.enabled || busy) return;
@@ -492,11 +496,17 @@ function DiagnosticTools({
       )}
       {pec && (
         <div className="exp__tools-result">
-          PEC ⟨P⟩ ≈ {pec.value.toFixed(4)} ({pec.trajectories} shots, {pec.locations} 1q locations)
+          PEC ⟨P⟩ ≈ {pec.value.toFixed(4)} ({pec.trajectories} shots ·
+          {" "}1q-depol: {pec.channels.oneQDepol}, phase-damp: {pec.channels.phaseDamping}, 2q-depol: {pec.channels.twoQDepol})
           <div className="exp__tools-extrap">
             variance overhead ≈ {pec.varianceOverhead.toExponential(2)}×
-            {pec.varianceOverhead > 1e6 && " — consider lowering 1q depolarising rate"}
+            {pec.varianceOverhead > 1e6 && " — consider lowering noise rates"}
           </div>
+          {pec.uninverted.length > 0 && (
+            <div className="exp__tools-extrap" style={{ color: "var(--warn, #d8a)" }}>
+              not inverted: {pec.uninverted.join(", ")} — estimate is partial
+            </div>
+          )}
         </div>
       )}
     </div>
