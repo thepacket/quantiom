@@ -5,24 +5,27 @@ workstation, and visualizer.**
 
 Quantiom is a multi-tab editor over a 55-gate palette, three
 simulators (pure-TypeScript `Float64Array` statevector ≤ 20 qubits,
-Stim-style Aaronson–Gottesman tableau ≤ 1024 qubits, and a quantum-
-trajectory noise simulator with calibrated NISQ channels), and a
-column of researcher-grade panels. Free parameters become live
-sliders, an animation clock drives them, an Adam optimiser will
-gradient-descend them to minimise ⟨H⟩ for VQE/QAOA/QML loops, and a
-peephole pass + a transpiler + a coupling-graph router can rewrite
-the resulting circuit to a target hardware native gate set. A Pauli-
-sum Hamiltonian editor emits a Trotter circuit ready to optimise;
-zero-noise extrapolation, an optimisation landscape sweep, and a
-barren-plateau diagnostic close the NISQ research loop. Process
-tomography reconstructs the χ matrix in heatmap or Hinton view;
-equivalence-checking compares two open tabs with process fidelity and
-trace distance. Noise can be calibrated by importing an IBM
-`BackendProperties` JSON snapshot (T1, T2, sx / cx errors, readout
-errors, coupling map). Circuits round-trip OpenQASM 3 (and parse
-OpenQASM 2), export to **Qiskit · Cirq · Braket · Q# · PyQuil ·
-pytket**, serialize into a shareable URL hash, and the t-animation can
-be recorded as a WebM video.
+Aaronson–Gottesman tableau ≤ 1024 qubits with **Pauli frame tracking
+for depolarising noise**, and a quantum-trajectory noise simulator
+with calibrated NISQ channels), and a column of researcher-grade
+panels. The Expectation panel evaluates either a single Pauli string
+or a **full weighted Pauli-sum Hamiltonian**; an Adam optimiser
+gradient-descends ⟨H⟩ for VQE/QAOA/QML loops; landscape sweep,
+barren-plateau diagnostic, and zero-noise extrapolation close the
+NISQ research loop. A one-click **Compile…** pipeline runs
+Transpile → Optimise → Route → Optimise to a target native gate set,
+reporting per-stage gate counts. The Hamiltonian panel emits **Trotter
+circuits at order 1 / 2 (Strang) / 4 (Suzuki) or QDrift** random
+compilation. Process tomography reconstructs the χ matrix in heatmap
+or Hinton view; equivalence-checking compares two open tabs with
+process fidelity and trace distance. Noise is per-gate-id, per-qubit,
+T1 / T2, crosstalk, custom Kraus, readout — all importable from IBM
+`BackendProperties` JSON (T1, T2, per-gate gate_error, readout error,
+coupling map). **WebGPU** detection and a 1-qubit-gate compute shader
+for trajectory parallelism land as a foundation. Circuits round-trip
+OpenQASM 3 (and parse OpenQASM 2), export to **Qiskit · Cirq · Braket
+· Q# · PyQuil · pytket**, serialize into a shareable URL hash, and
+the t-animation can be recorded as a WebM video.
 
 For users already comfortable with quantum-computing concepts. IBM
 Quantum Composer is the floor, not the ceiling.
@@ -118,6 +121,10 @@ them is the maintainer's.
   - **Optimise** — peephole pass: cancel adjacent inverses, merge same-
     axis rotations (`Rz(a)·Rz(b) → Rz(a+b)`), iterate to a fixed point;
     reports rules fired.
+  - **Compile…** — one-click pipeline that runs Transpile →
+    Optimise → Route → Optimise for a chosen target. Skips the
+    routing step when no coupling map is imported. Reports per-stage
+    gate count + depth.
   - **Transpile…** — three target gate sets:
     - Clifford + T: {H, S, T, CX} with the textbook 6-CX + 7-T Toffoli.
     - IBM heavy-hex: {RZ, SX, CX} with the canonical 5-pulse U3.
@@ -188,6 +195,13 @@ stay on the statevector path.
   stabilizer rows extracts the exact reduced single-qubit state.
 - **Aaronson–Gottesman measurement** — §4.1–4.2 random/deterministic
   branching with the rowsum phase-tracking trick.
+- **Stabilizer-with-noise via Pauli frame tracking** — Clifford
+  circuits under depolarising noise track a Pauli frame F over n
+  qubits (2n binary bits) alongside the tableau. Frame propagates
+  symplectically through H / S / √X / CX / CZ / SWAP; per-gate
+  depolarising rolls a uniform non-identity Pauli into F; measurement
+  outcomes XOR with the x-bit on the measured qubit. QEC syndrome
+  benchmarks under realistic noise run at the full 1024-qubit cap.
 
 ### Noise mode (quantum trajectories)
 
@@ -203,6 +217,10 @@ statevector path with zero overhead. When on:
   (per the imported coupling graph) receives 1-qubit depolarising at
   the crosstalk rate. Models the spectator-qubit error researchers
   see on superconducting devices.
+- **Per-gate-id rates** — `perGate?: Record<string, number>` keyed by
+  IR gate id (`sx`, `x`, `cx`, `cz`, `ecr`, …). Overrides the global
+  1q / 2q depolarising rates for matching gates. Real devices have
+  10× different errors for sx vs cx; this captures that.
 - **Readout bit-flip** at measurement.
 - **Custom 1-qubit Kraus channels** — up to 4 operators entered as
   2×2 complex matrices. Applied via state-conditional sampling after
@@ -262,10 +280,15 @@ nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
   purity readout.
 - **Phase disks** — per-qubit visualisation of the off-diagonal
   ρ_q[0,1] = (r_x + i r_y) / 2 in the complex plane.
-- **Expectation ⟨P⟩** — pick a Pauli (`I, X, Y, Z`) per qubit, get a
-  live ⟨ψ|P|ψ⟩ readout. In noise mode the value is trajectory-averaged
-  with a "avg of N trajectories" tag. The panel grows three layers
-  for parameterised circuits:
+- **Expectation ⟨P⟩ / ⟨H⟩** — two observable modes:
+  - **single Pauli** — per-qubit selectors, the original mode.
+  - **Hamiltonian** — paste a weighted Pauli sum (same syntax as the
+    Hamiltonian → Trotter panel), get ⟨H⟩ = Σ h_k ⟨P_k⟩ live, fully
+    plugged into Optimise / Landscape / Plateau / ZNE.
+
+  In noise mode the value is trajectory-averaged with a "avg of N
+  trajectories" tag. The panel grows four diagnostic tools for
+  parameterised circuits:
   - **Optimise** — pick which free symbols to vary, minimise or
     maximise, set steps and learning rate, choose **Adam** (default)
     or **SGD**. Quantiom runs central finite differences for the
@@ -293,8 +316,12 @@ nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
   depolarising, amplitude damping γ, phase damping γ, readout
   bit-flip, crosstalk; trajectory count with 64 / 256 / 1024 / 4096
   presets; **Import IBM BackendProperties .json** button; editable
-  per-qubit rate table; a free-form **Custom 1q Kraus channel** editor
-  (up to 4 operators); **coupling-graph view** drawn as a small SVG.
+  per-qubit rate table; **read-only per-gate-id rate table** when the
+  importer populates it (sx, x, cx, ecr, etc. — each with its own
+  depolarising rate); a free-form **Custom 1q Kraus channel** editor
+  (up to 4 operators); **coupling-graph view** drawn as a small SVG;
+  **WebGPU status chip** showing "available (Apple M3 / Apple)" or
+  "unavailable (CPU only)".
 - **Equivalence check** — load a comparison `.qasm` OR pick another
   open tab from a dropdown. For n ≤ 8, computes both full 2ⁿ × 2ⁿ
   unitaries column by column and compares entrywise (exact); for
@@ -305,7 +332,10 @@ nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
 - **Syndromes (Clifford shots)** — for Clifford-only circuits with
   measurements, click Sample to run the tableau N times and tabulate
   classical bitstring histograms. Stim-style QEC decoder benchmarks
-  in a browser tab.
+  in a browser tab. **Noise toggle** routes shots through Pauli frame
+  tracking: depolarising errors propagate as a Pauli frame F over the
+  n qubits, XOR'd into measurement outcomes — QEC under realistic
+  noise at the full 1024-qubit tableau cap.
 - **Measurement counts** — for any circuit with measurements, samples
   N independent runs (each with Math.random as the measurement RNG)
   and tabulates the classical-register bitstring histogram — the
@@ -320,9 +350,19 @@ nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
   matching named gate and its process fidelity.
 - **Hamiltonian → Trotter circuit** — paste a Pauli-sum Hamiltonian
   (e.g. `0.5 * II + 0.3 * XX - 0.2 * YZ`), pick step count and time
-  step δ, generate a first-order Trotter circuit and open it in a new
-  tab. Each term decomposes the textbook way: basis change → CNOT
-  staircase → Rz(2hδ) → undo. Presets for TFIM, XXZ, H₂, Heisenberg.
+  step δ, generate a Trotter circuit and open it in a new tab. Each
+  term decomposes the textbook way: basis change → CNOT staircase →
+  Rz(2hδ) → undo. Splittings:
+  - **order 1** — first-order Trotter (default).
+  - **order 2** — symmetric Strang splitting (forward sweep at δ/2 +
+    reverse sweep at δ/2; halves leading-order error at 2× gate count).
+  - **order 4** — Suzuki (nested 5× second-order with α = 1/(4 − 4^⅓)
+    coefficients; chemistry gold standard).
+  - **QDrift** — stochastic compiler (Campbell 2019): per step,
+    sample N terms proportional to |h_k|, each emitted as a Rz with
+    angle 2λδ/N. Every Generate emits a different circuit.
+  
+  Presets for TFIM, XXZ, H₂, Heisenberg.
 - **OpenQASM 3** — editable textarea with line numbers. Edits
   debounce-parse and replace the circuit IR on every successful parse;
   failures surface inline with line numbers. Round-trips cleanly with
@@ -337,15 +377,19 @@ crash in one panel does not break the others.
 ## Researcher workflows
 
 - **VQE / QAOA / QML loops**: paste a Hamiltonian (or build an ansatz
-  on the canvas), pick an observable in Expectation, click Optimise.
-  Plateau and Landscape sub-tools warn about un-trainable initialisations.
+  on the canvas), switch Expectation to **Hamiltonian mode** and
+  paste the same Pauli sum, click Optimise — ⟨H⟩ = Σ h_k ⟨P_k⟩
+  descends end-to-end. Plateau and Landscape sub-tools warn about
+  un-trainable initialisations.
 - **Calibrated noise comparison**: import an IBM `BackendProperties`
   snapshot, run a circuit, compare against actual hardware output.
 - **Zero-noise extrapolation**: with noise on, click ZNE to run at
   three rates and read the noise-free estimate.
 - **QEC decoder benchmarks**: build a stabilizer code with ancillas,
   add a syndrome-extraction sequence, sample 10 k shots on the
-  Clifford path — up to ~1 000 qubits.
+  Clifford path — up to ~1 000 qubits. **With noise enabled, the
+  Pauli frame tracker injects depolarising errors at the same rates
+  as the statevector noise path.**
 - **Compiler / equivalence research**: rewrite via Optimise, then
   Transpile, then Route; compare the result to the original with
   Equivalence check across two tabs. Process fidelity reports the

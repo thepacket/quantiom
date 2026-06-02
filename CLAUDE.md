@@ -64,8 +64,11 @@ host plus `/api/health`.
     rules follow §4 of `arXiv:quant-ph/0406196` verbatim;
     X/Y/Z/CZ/CY/SWAP/√X/√X† compose from those. Cap
     `MAX_QUBITS_STABILIZER = 1024`. `measureZ` implements §4.1–4.2
-    with rowsum phase tracking. `sampleSyndromes` runs N shots for
-    the Syndromes panel.
+    with rowsum phase tracking. `sampleSyndromes(n, gates, numClbits,
+    shots, noise?)` runs N shots; with `noise`, routes through
+    `runCliffordNoisy` which tracks a Pauli frame F (2n binary bits)
+    propagated symplectically through Cliffords with per-gate
+    depolarising error injection.
   - `simulateNoisy.ts`: trajectory simulator with stochastic Pauli
     depolarising + amplitude/phase damping + crosstalk + user-defined
     Kraus channels. Per-trajectory measurement sampling.
@@ -75,16 +78,23 @@ host plus `/api/health`.
   - `noise.ts`: `NoiseModel` shape + `loadNoise/saveNoise` (storage
     key `quantiom:noise:v2`) + `rateFor(model, kind, q)` per-qubit
     lookup + `importIbmBackend(jsonString)` (extracts T1/T2/sx
-    err/cx err/readout/coupling map; converts T1/T2 to per-gate
-    damping via the median sx gate length). Custom Kraus operators
-    persisted as numeric float arrays.
+    err/cx err/readout/coupling map AND per-gate-id error rates by
+    bucketing gate_error entries by gate name with median aggregation;
+    converts T1/T2 to per-gate damping via the median sx gate length).
+    Custom Kraus operators persisted as numeric float arrays.
+    `NoiseModel.perGate?: Record<string, number>` overrides depolarising
+    rates per IR gate id.
   - `measure.ts`: `measureZ/X/Y`, `reset`, `mulberry32`, `fnv1a`. The
     seeded RNG keeps measurement outcomes stable across re-renders.
   - `measurementShots.ts`: `sampleMeasurementShots(circuit, ...)` —
     runs N independent simulations with Math.random for the
     measurement RNG, returns classical-register bitstring histogram.
   - `expectation.ts`: Pauli expectations via in-place gate
-    application + inner product.
+    application + inner product. Exports `paulis()` (single Pauli
+    string), `pauliSumExpectation()` (weighted Pauli-sum H = Σ h_k P_k),
+    `evaluateObservable()` (dispatches on `Observable = { kind:
+    "pauli" } | { kind: "sum" }`). The Expectation panel's mode
+    toggle picks between the two.
   - `density.ts`: reduced density matrix via partial trace.
   - `sample.ts`: shot sampling from a probability distribution.
   - `resources.ts`: gate-count breakdown, T-count, **T-depth**
@@ -117,10 +127,29 @@ host plus `/api/health`.
     forms χ = β β†. Capped at 4 qubits. Optional noise mode routes
     through `simulateNoisy` for the trajectory-averaged "average
     unitary" approximation.
-  - `trotter.ts`: Pauli-sum parser and first-order Trotter circuit
-    builder. Each multi-qubit Pauli term decomposes via basis change
-    (H/S†H/I) → CNOT staircase → Rz(2hδ) → undo. Presets for TFIM,
-    XXZ, H₂, Heisenberg.
+  - `trotter.ts`: Pauli-sum parser and Trotter circuit builder.
+    Splitting selectable via `TrotterOptions.order` (1 = first-order,
+    2 = symmetric Strang, 4 = Suzuki nested with α = 1/(4 − 4^⅓))
+    or `TrotterOptions.mode = "qdrift"` for Campbell 2019 random
+    compilation with configurable samples per step. Each multi-qubit
+    Pauli term decomposes via basis change (H/S†H/I) → CNOT staircase
+    → Rz(2hδ) → undo. Presets for TFIM, XXZ, H₂, Heisenberg.
+  - `compile.ts`: `compileForDevice(circuit, target, coupling)` runs
+    Transpile → Optimise → Route → Optimise as one pipeline; returns
+    final circuit + per-stage metrics. Toolbar "Compile…" button
+    invokes it.
+  - `webgpuTraj.ts`: WebGPU foundation. `getWebGPUDevice()` (cached),
+    `isWebGPUAvailable()`, `webGPUAdapterInfo()` for the UI status
+    chip. `tryRunWebGPUTrajectories(circuit, params, customGates,
+    noise, T)` runs T noisy trajectories in parallel on the GPU for
+    **1-qubit-gate-only circuits with depolarising noise** (no 2q,
+    no T1/T2, no custom Kraus, no measurements/conditions/reset).
+    FP32 throughout. WGSL compute shader; one thread per trajectory;
+    pre-rolled per-(trajectory, op) randoms on CPU. Foundation only —
+    not yet wired into the live simulate-noisy path (those loops are
+    synchronous and consuming Promise<SimResult> needs an async
+    refactor through optimise/landscape/plateau/ZNE; activation is
+    staged).
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
     anti-controls and `if (c[k] == v) …` wrappers for conditional
@@ -228,9 +257,15 @@ host plus `/api/health`.
   library is the education.
 - **Density-matrix mode beyond what trajectories give.** 4ⁿ memory
   caps n at ~10 for no extra scientific value over trajectories.
-- **GPU / WebGPU.** Engineering effort vs the n ≤ 20 ceiling doesn't
-  pencil; researchers needing GPU go to qsim/cuQuantum. The Clifford
-  fast path covers the "big n" niche.
+- **WebGPU for general statevector compute.** Engineering effort vs
+  the n ≤ 20 ceiling doesn't pencil; researchers needing GPU go to
+  qsim/cuQuantum. The Clifford fast path covers the "big n" niche.
+  However, **WebGPU for trajectory parallelism in noise mode** is
+  on-the-table — the foundation lives in `sim/webgpuTraj.ts` and the
+  async wiring into Optimise/Landscape/Plateau/ZNE loops is a
+  staged follow-up. M-series Macs with unified memory are the
+  primary target; FP32 with optional double-float emulation is the
+  precision path.
 - **Real hardware backend integration.** Multi-week vendor work (auth,
   queue, billing). The six SDK exports cover the "I want to run on a
   QPU" workflow.
