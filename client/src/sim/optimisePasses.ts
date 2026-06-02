@@ -95,11 +95,23 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
   let gates = [...circuit.gates].sort(
     (a, b) => a.column - b.column || a.id.localeCompare(b.id),
   );
+  // Outer fixed-point loop: re-run the main per-qubit walker AND every
+  // post-pass until none of them change the gate list. This lets gates
+  // introduced by a post-pass (e.g. the Z·Z that fuseISwapPair emits, or
+  // the SWAP that fuseSwapSynthesis collapses) chain back into the main
+  // walker for further reduction. Without this, iSWAP⁴ would leave
+  // Z·Z·Z·Z behind instead of collapsing to identity, H·CX·H·CX wouldn't
+  // get its second CZ-side cancellation, etc.
   let passes = 0;
-  let changed = true;
-  while (changed && passes < 50) {
-    changed = false;
-    passes++;
+  let outerChanged = true;
+  let outerPasses = 0;
+  while (outerChanged && outerPasses < 50) {
+    outerChanged = false;
+    outerPasses++;
+    let changed = true;
+    while (changed && passes < 200) {
+      changed = false;
+      passes++;
     // Per-qubit walk: build a per-qubit "stack" of gates and check
     // adjacency on each qubit independently. A gate that touches multiple
     // qubits is the top of every qubit's stack; only consider it for
@@ -189,47 +201,52 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
       }
       next.push(g);
     }
+    if (next.length !== gates.length) outerChanged = true;
     gates = next;
-  }
+    }
 
-  // Post-pass: H(t)·CX(c,t)·H(t) → CZ(c,t). Sweep to a fixed point so
-  // chains of CZ-conjugated fragments collapse fully.
-  for (let i = 0; i < 50; i++) {
-    const result = fuseHCXH(gates, rulesFired);
-    if (!result.changed) break;
-    gates = result.gates;
-  }
-
-  // Post-pass: iSWAP·iSWAP → Z(a)·Z(b). Same semantics — see comment on
-  // SELF_INVERSE about why iSWAP isn't in that set.
-  for (let i = 0; i < 50; i++) {
-    const result = fuseISwapPair(gates, rulesFired);
-    if (!result.changed) break;
-    gates = result.gates;
-  }
-
-  // Post-pass: 3-CX → SWAP synthesis recognition.
-  //   CX(a,b)·CX(b,a)·CX(a,b)  →  SWAP(a,b)
-  //   CX(b,a)·CX(a,b)·CX(b,a)  →  SWAP(a,b)
-  // Fires on triples that are adjacent on *both* qubits (no intervening gate
-  // touches a or b). Saves 2 CX per match. Default-on like the H·CX·H pass
-  // — purely a collapse, no reordering, semantics preserved exactly.
-  for (let i = 0; i < 50; i++) {
-    const result = fuseSwapSynthesis(gates, rulesFired);
-    if (!result.changed) break;
-    gates = result.gates;
-  }
-
-  // Post-pass (deep mode only): commute-through-diagonals merge. Rz/P/U1/
-  // CP/CRZ rotations on the same qubit can hop past any other diagonal
-  // gate (Z, S, T, CZ, RZZ, …) to find a same-id same-qubit partner to
-  // merge with. Gated because the column reflow that follows changes the
-  // layout the user may have curated.
-  if (opts.deep) {
+    // Post-pass: H(t)·CX(c,t)·H(t) → CZ(c,t). Sweep to a fixed point so
+    // chains of CZ-conjugated fragments collapse fully.
     for (let i = 0; i < 50; i++) {
-      const result = commuteDiagonalMerge(gates, rulesFired);
+      const result = fuseHCXH(gates, rulesFired);
       if (!result.changed) break;
       gates = result.gates;
+      outerChanged = true;
+    }
+
+    // Post-pass: iSWAP·iSWAP → Z(a)·Z(b). Same semantics — see comment on
+    // SELF_INVERSE about why iSWAP isn't in that set.
+    for (let i = 0; i < 50; i++) {
+      const result = fuseISwapPair(gates, rulesFired);
+      if (!result.changed) break;
+      gates = result.gates;
+      outerChanged = true;
+    }
+
+    // Post-pass: 3-CX → SWAP synthesis recognition.
+    //   CX(a,b)·CX(b,a)·CX(a,b)  →  SWAP(a,b)
+    //   CX(b,a)·CX(a,b)·CX(b,a)  →  SWAP(a,b)
+    // Fires on triples that are adjacent on *both* qubits (no intervening gate
+    // touches a or b). Saves 2 CX per match.
+    for (let i = 0; i < 50; i++) {
+      const result = fuseSwapSynthesis(gates, rulesFired);
+      if (!result.changed) break;
+      gates = result.gates;
+      outerChanged = true;
+    }
+
+    // Post-pass (deep mode only): commute-through-diagonals merge. Rz/P/U1/
+    // CP/CRZ rotations on the same qubit can hop past any other diagonal
+    // gate (Z, S, T, CZ, RZZ, …) to find a same-id same-qubit partner to
+    // merge with. Gated because the column reflow that follows changes the
+    // layout the user may have curated.
+    if (opts.deep) {
+      for (let i = 0; i < 50; i++) {
+        const result = commuteDiagonalMerge(gates, rulesFired);
+        if (!result.changed) break;
+        gates = result.gates;
+        outerChanged = true;
+      }
     }
   }
 
