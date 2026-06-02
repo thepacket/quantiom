@@ -11,9 +11,65 @@ const REASSIGN_CONTROL_MIME = "application/x-quantiom-reassign-control";
 const REASSIGN_TARGET_MIME = "application/x-quantiom-reassign-target";
 
 const COL_W = 68;
+const COL_PAD = 8;
 const ROW_H = 56;
 const LABEL_W = 60;
 const MIN_COLS = 16;
+
+/**
+ * Estimate the rendered pixel width of a single gate's visual. Mirrors
+ * the per-glyph sizing inside PlacedGateView; kept in sync so the column
+ * layout can grow to accommodate wide labels like `RY(π/2 * t)` without
+ * letting adjacent columns overlap.
+ */
+function estimateGateWidth(gate: PlacedGate, customGates: CustomGate[]): number {
+  const isCustom = gate.gateId.startsWith(CUSTOM_PREFIX);
+  if (isCustom) {
+    const cd = customGates.find((c) => c.id === gate.gateId.slice(CUSTOM_PREFIX.length));
+    const label = cd?.name?.slice(0, 8) ?? "?";
+    return Math.max(40, label.length * 8 + 12);
+  }
+  const def = GATES_BY_ID[gate.gateId];
+  if (!def) return 36;
+  const label = gate.params.length > 0 ? `${def.symbol}(${gate.params.join(",")})` : def.symbol;
+  switch (def.targetGlyph) {
+    case "x-target": return 30;
+    case "swap": return 22;
+    case "measure": return 40;
+    case "reset": return 36;
+    case "state": return 44;
+    case "barrier": return 16;
+    case "delay": return 44;
+    case "box":
+    default:
+      return Math.max(36, label.length * 8 + 12);
+  }
+}
+
+/**
+ * Per-column width array + cumulative left-edge offsets. The canvas grid
+ * is no longer uniform: each column grows to the widest gate it contains
+ * so wide rotation labels don't overflow into the next column. Empty
+ * columns keep the default COL_W so dragging into a fresh slot still
+ * lands somewhere reasonable.
+ */
+function computeColumnLayout(
+  gates: ReadonlyArray<PlacedGate>,
+  customGates: CustomGate[],
+  numCols: number,
+): { widths: number[]; offsets: number[] } {
+  const widths = new Array<number>(numCols).fill(COL_W);
+  for (const g of gates) {
+    if (g.column < 0 || g.column >= numCols) continue;
+    const w = estimateGateWidth(g, customGates) + COL_PAD;
+    if (w > widths[g.column]) widths[g.column] = w;
+  }
+  // offsets[i] = left edge of column i; offsets[numCols] = total width.
+  const offsets = new Array<number>(numCols + 1);
+  offsets[0] = LABEL_W;
+  for (let i = 0; i < numCols; i++) offsets[i + 1] = offsets[i] + widths[i];
+  return { widths, offsets };
+}
 
 type Props = {
   circuit: Circuit;
@@ -42,7 +98,13 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
   const usedCols = circuit.gates.reduce((m, g) => Math.max(m, g.column + 1), 0);
   const numCols = Math.max(MIN_COLS, usedCols + 4);
   const totalRows = circuit.numQubits + (circuit.numClbits > 0 ? 1 : 0); // single clbit bus row
-  const width = LABEL_W + numCols * COL_W;
+  const layout = useMemo(
+    () => computeColumnLayout(circuit.gates, customGates, numCols),
+    [circuit.gates, customGates, numCols],
+  );
+  const colOffsets = layout.offsets;
+  const colWidths = layout.widths;
+  const width = colOffsets[numCols];
   const height = totalRows * ROW_H + 16;
 
   const onCellDragOver = (e: React.DragEvent, col: number, row: number) => {
@@ -242,14 +304,14 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
         )}
 
         {/* drop hover preview */}
-        {hover && <DropPreview hover={hover} circuit={circuit} customGates={customGates} />}
+        {hover && <DropPreview hover={hover} circuit={circuit} customGates={customGates} colOffsets={colOffsets} colWidths={colWidths} />}
 
         {/* step cursor (vertical line between the executed and pending columns) */}
         {currentStep !== undefined && currentStep < numCols - 1 && (
           <line
-            x1={LABEL_W + (currentStep + 1) * COL_W}
+            x1={colOffsets[currentStep + 1]}
             y1={0}
-            x2={LABEL_W + (currentStep + 1) * COL_W}
+            x2={colOffsets[currentStep + 1]}
             y2={height}
             className="canvas__step-cursor"
           />
@@ -264,6 +326,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
             past={currentStep !== undefined && g.column > currentStep}
             customGates={customGates}
             matched={highlightedIds?.has(g.id) ?? false}
+            x={colX(g.column, colOffsets, colWidths)}
           />
         ))}
       </svg>
@@ -276,9 +339,9 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
               key={`cell-${row}-${col}`}
               className="canvas__cell"
               style={{
-                left: LABEL_W + col * COL_W,
+                left: colOffsets[col],
                 top: row * ROW_H,
-                width: COL_W,
+                width: colWidths[col],
                 height: ROW_H,
               }}
               onDragOver={(e) => onCellDragOver(e, col, row)}
@@ -298,9 +361,9 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
               key={`move-${g.id}`}
               className="canvas__move-handle"
               style={{
-                left: LABEL_W + g.column * COL_W + 6,
+                left: colOffsets[g.column] + 6,
                 top: lo * ROW_H + 4,
-                width: COL_W - 12,
+                width: Math.max(0, colWidths[g.column] - 12),
                 height: (hi - lo + 1) * ROW_H - 8,
               }}
               draggable
@@ -323,7 +386,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
             key={`reassign-${g.id}-${role}-${index}`}
             className={`canvas__reassign canvas__reassign--${role}`}
             style={{
-              left: LABEL_W + g.column * COL_W + (COL_W - 22) / 2,
+              left: colOffsets[g.column] + (colWidths[g.column] - 22) / 2,
               top: row * ROW_H + (ROW_H - 22) / 2,
               width: 22,
               height: 22,
@@ -347,8 +410,8 @@ function rowY(row: number) {
   return row * ROW_H + ROW_H / 2;
 }
 
-function colX(col: number) {
-  return LABEL_W + col * COL_W + COL_W / 2;
+function colX(col: number, offsets: number[], widths: number[]): number {
+  return offsets[col] + widths[col] / 2;
 }
 
 function defaultQubitsFromDrop(dropRow: number, need: number, numQubits: number): number[] {
@@ -362,10 +425,14 @@ function DropPreview({
   hover,
   circuit,
   customGates,
+  colOffsets,
+  colWidths,
 }: {
   hover: NonNullable<HoverState>;
   circuit: Circuit;
   customGates: CustomGate[];
+  colOffsets: number[];
+  colWidths: number[];
 }) {
   let need: number | undefined;
   if (hover.gateId.startsWith(CUSTOM_PREFIX)) {
@@ -382,9 +449,9 @@ function DropPreview({
   const hi = Math.max(...qubits);
   return (
     <rect
-      x={LABEL_W + hover.col * COL_W + 4}
+      x={colOffsets[hover.col] + 4}
       y={lo * ROW_H + 4}
-      width={COL_W - 8}
+      width={Math.max(0, colWidths[hover.col] - 8)}
       height={(hi - lo + 1) * ROW_H - 8}
       className="canvas__drop-preview"
       rx={6}
@@ -399,6 +466,7 @@ function PlacedGateView({
   past,
   customGates,
   matched,
+  x,
 }: {
   gate: PlacedGate;
   selected: boolean;
@@ -406,13 +474,13 @@ function PlacedGateView({
   past?: boolean;
   customGates: CustomGate[];
   matched?: boolean;
+  x: number;
 }) {
   const isCustom = gate.gateId.startsWith(CUSTOM_PREFIX);
   const customDef = isCustom
     ? customGates.find((c) => c.id === gate.gateId.slice(CUSTOM_PREFIX.length))
     : undefined;
   const def = isCustom ? undefined : GATES_BY_ID[gate.gateId];
-  const x = colX(gate.column);
   const all = [...gate.controls, ...gate.targets];
   if (all.length === 0) return null;
   const lo = Math.min(...all);
