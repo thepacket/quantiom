@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PanelShell } from "./PanelShell";
 import { CouplingMapView } from "./CouplingMapView";
-import { importIbmBackend, type NoiseModel, type PerQubitRates } from "../sim/noise";
+import { importIbmBackend, NOISE_PRESETS, type NoiseModel, type NoisePresetId, type PerQubitRates } from "../sim/noise";
 import { isWebGPUAvailable, getWebGPUDevice, webGPUAdapterInfo } from "../sim/webgpuTraj";
 
 type Props = {
@@ -197,6 +197,25 @@ export function NoisePanel({ noise, onChange }: Props) {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="noise__row">
+            <span style={{ color: "var(--muted)" }}>presets</span>
+            <select
+              value=""
+              onChange={(e) => {
+                const id = e.target.value as NoisePresetId | "";
+                if (!id) return;
+                set(NOISE_PRESETS[id].rates);
+                e.target.value = "";
+              }}
+              style={{ fontSize: 11 }}
+              title="Apply a device-style noise rate preset (1q/2q depolarising, damping, readout, crosstalk)"
+            >
+              <option value="">device preset…</option>
+              {(Object.keys(NOISE_PRESETS) as NoisePresetId[]).map((id) => (
+                <option key={id} value={id}>{NOISE_PRESETS[id].label}</option>
+              ))}
+            </select>
           </div>
         </fieldset>
 

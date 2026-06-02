@@ -110,6 +110,62 @@ export const DEFAULT_NOISE: NoiseModel = {
   crosstalk: 0,
 };
 
+/**
+ * Device-style noise presets. Rates are rough public-record averages —
+ * use the IBM JSON importer for accurate per-qubit calibration. Picking
+ * a preset only overrides the noise rates; trajectories and the noise
+ * `enabled` flag are left to the caller so the user's session settings
+ * survive a preset selection.
+ */
+export type NoisePresetId = "demo" | "ibm-heron" | "google-sycamore" | "ionq-aria";
+
+export const NOISE_PRESETS: Record<NoisePresetId, { label: string; rates: Partial<NoiseModel> }> = {
+  demo: {
+    label: "Demo (visible)",
+    rates: {
+      oneQubitDepolarising: 0.01,
+      twoQubitDepolarising: 0.05,
+      amplitudeDamping: 0.005,
+      phaseDamping: 0.005,
+      readoutBitFlip: 0.05,
+      crosstalk: 0.001,
+    },
+  },
+  "ibm-heron": {
+    label: "IBM Heron (typical)",
+    rates: {
+      oneQubitDepolarising: 0.0003,
+      twoQubitDepolarising: 0.005,
+      amplitudeDamping: 0.0005,
+      phaseDamping: 0.0005,
+      readoutBitFlip: 0.015,
+      crosstalk: 0,
+    },
+  },
+  "google-sycamore": {
+    label: "Google Sycamore",
+    rates: {
+      oneQubitDepolarising: 0.0015,
+      twoQubitDepolarising: 0.006,
+      amplitudeDamping: 0.001,
+      phaseDamping: 0.001,
+      readoutBitFlip: 0.018,
+      crosstalk: 0,
+    },
+  },
+  "ionq-aria": {
+    label: "IonQ Aria (typical)",
+    rates: {
+      oneQubitDepolarising: 0.0004,
+      twoQubitDepolarising: 0.003,
+      amplitudeDamping: 0.0002,
+      phaseDamping: 0.0002,
+      readoutBitFlip: 0.005,
+      crosstalk: 0,
+    },
+  },
+};
+
 const STORAGE_KEY = "quantiom:noise:v2";
 
 export function loadNoise(): NoiseModel {
