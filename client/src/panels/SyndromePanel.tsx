@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PanelShell } from "./PanelShell";
 import { isCliffordOnly, sampleSyndromes } from "../sim/stabilizer";
 import { expandCustomGates, type CustomGate } from "../editor/customGates";
@@ -10,6 +10,9 @@ type Props = {
   circuit: Circuit;
   customGates: CustomGate[];
   noise?: NoiseModel;
+  /** Tick from the auto-shots timer — when set, re-fires sample() on each
+   *  new value (provided the panel is eligible and not already busy). */
+  shotsTick?: number;
 };
 
 const SHOT_PRESETS = [10, 50, 100, 500, 1_000, 5_000, 10_000, 50_000, 100_000];
@@ -20,15 +23,15 @@ const SHOT_PRESETS = [10, 50, 100, 500, 1_000, 5_000, 10_000, 50_000, 100_000];
  * shot, and tabulates counts per classical bitstring. Foundation for QEC
  * decoder benchmarking — Stim's headline workload, now in a browser tab.
  */
-export function SyndromePanel({ circuit, customGates, noise }: Props) {
+export function SyndromePanel({ circuit, customGates, noise, shotsTick }: Props) {
   return (
     <PanelShell id="syndromes" title="Syndromes (Clifford shots)" defaultCollapsed>
-      <SyndromeBody circuit={circuit} customGates={customGates} noise={noise} />
+      <SyndromeBody circuit={circuit} customGates={customGates} noise={noise} shotsTick={shotsTick} />
     </PanelShell>
   );
 }
 
-function SyndromeBody({ circuit, customGates, noise }: Props) {
+function SyndromeBody({ circuit, customGates, noise, shotsTick }: Props) {
   const [shots, setShots] = useState(1_000);
   const [counts, setCounts] = useState<Map<string, number> | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,6 +45,17 @@ function SyndromeBody({ circuit, customGates, noise }: Props) {
     () => expandedGates.some((g) => g.gateId === "measure" || g.gateId === "measure_x" || g.gateId === "measure_y"),
     [expandedGates],
   );
+
+  // Auto-fire sample() on every shotsTick from the right-column timer.
+  const lastTickRef = useRef<number | undefined>(shotsTick);
+  useEffect(() => {
+    if (shotsTick === undefined) return;
+    if (lastTickRef.current === shotsTick) return;
+    lastTickRef.current = shotsTick;
+    if (busy || !eligible || !hasMeasurements) return;
+    sample();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shotsTick]);
 
   const sample = () => {
     if (!eligible || !hasMeasurements) return;

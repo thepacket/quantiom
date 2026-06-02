@@ -422,11 +422,38 @@ export function CircuitEditor() {
   // Falls back silently to the CPU result the moment any constraint fails.
   const gpuProbs = useGPUNoisyProbabilities(steppedCircuit, paramValues, customGates, noise, true);
 
+  // Auto shot-batches timer. When enabled, a setInterval at the chosen
+  // rate increments `shotsTick`, which is threaded into every shot-based
+  // panel's sampling deps so they re-run on each tick.
+  const SHOTS_RATES = [1, 5, 10, 20, 40, 60] as const;
+  const [autoShots, setAutoShots] = useState<boolean>(() => {
+    try { return localStorage.getItem("quantiom:autoshots:on") === "1"; } catch { return false; }
+  });
+  const [shotsRate, setShotsRate] = useState<number>(() => {
+    try {
+      const v = parseInt(localStorage.getItem("quantiom:autoshots:rate") ?? "", 10);
+      return SHOTS_RATES.includes(v as 1 | 5 | 10 | 20 | 40 | 60) ? v : 1;
+    } catch { return 1; }
+  });
+  const [shotsTick, setShotsTick] = useState(0);
+  useEffect(() => {
+    try { localStorage.setItem("quantiom:autoshots:on", autoShots ? "1" : "0"); } catch { /* ignore */ }
+  }, [autoShots]);
+  useEffect(() => {
+    try { localStorage.setItem("quantiom:autoshots:rate", String(shotsRate)); } catch { /* ignore */ }
+  }, [shotsRate]);
+  useEffect(() => {
+    if (!autoShots || shotsRate <= 0) return;
+    const id = window.setInterval(() => setShotsTick((t) => t + 1), Math.round(1000 / shotsRate));
+    return () => window.clearInterval(id);
+  }, [autoShots, shotsRate]);
+
   // For circuits with measurements: a single deterministic simulate() run
   // collapses to one classical branch and reports a pinned distribution.
   // Average |amp|² across N independent shots so Probabilities matches what
   // Measurement counts reports. The work is O(shots × circuit cost); the
-  // dep array keeps this from refiring on every render.
+  // dep array keeps this from refiring on every render. `shotsTick` is in
+  // the dep array so the auto-shot timer pulls a fresh sample on each tick.
   const SAMPLED_SHOTS = 1024;
   const hasMeasurements = useMemo(
     () => steppedCircuit.gates.some((g) => g.gateId === "measure" || g.gateId === "measure_x" || g.gateId === "measure_y"),
@@ -435,7 +462,8 @@ export function CircuitEditor() {
   const sampledProbs = useMemo<number[] | null>(() => {
     if (!hasMeasurements) return null;
     return sampleAveragedAmplitudeProbabilities(steppedCircuit, paramValues, customGates, SAMPLED_SHOTS);
-  }, [hasMeasurements, steppedCircuit, paramValues, customGates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMeasurements, steppedCircuit, paramValues, customGates, shotsTick]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -676,12 +704,35 @@ export function CircuitEditor() {
         </ErrorBoundary>
       </div>
       <div className="editor__right">
+        <div className="editor__right-bar">
+          <label className="editor__right-bar-toggle" title="When on, every panel with shot-based sampling re-runs on each tick.">
+            <input
+              type="checkbox"
+              checked={autoShots}
+              onChange={(e) => setAutoShots(e.target.checked)}
+            />
+            <span>auto shots</span>
+          </label>
+          <select
+            value={shotsRate}
+            onChange={(e) => setShotsRate(parseInt(e.target.value, 10))}
+            disabled={!autoShots}
+            title="Re-sample rate (per second)"
+          >
+            {SHOTS_RATES.map((r) => (
+              <option key={r} value={r}>{r}/s</option>
+            ))}
+          </select>
+          {autoShots && (
+            <span className="editor__right-bar-tick" title={`tick ${shotsTick}`}>● {shotsTick}</span>
+          )}
+        </div>
         <ErrorBoundary label="parameters">
           <ParameterPanel state={simState} values={paramValues} onChange={setParamValues} />
         </ErrorBoundary>
         <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="measurement-counts">
-          <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+          <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} shotsTick={shotsTick} />
         </ErrorBoundary>
         <ErrorBoundary label="probabilities">
           <ProbabilityPanel
@@ -689,6 +740,7 @@ export function CircuitEditor() {
             gpuProbabilities={gpuProbs}
             sampledProbabilities={sampledProbs}
             sampledShots={hasMeasurements ? SAMPLED_SHOTS : undefined}
+            shotsTick={shotsTick}
           />
         </ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
@@ -733,7 +785,7 @@ export function CircuitEditor() {
           />
         </ErrorBoundary>
         <ErrorBoundary label="syndromes">
-          <SyndromePanel circuit={circuit} customGates={customGates} noise={noise} />
+          <SyndromePanel circuit={circuit} customGates={customGates} noise={noise} shotsTick={shotsTick} />
         </ErrorBoundary>
         <ErrorBoundary label="tomography">
           <TomographyPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />

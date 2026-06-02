@@ -92,6 +92,9 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__model-id { font-size: 14px; color: var(--muted); font-family: ui-monospace, monospace; }
 .chat__model-none { padding: 12px; color: var(--muted); font-size: 15px; text-align: center; }
 .editor__right { border-left: 1px solid var(--border); background: var(--panel); overflow: auto; min-width: 0; }
+.editor__right-bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg-2); font-size: 11px; color: var(--muted); position: sticky; top: 0; z-index: 5; }
+.editor__right-bar-toggle { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.editor__right-bar-tick { color: var(--accent); font-variant-numeric: tabular-nums; margin-left: auto; }
 /* Seven grid rows for editor__center's children:
    TabStrip (auto) · toolbar (auto) · StepBar (auto) · canvas (1fr — grows
    to fill remaining vertical space) · splitter (auto) · Inspector

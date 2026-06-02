@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PanelShell } from "./PanelShell";
 import { sampleMeasurementShots } from "../sim/measurementShots";
 import type { Circuit } from "../editor/types";
@@ -9,6 +9,9 @@ type Props = {
   circuit: Circuit;
   customGates: CustomGate[];
   paramValues: ParameterValues;
+  /** Tick counter from the right-column auto-shots timer. Each new value
+   *  re-fires `sample()` automatically. Ignored when undefined. */
+  shotsTick?: number;
 };
 
 const SHOT_PRESETS = [10, 50, 100, 500, 1_000, 5_000, 10_000, 50_000, 100_000];
@@ -27,7 +30,7 @@ export function MeasurementCountsPanel(props: Props) {
   );
 }
 
-function Body({ circuit, customGates, paramValues }: Props) {
+function Body({ circuit, customGates, paramValues, shotsTick }: Props) {
   const [shots, setShots] = useState(1_000);
   const [counts, setCounts] = useState<Map<string, number> | null>(null);
   const [busy, setBusy] = useState(false);
@@ -51,6 +54,22 @@ function Body({ circuit, customGates, paramValues }: Props) {
       }
     }, 0);
   };
+
+  // Auto-fire sample() on every shotsTick change. The `busy` guard means a
+  // slow sample doesn't pile up if the user picks a fast rate on a large
+  // shot count — ticks that arrive mid-flight are simply skipped. The
+  // tickRef + initial-mount guard avoid sampling immediately at first
+  // render before the user has chosen what they want to see.
+  const lastTickRef = useRef<number | undefined>(shotsTick);
+  useEffect(() => {
+    if (shotsTick === undefined) return;
+    if (lastTickRef.current === shotsTick) return;
+    lastTickRef.current = shotsTick;
+    if (busy) return;
+    if (!hasMeasurement || circuit.numClbits === 0) return;
+    sample();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shotsTick]);
 
   if (!hasMeasurement || circuit.numClbits === 0) {
     return (

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
@@ -21,6 +21,9 @@ type Props = {
   /** Number of shots used to build `sampledProbabilities` — surfaced in
    *  a small note so users know what they're looking at. */
   sampledShots?: number;
+  /** Tick counter from the right-column auto-shots timer. When the panel
+   *  is in "shots" mode, each new value forces a fresh resample. */
+  shotsTick?: number;
 };
 type Mode = "exact" | "shots";
 
@@ -46,7 +49,7 @@ function loadInitialShots(): number {
   return 1_000;
 }
 
-export function ProbabilityPanel({ state, gpuProbabilities, sampledProbabilities, sampledShots }: Props) {
+export function ProbabilityPanel({ state, gpuProbabilities, sampledProbabilities, sampledShots, shotsTick }: Props) {
   const collapsed = usePanelCollapsed();
   const data = dataOf(state);
   const [mode, setMode] = useState<Mode>(loadInitialMode);
@@ -66,6 +69,18 @@ export function ProbabilityPanel({ state, gpuProbabilities, sampledProbabilities
         : "exact";
   // Bumping this nonce forces a fresh sample without changing other deps.
   const [sampleNonce, setSampleNonce] = useState(0);
+
+  // Auto-resample on every shotsTick change when the panel is in "shots"
+  // mode. The tickRef guard prevents the initial-mount tick from firing
+  // before the user has explicitly switched to shots mode.
+  const lastTickRef = useRef<number | undefined>(shotsTick);
+  useEffect(() => {
+    if (shotsTick === undefined) return;
+    if (lastTickRef.current === shotsTick) return;
+    lastTickRef.current = shotsTick;
+    if (mode === "shots") setSampleNonce((n) => n + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shotsTick]);
 
   const counts = useMemo<number[] | null>(() => {
     if (collapsed || mode !== "shots" || !effectiveProbs) return null;
