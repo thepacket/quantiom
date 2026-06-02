@@ -9,6 +9,7 @@ import { FileMenu } from "./FileMenu";
 import { StepBar } from "./StepBar";
 import { loadCustomGates, newCustomGateId, saveCustomGates, type CustomGate } from "./customGates";
 import { decodeCircuitFromHash } from "./shareLink";
+import { inverseGates } from "./inverse";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -188,6 +189,23 @@ export function CircuitEditor() {
               Redo
             </button>
             <button onClick={onSaveAsGate} title="Save the current circuit as a reusable custom gate">Save as gate</button>
+            <button
+              onClick={() => {
+                const maxCol = circuit.gates.reduce((m, g) => Math.max(m, g.column), -1);
+                if (maxCol < 0) return;
+                const { inverted, skipped } = inverseGates(circuit, 0, maxCol);
+                if (skipped.length > 0) {
+                  const ok = window.confirm(
+                    `${skipped.length} gate(s) could not be inverted (measurements / state prep / arbitrary unitary) and will be omitted. Continue?`,
+                  );
+                  if (!ok) return;
+                }
+                for (const g of inverted) dispatch({ type: "place-gate", gate: g });
+              }}
+              title="Append the inverse (U†) of the current circuit"
+            >
+              Append U†
+            </button>
             <button onClick={() => dispatch({ type: "clear" })} title="Clear circuit">Clear</button>
           </div>
         </div>

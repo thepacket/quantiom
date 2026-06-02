@@ -21,6 +21,12 @@ export type Resources = {
   /** T or T† gates — the dominant non-Clifford cost in surface-code fault
    *  tolerance, where every T needs distillation. */
   tCount: number;
+  /** Number of distinct circuit columns that contain at least one T or T†.
+   *  Surface-code FT papers report T-depth, not just T-count: each
+   *  parallel layer of T gates is one round of magic-state distillation. */
+  tDepth: number;
+  /** Number of CX gates (control-not). The dominant two-qubit cost. */
+  cxCount: number;
   /** S/S†/H/CX/CZ/SWAP/X/Y/Z/I plus sx/sxdg — gates the Clifford fast path
    *  handles in O(n²) per gate. */
   cliffordCount: number;
@@ -51,8 +57,10 @@ export function estimateResources(circuit: Circuit): Resources {
   let measurements = 0;
   let parameterized = 0;
   let tCount = 0;
+  let cxCount = 0;
   let cliffordCount = 0;
   let parallelDepth = 0;
+  const tColumns = new Set<number>();
   const perQubitLength = new Array<number>(circuit.numQubits).fill(0);
   const touchedQubits = new Set<number>();
   const freeSymbols = new Set<string>();
@@ -85,7 +93,8 @@ export function estimateResources(circuit: Circuit): Resources {
       if (perQubitLength[q] !== undefined) perQubitLength[q]++;
     }
 
-    if (T_GATES.has(g.gateId)) tCount++;
+    if (T_GATES.has(g.gateId)) { tCount++; tColumns.add(g.column); }
+    if (g.gateId === "cx") cxCount++;
     if (CLIFFORD_GATES.has(g.gateId)) cliffordCount++;
 
     const def = GATES_BY_ID[g.gateId];
@@ -114,6 +123,8 @@ export function estimateResources(circuit: Circuit): Resources {
     measurements,
     parameterized,
     tCount,
+    tDepth: tColumns.size,
+    cxCount,
     cliffordCount,
     parallelDepth,
     longestQubitLength: longest,

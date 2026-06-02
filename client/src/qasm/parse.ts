@@ -165,6 +165,11 @@ export function parseQasm3(text: string): ParseResult {
   let idCounter = 1;
   const newId = () => `pg${idCounter++}`;
 
+  /** Condition to attach to the next `addGate` call. Set when an `if (c[k]
+   *  == v) …` prefix is peeled off a statement; cleared after the gate is
+   *  pushed. */
+  let pendingCondition: { clbit: number; value: number } | null = null;
+
   function addGate(opts: {
     gateId: string;
     qubits: number[];
@@ -203,6 +208,10 @@ export function parseQasm3(text: string): ParseResult {
     };
     if (opts.controlStates && opts.controlStates.length === controls.length) {
       placed.controlStates = [...opts.controlStates];
+    }
+    if (pendingCondition) {
+      placed.condition = pendingCondition;
+      pendingCondition = null;
     }
     gates.push(placed);
   }
@@ -258,8 +267,19 @@ export function parseQasm3(text: string): ParseResult {
 
     // Multiple statements per line are valid QASM 3 — split on top-level `;`.
     const lineStatements = splitTopLevel(code, ";");
-    for (const stmt of lineStatements) {
-      if (!stmt) continue;
+    for (const rawStmt of lineStatements) {
+      if (!rawStmt) continue;
+      let stmt = rawStmt;
+      // Peel off `if (c[k] == v)` prefix and stash the condition for the
+      // next addGate() call inside this statement.
+      const ifMatch = stmt.match(/^if\s*\(\s*c\s*\[\s*(\d+)\s*\]\s*==\s*(\d+)\s*\)\s*(.+)$/i);
+      if (ifMatch) {
+        pendingCondition = { clbit: parseInt(ifMatch[1], 10), value: parseInt(ifMatch[2], 10) };
+        stmt = ifMatch[3].trim();
+        if (!stmt) { pendingCondition = null; continue; }
+      } else {
+        pendingCondition = null;
+      }
       // Stray trailing `;` already consumed by splitTopLevel; leftover after
       // a final `;` becomes an empty string and is skipped above.
 

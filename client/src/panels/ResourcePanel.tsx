@@ -43,6 +43,8 @@ function ResourceBody({ circuit }: Props) {
           value={r.tCount}
           hint={r.tCount > 0 ? `${tFraction.toFixed(1)}% of gates` : "no T gates"}
         />
+        <Cell label="T-depth" value={r.tDepth} hint={r.tDepth > 0 ? `magic-state rounds` : ""} />
+        <Cell label="CX count" value={r.cxCount} />
       </div>
       {isClifford && (
         <div className="resources__note">
