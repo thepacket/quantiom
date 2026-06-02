@@ -214,6 +214,20 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
       outerChanged = true;
     }
 
+    // Post-pass: H(q)·P(q)·H(q) basis-change windows.
+    //   H·X·H → Z,  H·Z·H → X,  H·Y·H → −Y → Y (global phase dropped).
+    // Three single-qubit gates collapse to one. Foundational Bell-basis
+    // simplification: Bell prep/measurement is an H-and-CX dance, and
+    // every H·Pauli·H window we recognise lets the surrounding patterns
+    // simplify further (e.g. interleaved with the existing H·CX·H → CZ
+    // and the new SWAP / power-merge passes).
+    for (let i = 0; i < 50; i++) {
+      const result = fuseHadamardPauliSandwich(gates, rulesFired);
+      if (!result.changed) break;
+      gates = result.gates;
+      outerChanged = true;
+    }
+
     // Post-pass: iSWAP·iSWAP → Z(a)·Z(b). Same semantics — see comment on
     // SELF_INVERSE about why iSWAP isn't in that set.
     for (let i = 0; i < 50; i++) {
@@ -427,6 +441,92 @@ function fuseHCXH(
     if (remove.has(g.id)) continue;
     if (rewriteCXtoCZ.has(g.id)) {
       next.push({ ...g, id: newGateId(), gateId: "cz" });
+      continue;
+    }
+    next.push(g);
+  }
+  return { gates: next, changed };
+}
+
+/**
+ * Detect H(q)·P(q)·H(q) windows (single-qubit Hadamard sandwich around
+ * a Pauli) and collapse via the Hadamard conjugation identities:
+ *   H X H = Z
+ *   H Z H = X
+ *   H Y H = −Y  (global phase dropped — fine for any observable / probability
+ *                measure we expose, all of which are phase-insensitive)
+ *
+ * Three single-qubit gates collapse to one. Useful as both a standalone
+ * simplification and as a setup for further reductions: the inner Pauli
+ * often arose from Pauli-collapse (X·Y → Z) or power-merge (T·T·T·T → Z),
+ * and after the Hadamard sandwich resolves, the new gate may chain into
+ * another adjacent Pauli or self-inverse merge.
+ */
+function fuseHadamardPauliSandwich(
+  gates: PlacedGate[],
+  rules: Record<string, number>,
+): { gates: PlacedGate[]; changed: boolean } {
+  const sorted = [...gates].sort(
+    (a, b) => a.column - b.column || a.id.localeCompare(b.id),
+  );
+  const numQ = sorted.reduce(
+    (m, g) => Math.max(m, ...g.controls, ...g.targets),
+    -1,
+  ) + 1;
+  const perQ: number[][] = Array.from({ length: numQ }, () => []);
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    for (const q of [...g.controls, ...g.targets]) {
+      if (q < numQ) perQ[q].push(i);
+    }
+  }
+
+  const isPlainH = (g: PlacedGate, q: number) =>
+    g.gateId === "h" && g.controls.length === 0 && g.targets.length === 1 && g.targets[0] === q
+    && !g.condition && !g.controlStates?.some((s) => !s);
+  const isPlainPauli = (g: PlacedGate, q: number): "x" | "y" | "z" | null => {
+    if (g.controls.length !== 0 || g.targets.length !== 1) return null;
+    if (g.targets[0] !== q) return null;
+    if (g.condition || g.controlStates?.some((s) => !s)) return null;
+    if (g.gateId === "x" || g.gateId === "y" || g.gateId === "z") return g.gateId;
+    return null;
+  };
+  const HPH_RESULT: Record<"x" | "y" | "z", "z" | "y" | "x"> = { x: "z", y: "y", z: "x" };
+
+  const remove = new Set<string>();
+  const rewriteTo = new Map<string, "x" | "y" | "z">();
+  let changed = false;
+
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    const which = isPlainPauli(g, g.targets[0]);
+    if (!which) continue;
+    if (remove.has(g.id) || rewriteTo.has(g.id)) continue;
+    const q = g.targets[0];
+    const list = perQ[q]; if (!list) continue;
+    const pos = list.indexOf(i);
+    if (pos <= 0 || pos >= list.length - 1) continue;
+    const prev = sorted[list[pos - 1]];
+    const next = sorted[list[pos + 1]];
+    if (remove.has(prev.id) || remove.has(next.id)) continue;
+    if (!isPlainH(prev, q) || !isPlainH(next, q)) continue;
+    // Fuse: drop both Hs, rewrite Pauli to its HxH-conjugate (Y → Y;
+    // drop the −1 global phase).
+    remove.add(prev.id);
+    remove.add(next.id);
+    rewriteTo.set(g.id, HPH_RESULT[which]);
+    rules[`H·${which.toUpperCase()}·H → ${HPH_RESULT[which].toUpperCase()}`] =
+      (rules[`H·${which.toUpperCase()}·H → ${HPH_RESULT[which].toUpperCase()}`] ?? 0) + 1;
+    changed = true;
+  }
+
+  if (!changed) return { gates, changed };
+  const next: PlacedGate[] = [];
+  for (const g of gates) {
+    if (remove.has(g.id)) continue;
+    const rw = rewriteTo.get(g.id);
+    if (rw) {
+      next.push({ ...g, id: newGateId(), gateId: rw, params: [] });
       continue;
     }
     next.push(g);
