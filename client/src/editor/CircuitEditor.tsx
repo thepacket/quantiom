@@ -279,6 +279,12 @@ export function CircuitEditor() {
                 );
               }}
             />
+            <button
+              onClick={() => dispatch({ type: "compact-columns" })}
+              title="Auto-arrange columns: pull every gate as far left as it can go without collision"
+            >
+              Compact
+            </button>
             <button onClick={() => dispatch({ type: "clear" })} title="Clear circuit">Clear</button>
           </div>
         </div>
@@ -298,6 +304,7 @@ export function CircuitEditor() {
           dispatch={dispatch}
           selectedGateId={selectedGateId}
           onSelect={setSelectedGateId}
+          onStepTo={setPickedStep}
         />
       </div>
       <div className="editor__right">

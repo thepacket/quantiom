@@ -54,9 +54,13 @@ type Props = {
   selectedGateId: string | null;
   dispatch: React.Dispatch<HistoryAction>;
   onSelect: (id: string | null) => void;
+  /** Optional — when provided, the Inspector renders a "Step to before"
+   *  button that freezes the simulator just before this gate so all the
+   *  panels reflect the state the gate is about to act on. */
+  onStepTo?: (column: number | null) => void;
 };
 
-export function Inspector({ circuit, selectedGateId, dispatch, onSelect }: Props) {
+export function Inspector({ circuit, selectedGateId, dispatch, onSelect, onStepTo }: Props) {
   const gate = circuit.gates.find((g) => g.id === selectedGateId) ?? null;
 
   if (!gate) {
@@ -104,15 +108,26 @@ export function Inspector({ circuit, selectedGateId, dispatch, onSelect }: Props
             {def.numClbits ? ` · ${def.numClbits} clbit` : ""}
           </div>
         </div>
-        <button
-          className="inspector__delete"
-          onClick={() => {
-            dispatch({ type: "remove-gate", id: gate.id });
-            onSelect(null);
-          }}
-        >
-          Delete
-        </button>
+        <div className="inspector__head-actions">
+          {onStepTo && (
+            <button
+              className="inspector__step-here"
+              onClick={() => onStepTo(gate.column - 1)}
+              title="Freeze the simulator just before this gate so the panels show what it acts on"
+            >
+              Step here
+            </button>
+          )}
+          <button
+            className="inspector__delete"
+            onClick={() => {
+              dispatch({ type: "remove-gate", id: gate.id });
+              onSelect(null);
+            }}
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       <div className="inspector__row">

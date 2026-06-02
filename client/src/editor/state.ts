@@ -19,6 +19,7 @@ export type Action =
   | { type: "move-gate"; id: string; column: number; anchorQubit: number }
   | { type: "reassign-qubit"; id: string; role: "controls" | "targets"; index: number; newQubit: number }
   | { type: "replace-circuit"; circuit: Circuit }
+  | { type: "compact-columns" }
   | { type: "clear" };
 
 export type HistoryAction = Action | { type: "undo" } | { type: "redo" };
@@ -93,6 +94,26 @@ function reducer(state: Circuit, action: Action): Circuit {
     }
     case "replace-circuit":
       return action.circuit;
+    case "compact-columns": {
+      // ASAP re-pack: pull every gate as far left as it can go without
+      // colliding with another gate's qubit/clbit span in that column.
+      const sorted = [...state.gates].sort(
+        (a, b) => a.column - b.column || a.id.localeCompare(b.id),
+      );
+      const nextColQ = new Array<number>(state.numQubits).fill(0);
+      const nextColC = new Array<number>(state.numClbits).fill(0);
+      const out: PlacedGate[] = [];
+      for (const g of sorted) {
+        const qs = qubitSpan(g);
+        let col = 0;
+        for (const q of qs) col = Math.max(col, nextColQ[q] ?? 0);
+        for (const c of g.clbits) col = Math.max(col, nextColC[c] ?? 0);
+        out.push({ ...g, column: col });
+        for (const q of qs) nextColQ[q] = col + 1;
+        for (const c of g.clbits) nextColC[c] = col + 1;
+      }
+      return { ...state, gates: out };
+    }
     case "clear":
       return { ...state, gates: [] };
   }
