@@ -657,6 +657,9 @@ export function CircuitEditor() {
           onSelect={setSelectedGateId}
           onStepTo={setPickedStep}
         />
+        <ErrorBoundary label="chat">
+          <ChatPanel circuit={circuit} onLoadInNewTab={(c, n) => t.newTab(c, n)} />
+        </ErrorBoundary>
       </div>
       <div className="editor__right">
         <ErrorBoundary label="parameters">
@@ -719,9 +722,6 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
-      <ErrorBoundary label="chat">
-        <ChatPanel circuit={circuit} onLoadInNewTab={(c, n) => t.newTab(c, n)} />
-      </ErrorBoundary>
     </div>
   );
 }

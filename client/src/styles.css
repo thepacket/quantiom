@@ -39,9 +39,9 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .app__main { flex: 1; min-height: 0; display: flex; }
 
 /* ─── Editor layout ─────────────────────────────────────────────────── */
-.editor { display: grid; grid-template-columns: 280px 1fr 360px; grid-template-rows: auto 1fr auto; flex: 1; min-height: 0; height: 100%; }
-/* Chat panel spans all three columns at the bottom row. */
-.chat { grid-column: 1 / -1; display: flex; flex-direction: column; position: relative; border-top: 1px solid var(--border); background: var(--panel); min-height: 0; }
+.editor { display: grid; grid-template-columns: 280px 1fr 360px; grid-template-rows: auto 1fr; flex: 1; min-height: 0; height: 100%; }
+/* Chat panel sits inside editor__center, below the Inspector. */
+.chat { display: flex; flex-direction: column; position: relative; border-top: 1px solid var(--border); background: var(--panel); min-height: 0; }
 .chat--collapsed { height: 24px; min-height: 24px; }
 .chat--collapsed .chat__toggle { width: 100%; height: 100%; border: none; border-radius: 0; background: var(--bg-2); color: var(--muted); font-size: 11px; }
 .chat__resize { position: absolute; top: 0; left: 0; right: 0; height: 4px; cursor: ns-resize; background: transparent; }
@@ -94,13 +94,14 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .editor--presentation .editor__splitter,
 .editor--presentation .inspector { display: none; }
 .editor__right { border-left: 1px solid var(--border); background: var(--panel); overflow: auto; min-width: 0; }
-/* Six grid rows for editor__center's children:
+/* Seven grid rows for editor__center's children:
    TabStrip (auto) · toolbar (auto) · StepBar (auto) · canvas (1fr — grows
    to fill remaining vertical space) · splitter (auto) · Inspector
-   (--inspector-h, defaults to auto when the user hasn't dragged). */
+   (--inspector-h, defaults to auto when the user hasn't dragged) ·
+   ChatPanel (auto; its own internal flex layout drives height). */
 .editor__center {
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto var(--inspector-h, auto);
+  grid-template-rows: auto auto auto 1fr auto var(--inspector-h, auto) auto;
   min-width: 0; min-height: 0;
 }
 .editor__splitter {
