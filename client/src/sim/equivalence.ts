@@ -36,6 +36,12 @@ export type EquivalenceResult = {
   /** Diagnostic: the basis index where the largest deviation occurred. */
   worstColumn: number;
   worstRow: number;
+  /** Average process fidelity F = |Tr(U_A† U_B)/2ⁿ|² ∈ [0, 1].
+   *  Equals 1 iff the two are equivalent up to global phase. */
+  processFidelity: number;
+  /** Trace distance proxy on a maximally-mixed state input. Bounded
+   *  rigorously by √(1 - F). */
+  traceDistanceProxy: number;
 };
 
 /** Threshold above which we declare equivalence in the floating-point sense. */
@@ -61,6 +67,8 @@ export function equivalenceCheck(
       sampledColumns: 0,
       worstColumn: -1,
       worstRow: -1,
+      processFidelity: 0,
+      traceDistanceProxy: 1,
     };
   }
   const n = circuitA.numQubits;
@@ -77,10 +85,21 @@ export function equivalenceCheck(
   let maxDev = 0;
   let worstCol = -1;
   let worstRow = -1;
+  // For the process fidelity F = |Tr(U_A† U_B) / d|², accumulate the trace.
+  let traceRe = 0;
+  let traceIm = 0;
 
   for (const j of indices) {
     const psiA = simulate(circuitA, paramValues, customGatesA, { startIndex: j }).state;
     const psiB = simulate(circuitB, paramValues, customGatesB, { startIndex: j }).state;
+    // Accumulate U_A[*,j]† · U_B[*,j] = column j contribution to Tr(U_A† U_B).
+    for (let i = 0; i < dim; i++) {
+      const aRe = psiA[2 * i], aIm = psiA[2 * i + 1];
+      const bRe = psiB[2 * i], bIm = psiB[2 * i + 1];
+      // conj(A) * B = (aRe - i aIm)(bRe + i bIm) = (aRe·bRe + aIm·bIm) + i(aRe·bIm - aIm·bRe)
+      traceRe += aRe * bRe + aIm * bIm;
+      traceIm += aRe * bIm - aIm * bRe;
+    }
 
     // Lock the global phase on the first column whose first nonzero entry
     // is large enough to be reliable.
@@ -128,6 +147,15 @@ export function equivalenceCheck(
     }
   }
 
+  // For sampled mode, we accumulated Tr over only a subset of columns;
+  // rescale so the value approximates the full trace.
+  const scale = exact ? 1 : dim / indices.length;
+  const fullTraceRe = traceRe * scale;
+  const fullTraceIm = traceIm * scale;
+  const F = (fullTraceRe * fullTraceRe + fullTraceIm * fullTraceIm) / (dim * dim);
+  const processFidelity = Math.max(0, Math.min(1, F));
+  const traceDistanceProxy = Math.sqrt(Math.max(0, 1 - processFidelity));
+
   // If we never locked a phase (both circuits act trivially on the basis
   // states sampled, e.g. both are identity-on-zeros), they're equivalent.
   if (!phaseLocked) {
@@ -139,6 +167,8 @@ export function equivalenceCheck(
       sampledColumns: indices.length,
       worstColumn: -1,
       worstRow: -1,
+      processFidelity,
+      traceDistanceProxy,
     };
   }
 
@@ -150,6 +180,8 @@ export function equivalenceCheck(
     sampledColumns: indices.length,
     worstColumn: worstCol,
     worstRow: worstRow,
+    processFidelity,
+    traceDistanceProxy,
   };
 }
 

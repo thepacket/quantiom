@@ -354,7 +354,18 @@ export function CircuitEditor() {
         <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
         <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} coupling={noise.coupling} /></ErrorBoundary>
         <ErrorBoundary label="equivalence">
-          <EquivalencePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+          <EquivalencePanel
+            circuit={circuit}
+            customGates={customGates}
+            paramValues={paramValues}
+            otherTabs={t.tabs
+              .filter((x) => x.id !== t.activeId)
+              .map((x) => ({
+                id: x.id,
+                label: x.versioned.present.name ?? "Untitled",
+                circuit: x.versioned.present,
+              }))}
+          />
         </ErrorBoundary>
         <ErrorBoundary label="syndromes">
           <SyndromePanel circuit={circuit} customGates={customGates} />

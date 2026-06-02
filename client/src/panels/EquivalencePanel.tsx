@@ -10,6 +10,9 @@ type Props = {
   circuit: Circuit;
   customGates: CustomGate[];
   paramValues: ParameterValues;
+  /** Optional list of other tabs the user can pick to compare against,
+   *  instead of loading a file. Each entry is (id, label, circuit). */
+  otherTabs?: Array<{ id: string; label: string; circuit: Circuit }>;
 };
 
 /**
@@ -17,15 +20,15 @@ type Props = {
  * Default-collapsed; the check runs on-demand (clicking the Compare button
  * after a file is loaded). Heavy computation only happens on the click.
  */
-export function EquivalencePanel({ circuit, customGates, paramValues }: Props) {
+export function EquivalencePanel(props: Props) {
   return (
     <PanelShell id="equivalence" title="Equivalence check" defaultCollapsed>
-      <EquivalenceBody circuit={circuit} customGates={customGates} paramValues={paramValues} />
+      <EquivalenceBody {...props} />
     </PanelShell>
   );
 }
 
-function EquivalenceBody({ circuit, customGates, paramValues }: Props) {
+function EquivalenceBody({ circuit, customGates, paramValues, otherTabs }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [other, setOther] = useState<{ name: string; circuit: Circuit } | null>(null);
   const [result, setResult] = useState<EquivalenceResult | null>(null);
@@ -93,11 +96,34 @@ function EquivalenceBody({ circuit, customGates, paramValues }: Props) {
       />
       {!other ? (
         <>
-          <button className="equiv__load" onClick={load}>Load comparison .qasm…</button>
+          <div className="equiv__source">
+            <button className="equiv__load" onClick={load}>Load comparison .qasm…</button>
+            {otherTabs && otherTabs.length > 0 && (
+              <select
+                className="equiv__tabs"
+                defaultValue=""
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (!id) return;
+                  const tab = otherTabs.find((t) => t.id === id);
+                  if (tab) setOther({ name: tab.label, circuit: tab.circuit });
+                  setError(null);
+                  setResult(null);
+                  e.target.value = "";
+                }}
+              >
+                <option value="">…or pick another tab</option>
+                {otherTabs.map((t) => (
+                  <option key={t.id} value={t.id}>{t.label}</option>
+                ))}
+              </select>
+            )}
+          </div>
           <p className="panel__placeholder">
             Compare the current circuit against a second one. Computes either
             the full 2ⁿ × 2ⁿ unitary (n ≤ 8) or 16 sampled columns (n &gt; 8),
-            and reports equivalence up to global phase.
+            and reports equivalence up to global phase plus process fidelity
+            F and a trace-distance bound.
           </p>
         </>
       ) : (
@@ -128,6 +154,8 @@ function EquivalenceBody({ circuit, customGates, paramValues }: Props) {
           </div>
           <div className="equiv__metrics">
             <div>max |Δa| = {result.maxDeviation.toExponential(2)}</div>
+            <div>process fidelity F = {result.processFidelity.toFixed(6)}</div>
+            <div>trace distance ≤ {result.traceDistanceProxy.toFixed(4)}</div>
             <div>global phase φ = {(result.globalPhase * 180 / Math.PI).toFixed(2)}°</div>
             {!result.equivalent && result.worstColumn >= 0 && (
               <div>
