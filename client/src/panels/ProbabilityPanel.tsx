@@ -25,7 +25,7 @@ type Props = {
 type Mode = "exact" | "shots";
 
 const BAR_H = 14;
-const SHOT_PRESETS = [100, 1024, 8192, 100_000];
+const SHOT_PRESETS = [10, 50, 100, 500, 1_000, 5_000, 10_000, 50_000, 100_000];
 
 const MODE_STORAGE_KEY = "quantiom:probabilities-mode";
 const SHOTS_STORAGE_KEY = "quantiom:probabilities-shots";
@@ -43,7 +43,7 @@ function loadInitialShots(): number {
     const v = parseInt(localStorage.getItem(SHOTS_STORAGE_KEY) ?? "", 10);
     if (Number.isFinite(v) && v > 0) return v;
   } catch { /* ignore */ }
-  return 1024;
+  return 1_000;
 }
 
 export function ProbabilityPanel({ state, gpuProbabilities, sampledProbabilities, sampledShots }: Props) {

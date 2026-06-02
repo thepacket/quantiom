@@ -12,7 +12,7 @@ type Props = {
   noise?: NoiseModel;
 };
 
-const SHOT_PRESETS = [100, 1024, 8192, 100_000];
+const SHOT_PRESETS = [10, 50, 100, 500, 1_000, 5_000, 10_000, 50_000, 100_000];
 
 /**
  * Syndrome histogram for Clifford-only circuits with measurements. Runs the
@@ -29,7 +29,7 @@ export function SyndromePanel({ circuit, customGates, noise }: Props) {
 }
 
 function SyndromeBody({ circuit, customGates, noise }: Props) {
-  const [shots, setShots] = useState(1024);
+  const [shots, setShots] = useState(1_000);
   const [counts, setCounts] = useState<Map<string, number> | null>(null);
   const [busy, setBusy] = useState(false);
   const [nonce, setNonce] = useState(0);

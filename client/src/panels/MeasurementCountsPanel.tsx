@@ -11,7 +11,7 @@ type Props = {
   paramValues: ParameterValues;
 };
 
-const SHOT_PRESETS = [100, 1024, 8192, 100_000];
+const SHOT_PRESETS = [10, 50, 100, 500, 1_000, 5_000, 10_000, 50_000, 100_000];
 
 /**
  * Measurement counts panel. For circuits with mid-circuit measurement (and
@@ -28,7 +28,7 @@ export function MeasurementCountsPanel(props: Props) {
 }
 
 function Body({ circuit, customGates, paramValues }: Props) {
-  const [shots, setShots] = useState(1024);
+  const [shots, setShots] = useState(1_000);
   const [counts, setCounts] = useState<Map<string, number> | null>(null);
   const [busy, setBusy] = useState(false);
   const [nonce, setNonce] = useState(0);
