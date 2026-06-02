@@ -455,6 +455,12 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .noise__pergate-row { display: flex; justify-content: space-between; font-size: 10px; font-family: ui-monospace, monospace; padding: 1px 4px; }
 .noise__pergate-row code { color: var(--accent); }
 .noise__pergate-row span { color: var(--muted); }
+.noise__gpu { display: flex; gap: 6px; align-items: center; padding: 4px 8px; font-size: 11px; border-radius: 3px; }
+.noise__gpu-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; }
+.noise__gpu--ok { background: rgba(130, 200, 122, 0.08); border: 1px solid #4a6244; color: #82c87a; }
+.noise__gpu--off { background: rgba(120, 120, 120, 0.05); border: 1px solid var(--border); color: var(--muted); }
+.noise__gpu--ok .noise__gpu-tag { color: #82c87a; }
+.noise__gpu--off .noise__gpu-tag { color: var(--muted); }
 
 .statevector__ket { padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow-x: auto; font-size: 15px; }
 .statevector__ket .katex-display { margin: 0; }

@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PanelShell } from "./PanelShell";
 import { CouplingMapView } from "./CouplingMapView";
 import { importIbmBackend, type NoiseModel, type PerQubitRates } from "../sim/noise";
+import { isWebGPUAvailable, getWebGPUDevice, webGPUAdapterInfo } from "../sim/webgpuTraj";
 
 type Props = {
   noise: NoiseModel;
@@ -25,6 +26,21 @@ export function NoisePanel({ noise, onChange }: Props) {
   const set = (patch: Partial<NoiseModel>) => onChange({ ...noise, ...patch });
   const fmt = (v: number) =>
     v >= 0.01 ? v.toFixed(3) : v >= 0.001 ? v.toFixed(4) : v > 0 ? v.toExponential(1) : "0";
+
+  const [gpuStatus, setGpuStatus] = useState<{ available: boolean; adapter: string | null } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (isWebGPUAvailable()) {
+      getWebGPUDevice().then((dev) => {
+        if (cancelled) return;
+        if (dev) setGpuStatus({ available: true, adapter: webGPUAdapterInfo() });
+        else setGpuStatus({ available: false, adapter: null });
+      });
+    } else {
+      setGpuStatus({ available: false, adapter: null });
+    }
+    return () => { cancelled = true; };
+  }, []);
 
   const onImport = () => fileRef.current?.click();
 
@@ -75,6 +91,16 @@ export function NoisePanel({ noise, onChange }: Props) {
             <span className="noise__source-tag">device</span>
             <span>{noise.source}</span>
             <button className="noise__source-clear" onClick={clearPerQubit} title="Clear per-qubit overrides">×</button>
+          </div>
+        )}
+        {gpuStatus && (
+          <div className={"noise__gpu " + (gpuStatus.available ? "noise__gpu--ok" : "noise__gpu--off")}>
+            <span className="noise__gpu-tag">WebGPU</span>
+            <span>
+              {gpuStatus.available
+                ? (gpuStatus.adapter ? `available (${gpuStatus.adapter})` : "available")
+                : "unavailable (CPU only)"}
+            </span>
           </div>
         )}
 
