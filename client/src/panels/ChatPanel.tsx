@@ -224,7 +224,7 @@ export function ChatPanel({ circuit, onLoadInNewTab }: Props) {
           onKeyDown={(e) => {
             // Enter sends; Shift+Enter inserts a newline; ⌘/Ctrl+Enter still
             // sends too so muscle memory from the old binding keeps working.
-            if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
               send();
             }
