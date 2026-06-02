@@ -87,6 +87,10 @@ export type SimulateOptions = {
    *  (the |0…0⟩ ground state). Used by equivalence checking and other
    *  workflows that need the per-column action of the circuit's unitary. */
   startIndex?: number;
+  /** Optional RNG for measurement sampling. Default: a Mulberry32 seeded
+   *  deterministically from (circuit, params) so re-renders give the same
+   *  trajectory. Pass Math.random for fresh shots per call. */
+  rng?: () => number;
 };
 
 export function simulate(
@@ -138,10 +142,14 @@ export function simulate(
   let rng: (() => number) | null = null;
   if (hasMeasurement || hasConditions) {
     cReg = new Uint8Array(Math.max(1, circuit.numClbits));
-    // Deterministic seed: a hash of the circuit + parameter values keeps
-    // re-renders stable until the user actually changes something.
-    const seedText = JSON.stringify({ g: circuit.gates, q: circuit.numQubits, p: paramValues });
-    rng = mulberry32(fnv1a(seedText));
+    if (options?.rng) {
+      rng = options.rng;
+    } else {
+      // Deterministic seed: a hash of the circuit + parameter values keeps
+      // re-renders stable until the user actually changes something.
+      const seedText = JSON.stringify({ g: circuit.gates, q: circuit.numQubits, p: paramValues });
+      rng = mulberry32(fnv1a(seedText));
+    }
   }
 
   for (const g of gates) {
