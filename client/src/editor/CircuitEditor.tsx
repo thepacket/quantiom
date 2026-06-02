@@ -664,6 +664,9 @@ export function CircuitEditor() {
           <ParameterPanel state={simState} values={paramValues} onChange={setParamValues} />
         </ErrorBoundary>
         <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="measurement-counts">
+          <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} gpuProbabilities={gpuProbs} /></ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
@@ -708,9 +711,6 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="syndromes">
           <SyndromePanel circuit={circuit} customGates={customGates} noise={noise} />
-        </ErrorBoundary>
-        <ErrorBoundary label="measurement-counts">
-          <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
         <ErrorBoundary label="tomography">
           <TomographyPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
