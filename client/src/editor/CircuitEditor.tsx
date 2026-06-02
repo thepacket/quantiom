@@ -10,6 +10,7 @@ import { StepBar } from "./StepBar";
 import { loadCustomGates, newCustomGateId, saveCustomGates, type CustomGate } from "./customGates";
 import { decodeCircuitFromHash } from "./shareLink";
 import { inverseGates } from "./inverse";
+import { transpile, type TranspileTarget } from "../sim/transpile";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -26,6 +27,39 @@ import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
 import { loadNoise, saveNoise, type NoiseModel } from "../sim/noise";
+
+function TranspileButton({ onTranspile }: { onTranspile: (t: TranspileTarget) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span style={{ position: "relative" }}>
+      <button onClick={() => setOpen((o) => !o)} title="Rewrite into a target native gate set">Transpile…</button>
+      {open && (
+        <div
+          className="examples-picker__pop"
+          style={{ width: 200, top: "100%", marginTop: 4 }}
+          onMouseLeave={() => setOpen(false)}
+        >
+          <div className="examples-picker__list">
+            {[
+              { id: "clifford-t" as const, label: "Clifford + T", hint: "{H, S, T, CX}" },
+              { id: "ibm-heavy-hex" as const, label: "IBM heavy-hex", hint: "{RZ, SX, CX}" },
+              { id: "rigetti" as const, label: "Rigetti", hint: "{RZ, RX(±π/2), CZ}" },
+            ].map((t) => (
+              <button
+                key={t.id}
+                className="examples-picker__item"
+                onClick={() => { setOpen(false); onTranspile(t.id); }}
+              >
+                <span>{t.label}</span>
+                <span className="export-picker__hint">{t.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
 
 export function CircuitEditor() {
   const t = useTabs();
@@ -207,6 +241,25 @@ export function CircuitEditor() {
             >
               Append U†
             </button>
+            <TranspileButton
+              onTranspile={(target) => {
+                const result = transpile(circuit, target);
+                const label =
+                  target === "clifford-t" ? "Clifford+T" : target === "ibm-heavy-hex" ? "IBM heavy-hex" : "Rigetti";
+                if (result.skipped.length > 0) {
+                  console.warn(`Transpile to ${target}: ${result.skipped.length} gates without a decomposition kept as-is`, result.skipped);
+                }
+                t.newTab(result.circuit, `${circuit.name ?? "Untitled"} → ${label}`);
+                window.alert(
+                  `Transpiled to ${label}:\n` +
+                  `  gates: ${result.before.gates} → ${result.after.gates}\n` +
+                  `  CX:    ${result.before.cx} → ${result.after.cx}\n` +
+                  `  T:     ${result.before.tCount} → ${result.after.tCount}\n` +
+                  `  depth: ${result.before.depth} → ${result.after.depth}` +
+                  (result.skipped.length > 0 ? `\n  (${result.skipped.length} gates not decomposable to ${label})` : ""),
+                );
+              }}
+            />
             <button onClick={() => dispatch({ type: "clear" })} title="Clear circuit">Clear</button>
           </div>
         </div>
