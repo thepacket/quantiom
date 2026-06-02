@@ -25,6 +25,8 @@ import type { NoiseModel } from "./noise";
  * so the UI can show a live counter and let the user cancel.
  */
 
+export type OptimizerKind = "sgd" | "adam";
+
 export type OptimizerOptions = {
   symbols: string[];
   observable: Pauli[];
@@ -38,6 +40,8 @@ export type OptimizerOptions = {
   epsilon: number;
   /** Optimisation direction. */
   goal: "minimize" | "maximize";
+  /** Algorithm. Default Adam (better on rugged landscapes). */
+  optimizer?: OptimizerKind;
   /** Called after each step with the current iterate. Return false to stop. */
   onProgress?: (step: number, value: number, params: ParameterValues) => boolean | void;
 };
@@ -60,7 +64,15 @@ export function optimizeExpectation(
   const sign = options.goal === "minimize" ? +1 : -1;
   const epsilon = options.epsilon;
   const lr = options.learningRate;
+  const kind: OptimizerKind = options.optimizer ?? "adam";
   let lastValue = evaluate(circuit, customGates, params, options.observable, noise);
+
+  // Adam state.
+  const beta1 = 0.9;
+  const beta2 = 0.999;
+  const adamEps = 1e-8;
+  const m = new Array<number>(symbols.length).fill(0);
+  const v = new Array<number>(symbols.length).fill(0);
 
   for (let step = 0; step < options.steps; step++) {
     // Central finite differences per symbol.
@@ -73,15 +85,30 @@ export function optimizeExpectation(
       params[sym] = original - epsilon;
       const eMinus = evaluate(circuit, customGates, params, options.observable, noise);
       params[sym] = original;
-      grad[i] = (ePlus - eMinus) / (2 * epsilon);
+      grad[i] = sign * (ePlus - eMinus) / (2 * epsilon);
     }
 
-    // Gradient step (sign flips for maximise).
+    // Apply update.
     let normSq = 0;
-    for (let i = 0; i < symbols.length; i++) {
-      const delta = sign * lr * grad[i];
-      params[symbols[i]] = (params[symbols[i]] ?? 0) - delta;
-      normSq += grad[i] * grad[i];
+    if (kind === "adam") {
+      const t = step + 1;
+      const biasCorr1 = 1 - Math.pow(beta1, t);
+      const biasCorr2 = 1 - Math.pow(beta2, t);
+      for (let i = 0; i < symbols.length; i++) {
+        const g = grad[i];
+        m[i] = beta1 * m[i] + (1 - beta1) * g;
+        v[i] = beta2 * v[i] + (1 - beta2) * g * g;
+        const mHat = m[i] / biasCorr1;
+        const vHat = v[i] / biasCorr2;
+        const delta = lr * mHat / (Math.sqrt(vHat) + adamEps);
+        params[symbols[i]] = (params[symbols[i]] ?? 0) - delta;
+        normSq += g * g;
+      }
+    } else {
+      for (let i = 0; i < symbols.length; i++) {
+        params[symbols[i]] = (params[symbols[i]] ?? 0) - lr * grad[i];
+        normSq += grad[i] * grad[i];
+      }
     }
     lastValue = evaluate(circuit, customGates, params, options.observable, noise);
 
@@ -89,7 +116,6 @@ export function optimizeExpectation(
     if (cont === false) {
       return { steps: step + 1, finalValue: lastValue, finalParams: params, stopped: "cancelled" };
     }
-    // Convergence: tiny gradient.
     if (Math.sqrt(normSq) < 1e-6) {
       return { steps: step + 1, finalValue: lastValue, finalParams: params, stopped: "converged" };
     }

@@ -4,7 +4,7 @@ import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { paulis as evalPaulis, type Pauli } from "../sim/expectation";
 import { noisyPauliExpectation } from "../sim/simulateNoisy";
-import { optimizeExpectation } from "../sim/optimize";
+import { optimizeExpectation, type OptimizerKind } from "../sim/optimize";
 import type { NoiseModel } from "../sim/noise";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
@@ -149,9 +149,11 @@ function Optimizer({
   const [picked, setPicked] = useState<Set<string>>(() => new Set(freeSymbols));
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ step: number; value: number } | null>(null);
+  const [history, setHistory] = useState<number[]>([]);
   const [steps, setSteps] = useState(30);
-  const [lr, setLr] = useState(0.3);
+  const [lr, setLr] = useState(0.1);
   const [goal, setGoal] = useState<"minimize" | "maximize">("minimize");
+  const [opt, setOpt] = useState<OptimizerKind>("adam");
   const cancelRef = { current: false };
 
   // Keep `picked` in sync when free symbols set changes.
@@ -176,6 +178,8 @@ function Optimizer({
     if (running || picked.size === 0) return;
     setRunning(true);
     setProgress({ step: 0, value: currentValue ?? 0 });
+    const localHistory: number[] = [];
+    setHistory([]);
     // Run async so the UI updates between steps.
     setTimeout(() => {
       try {
@@ -190,10 +194,12 @@ function Optimizer({
             learningRate: lr,
             epsilon: 1e-3,
             goal,
+            optimizer: opt,
             onProgress: (step, value, params) => {
               setProgress({ step, value });
-              // Push intermediate params so panels animate. Heavy if every
-              // step triggers a re-render; we throttle to ~ every 4 steps.
+              localHistory.push(value);
+              // Throttle history flushes too — copy into state every 2 steps.
+              if (step % 2 === 0 || step === steps) setHistory([...localHistory]);
               if (step % 4 === 0 || step === steps) ctx.onParamChange({ ...params });
               return !cancelRef.current;
             },
@@ -202,6 +208,7 @@ function Optimizer({
         );
         ctx.onParamChange({ ...result.finalParams });
         setProgress({ step: result.steps, value: result.finalValue });
+        setHistory([...localHistory]);
       } finally {
         setRunning(false);
       }
@@ -228,11 +235,15 @@ function Optimizer({
           <option value="minimize">minimise</option>
           <option value="maximize">maximise</option>
         </select>
+        <select value={opt} onChange={(e) => setOpt(e.target.value as OptimizerKind)} title="Optimiser">
+          <option value="adam">Adam</option>
+          <option value="sgd">SGD</option>
+        </select>
         <label>steps
           <input type="number" min={1} max={500} value={steps} onChange={(e) => setSteps(parseInt(e.target.value || "30", 10))} />
         </label>
         <label>lr
-          <input type="number" min={0.001} step={0.01} value={lr} onChange={(e) => setLr(parseFloat(e.target.value || "0.3"))} />
+          <input type="number" min={0.001} step={0.01} value={lr} onChange={(e) => setLr(parseFloat(e.target.value || "0.1"))} />
         </label>
         {!running ? (
           <button className="exp__opt-run" onClick={start} disabled={picked.size === 0}>Run</button>
@@ -245,6 +256,32 @@ function Optimizer({
           step {progress.step}/{steps} · ⟨P⟩={progress.value.toFixed(4)}
         </div>
       )}
+      {history.length > 1 && <HistoryChart history={history} goal={goal} />}
+    </div>
+  );
+}
+
+function HistoryChart({ history, goal }: { history: number[]; goal: "minimize" | "maximize" }) {
+  const W = 200, H = 36;
+  const minV = Math.min(...history);
+  const maxV = Math.max(...history);
+  const range = maxV - minV || 1;
+  const path = history
+    .map((v, i) => {
+      const x = (i / (history.length - 1)) * W;
+      const y = H - ((v - minV) / range) * H;
+      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const best = goal === "minimize" ? minV : maxV;
+  return (
+    <div className="exp__opt-chart">
+      <svg width={W} height={H} className="exp__opt-chart-svg">
+        <path d={path} className="exp__opt-chart-line" fill="none" />
+      </svg>
+      <div className="exp__opt-chart-meta">
+        best ⟨P⟩ = {best.toFixed(4)}
+      </div>
     </div>
   );
 }
