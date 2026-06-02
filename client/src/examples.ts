@@ -64,6 +64,11 @@ import qaoaKite from "../../examples/qaoa_kite_4q.qasm?raw";
 import qftAnim5 from "../../examples/qft_animated_5q.qasm?raw";
 import qWalk8 from "../../examples/quantum_walk_8steps_3q.qasm?raw";
 import amplitudeAmp from "../../examples/amplitude_amplification_3q.qasm?raw";
+import realAmplitudes4 from "../../examples/ansatz_real_amplitudes_4q.qasm?raw";
+import uccsdLite4 from "../../examples/ansatz_uccsd_lite_4q.qasm?raw";
+import qaoaSquareP2 from "../../examples/qaoa_square_p2.qasm?raw";
+import teleportDynamic from "../../examples/teleport_dynamic.qasm?raw";
+import repeatUntilSuccess from "../../examples/repeat_until_success.qasm?raw";
 
 export type Example = { id: string; label: string; qasm: string };
 
@@ -96,6 +101,8 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
     label: "Protocols",
     items: [
       { id: "teleport", label: "Quantum teleportation (3q)", qasm: teleport },
+      { id: "teleport-dynamic", label: "Teleportation with classical feedback (3q)", qasm: teleportDynamic },
+      { id: "repeat-until-success", label: "Repeat-until-success template (2q)", qasm: repeatUntilSuccess },
       { id: "ent-swap", label: "Entanglement swapping (4q)", qasm: entSwap },
       { id: "superdense", label: "Superdense coding (2q)", qasm: superdense },
       { id: "kickback", label: "Phase kickback (2q)", qasm: kickback },
@@ -160,8 +167,11 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
     items: [
       { id: "qaoa", label: "QAOA MaxCut triangle (3q)", qasm: qaoa },
       { id: "qaoa-kite", label: "QAOA MaxCut kite (4q)", qasm: qaoaKite },
+      { id: "qaoa-square-p2", label: "QAOA MaxCut square, depth 2 (4q)", qasm: qaoaSquareP2 },
       { id: "vqe", label: "Hardware-efficient ansatz, 2 layers (4q)", qasm: vqe },
       { id: "vqe-6", label: "Hardware-efficient ansatz, 6 layers (4q)", qasm: vqeHwe6 },
+      { id: "real-amps-4", label: "Real Amplitudes ansatz, 2 layers (4q)", qasm: realAmplitudes4 },
+      { id: "uccsd-lite-4", label: "UCCSD-lite single excitation (4q)", qasm: uccsdLite4 },
     ],
   },
   {
