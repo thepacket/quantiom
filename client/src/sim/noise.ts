@@ -54,6 +54,16 @@ export type NoiseModel = {
   phaseDamping: number;
   /** Global measurement readout error probability. */
   readoutBitFlip: number;
+  /** Per-gate crosstalk: when a 2-qubit gate fires between (a, b), every
+   *  neighbour of a (in `coupling`) other than b gets 1-qubit depolarising
+   *  at this rate, and likewise for b. Models "spectator" error from
+   *  unwanted excitations on coupled neighbours during a two-qubit
+   *  interaction. Inert when `coupling` is absent. */
+  crosstalk: number;
+  /** Coupling map / adjacency list. coupling[q] = neighbour qubit indices.
+   *  Populated by the IBM importer from the device's `coupling_map` and
+   *  used by the crosstalk channel. */
+  coupling?: number[][];
   /** Per-qubit overrides. Length matches the circuit width when set by
    *  the importer; out-of-range qubits fall back to the global rates. */
   perQubit?: PerQubitRates[];
@@ -70,6 +80,7 @@ export const DEFAULT_NOISE: NoiseModel = {
   amplitudeDamping: 0,
   phaseDamping: 0,
   readoutBitFlip: 0.02,
+  crosstalk: 0,
 };
 
 const STORAGE_KEY = "quantiom:noise:v2";
@@ -87,8 +98,10 @@ export function loadNoise(): NoiseModel {
       amplitudeDamping: clamp01(parsed.amplitudeDamping ?? DEFAULT_NOISE.amplitudeDamping),
       phaseDamping: clamp01(parsed.phaseDamping ?? DEFAULT_NOISE.phaseDamping),
       readoutBitFlip: clamp01(parsed.readoutBitFlip ?? DEFAULT_NOISE.readoutBitFlip),
+      crosstalk: clamp01(parsed.crosstalk ?? DEFAULT_NOISE.crosstalk),
       trajectories: Math.max(1, Math.min(8192, parsed.trajectories ?? DEFAULT_NOISE.trajectories)),
       perQubit: Array.isArray(parsed.perQubit) ? parsed.perQubit.map(sanitisePerQubit) : undefined,
+      coupling: Array.isArray(parsed.coupling) ? parsed.coupling : undefined,
     };
   } catch {
     return { ...DEFAULT_NOISE };
@@ -220,6 +233,29 @@ export function importIbmBackend(json: string): NoiseModel {
   const name = typeof parsed.backend_name === "string" ? parsed.backend_name : "imported";
   const date = typeof parsed.last_update_date === "string" ? parsed.last_update_date : "";
 
+  // Coupling map: either parsed.coupling_map (direct field, an array of
+  // [a, b] pairs) or inferred from the cx/cz/ecr gate entries.
+  const coupling: number[][] = Array.from({ length: numQubits }, () => []);
+  const addEdge = (a: number, b: number) => {
+    if (!Number.isInteger(a) || !Number.isInteger(b) || a === b) return;
+    if (a < 0 || b < 0 || a >= numQubits || b >= numQubits) return;
+    if (!coupling[a].includes(b)) coupling[a].push(b);
+    if (!coupling[b].includes(a)) coupling[b].push(a);
+  };
+  if (Array.isArray(parsed.coupling_map)) {
+    for (const pair of parsed.coupling_map) {
+      if (Array.isArray(pair) && pair.length === 2) addEdge(pair[0], pair[1]);
+    }
+  } else {
+    for (const g of gates) {
+      const e = g as Record<string, unknown>;
+      if ((e.gate === "cx" || e.gate === "cz" || e.gate === "ecr") && Array.isArray(e.qubits) && e.qubits.length === 2) {
+        addEdge(e.qubits[0] as number, e.qubits[1] as number);
+      }
+    }
+  }
+  const couplingHasEdges = coupling.some((nbrs) => nbrs.length > 0);
+
   return {
     enabled: true,
     trajectories: DEFAULT_NOISE.trajectories,
@@ -228,7 +264,9 @@ export function importIbmBackend(json: string): NoiseModel {
     amplitudeDamping: ads.length > 0 ? mean(ads) : 0,
     phaseDamping: pds.length > 0 ? mean(pds) : 0,
     readoutBitFlip,
+    crosstalk: 0,
     perQubit,
+    coupling: couplingHasEdges ? coupling : undefined,
     source: `${name}${date ? ` @ ${date.slice(0, 10)}` : ""}`,
   };
 }

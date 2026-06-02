@@ -133,6 +133,7 @@ export function simulateNoisy(
         for (const q of involved) {
           damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
         }
+        applyCrosstalk(state, n, involved[0], involved[1], noise);
       } else {
         for (const q of involved) {
           depolarise1(state, n, q, noise.twoQubitDepolarising);
@@ -198,6 +199,30 @@ export function simulateNoisy(
 }
 
 // ─── Internal: depolarising channels (stochastic Pauli) ─────────────────
+
+/**
+ * Crosstalk: when a 2-qubit gate fires between (a, b), apply 1-qubit
+ * depolarising at `noise.crosstalk` to every coupled neighbour other than
+ * the one already involved. Inert when `noise.coupling` is absent or
+ * `noise.crosstalk` is zero. Models the spectator-qubit error researchers
+ * see on superconducting devices during a CX/ECR pulse.
+ */
+function applyCrosstalk(state: Float64Array, n: number, a: number, b: number, noise: { crosstalk: number; coupling?: number[][] }): void {
+  if (noise.crosstalk <= 0 || !noise.coupling) return;
+  const seen = new Set<number>([a, b]);
+  const list = (q: number) => {
+    const nbrs = noise.coupling![q];
+    if (!nbrs) return;
+    for (const nb of nbrs) {
+      if (seen.has(nb)) continue;
+      if (nb < 0 || nb >= n) continue;
+      seen.add(nb);
+      depolarise1(state, n, nb, noise.crosstalk);
+    }
+  };
+  list(a);
+  list(b);
+}
 
 function depolarise1(state: Float64Array, n: number, q: number, p: number): void {
   if (p <= 0) return;
@@ -473,6 +498,7 @@ export function noisyPauliExpectation(
       } else if (involved.length === 2) {
         depolarise2(state, n, involved[0], involved[1], noise.twoQubitDepolarising);
         for (const q of involved) damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
+        applyCrosstalk(state, n, involved[0], involved[1], noise);
       } else {
         for (const q of involved) {
           depolarise1(state, n, q, noise.twoQubitDepolarising);

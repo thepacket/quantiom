@@ -120,8 +120,25 @@ export function NoisePanel({ noise, onChange }: Props) {
             step={0.001}
             fmt={fmt}
             onChange={(v) => set({ readoutBitFlip: v })}
-            title="Measurement readout bit-flip (inert until mid-circuit measurement lands)"
+            title="Measurement readout bit-flip"
           />
+          <Slider
+            label="crosstalk"
+            value={noise.crosstalk}
+            max={0.05}
+            step={0.0001}
+            fmt={fmt}
+            onChange={(v) => set({ crosstalk: v })}
+            title={noise.coupling ? "Per-2q-gate residual depolarising on coupled neighbours" : "Inert until a coupling map is imported"}
+          />
+          {noise.coupling && (
+            <div className="noise__coupling">
+              <span className="noise__coupling-label">coupling map</span>
+              <span className="noise__coupling-edges">
+                {noise.coupling.reduce((sum, nbrs) => sum + nbrs.length, 0) / 2} edges, {noise.coupling.length} qubits
+              </span>
+            </div>
+          )}
         </fieldset>
 
         <fieldset className="noise__group" disabled={!noise.enabled}>
