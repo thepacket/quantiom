@@ -25,6 +25,8 @@ type Props = {
   currentStep?: number;
   /** Registry used to resolve custom-gate references for rendering. */
   customGates?: CustomGate[];
+  /** Optional set of gate ids to outline as search matches. */
+  highlightedIds?: Set<string>;
 };
 
 type HoverState =
@@ -32,7 +34,7 @@ type HoverState =
   | { kind: "move"; col: number; row: number; gateId: string; placedId: string }
   | null;
 
-export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep, customGates = [] }: Props) {
+export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep, customGates = [], highlightedIds }: Props) {
   const [hover, setHover] = useState<HoverState>(null);
   // Tracks the in-flight move-gate drag so dragOver (which can't read payload) knows the gate.
   const dragMove = useRef<{ placedId: string; gateId: string } | null>(null);
@@ -184,10 +186,28 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
         {/* qubit wire labels and lines */}
         {Array.from({ length: circuit.numQubits }, (_, q) => {
           const y = rowY(q);
+          const label = circuit.qubitNames?.[q]?.trim() || `q${q}`;
+          const onRename = () => {
+            const next = window.prompt(`Rename qubit ${q}`, label);
+            if (next === null) return;
+            const trimmed = next.trim();
+            const names = [...(circuit.qubitNames ?? [])];
+            while (names.length < circuit.numQubits) names.push("");
+            names[q] = trimmed;
+            dispatch({ type: "rename-qubit", index: q, name: trimmed });
+          };
           return (
             <g key={`wire-${q}`}>
-              <text x={LABEL_W - 12} y={y + 4} className="canvas__label" textAnchor="end">
-                q{q}
+              <text
+                x={LABEL_W - 12}
+                y={y + 4}
+                className="canvas__label"
+                textAnchor="end"
+                onDoubleClick={onRename}
+                style={{ cursor: "text" }}
+              >
+                <title>Double-click to rename</title>
+                {label}
               </text>
               <line x1={LABEL_W} y1={y} x2={width - 4} y2={y} className="canvas__wire" />
             </g>
@@ -243,6 +263,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
             onClick={() => onSelect(g.id)}
             past={currentStep !== undefined && g.column > currentStep}
             customGates={customGates}
+            matched={highlightedIds?.has(g.id) ?? false}
           />
         ))}
       </svg>
@@ -377,12 +398,14 @@ function PlacedGateView({
   onClick,
   past,
   customGates,
+  matched,
 }: {
   gate: PlacedGate;
   selected: boolean;
   onClick: () => void;
   past?: boolean;
   customGates: CustomGate[];
+  matched?: boolean;
 }) {
   const isCustom = gate.gateId.startsWith(CUSTOM_PREFIX);
   const customDef = isCustom
@@ -403,7 +426,7 @@ function PlacedGateView({
     const w = Math.max(40, label.length * 8 + 12);
     return (
       <g
-        className={"gate gate--custom" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "")}
+        className={"gate gate--custom" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "")}
         onClick={(e) => { e.stopPropagation(); onClick(); }}
       >
         <rect x={x - w / 2} y={yTop} width={w} height={boxH} rx={6} className="gate__box gate__box--custom" />
@@ -421,7 +444,7 @@ qubits: ${all.join(", ")}
 column ${gate.column}${gate.params.length > 0 ? `\nparams: ${gate.params.join(", ")}` : ""}${gate.condition ? `\nif c[${gate.condition.clbit}] == ${gate.condition.value}` : ""}`;
   return (
     <g
-      className={"gate" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "")}
+      className={"gate" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "")}
       data-cat={def.category}
       onClick={(e) => {
         e.stopPropagation();
@@ -459,6 +482,17 @@ column ${gate.column}${gate.params.length > 0 ? `\nparams: ${gate.params.join(",
           y2={rowY(qubitSpan(gate).length === 0 ? 0 : Math.max(...gate.targets) + 0) + 20}
           className="gate__cl-link"
         />
+      )}
+      {gate.annotation && (
+        <text
+          x={x}
+          y={hi * ROW_H + ROW_H - 4}
+          textAnchor="middle"
+          className="gate__annotation"
+        >
+          <title>{gate.annotation}</title>
+          {gate.annotation.length > 10 ? gate.annotation.slice(0, 9) + "…" : gate.annotation}
+        </text>
       )}
     </g>
   );

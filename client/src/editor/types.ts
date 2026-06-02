@@ -74,6 +74,13 @@ export type PlacedGate = {
    * Classical-bit-conditioned execution. Equivalent to OpenQASM `if (c == v) gate`.
    */
   condition?: { clbit: number; value: number };
+  /**
+   * Free-form annotation pinned to this gate. Rendered as a small tag
+   * beneath the gate box on the canvas; edited in the Inspector. Round-trips
+   * via a `// note: …` comment emitted by the QASM 3 emitter on the line
+   * before the gate.
+   */
+  annotation?: string;
 };
 
 export type Circuit = {
@@ -84,4 +91,8 @@ export type Circuit = {
    * absent for blank/scratch circuits and replaced on every example or
    * file load. */
   name?: string;
+  /** Optional per-qubit display names (e.g. "data", "ancilla", "syndrome").
+   * Indexed by qubit number; missing or empty entries fall back to `q{N}`.
+   * Length is not required to equal numQubits — short arrays are tolerated. */
+  qubitNames?: string[];
 };

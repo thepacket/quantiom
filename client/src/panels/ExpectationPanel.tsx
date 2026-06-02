@@ -46,6 +46,17 @@ function ExpectationBody({ state, noisyContext }: Props) {
   const [selection, setSelection] = useState<Pauli[]>([]);
   const [mode, setMode] = useState<"single" | "hamiltonian">("single");
   const [hText, setHText] = useState<string>("0.5 * Z + 0.3 * X");
+  // Post-selection on a classical bit outcome. Only used when the circuit
+  // has measurements + noise mode is on; otherwise the trajectory average
+  // path isn't running and there's nothing to filter.
+  const numClbits = noisyContext?.circuit.numClbits ?? 0;
+  const hasMeasurements = useMemo(
+    () => !!noisyContext?.circuit.gates.some((g) => g.gateId === "measure" || g.gateId === "measure_x" || g.gateId === "measure_y"),
+    [noisyContext?.circuit],
+  );
+  const [postSelectOn, setPostSelectOn] = useState(false);
+  const [postClbit, setPostClbit] = useState(0);
+  const [postValue, setPostValue] = useState<0 | 1>(0);
 
   // Resize per-qubit Pauli selection when the circuit width changes.
   useEffect(() => {
@@ -85,18 +96,22 @@ function ExpectationBody({ state, noisyContext }: Props) {
     if (!data || !observable) return null;
     if (mode === "hamiltonian" && hParsed.ok && hParsed.nH !== n) return null;
     if (data.isNoisy && noisyContext) {
+      const ps = postSelectOn && hasMeasurements && postClbit < numClbits
+        ? { clbit: postClbit, value: postValue }
+        : undefined;
       return noisyExpectationObservable(
         noisyContext.circuit,
         noisyContext.paramValues,
         noisyContext.customGates,
         noisyContext.noise,
         observable,
+        ps,
       );
     }
     if (data.isStabilizer) return null;
     if (observable.kind === "pauli") return evalPaulis(data.state, n, observable.paulis);
     return pauliSumExpectation(data.state, n, observable.terms);
-  }, [data, observable, n, mode, hParsed, collapsed, noisyContext]);
+  }, [data, observable, n, mode, hParsed, collapsed, noisyContext, postSelectOn, postClbit, postValue, hasMeasurements, numClbits]);
 
   const opLabel = useMemo(() => {
     const parts: string[] = [];
@@ -180,9 +195,30 @@ function ExpectationBody({ state, noisyContext }: Props) {
           )}
         </div>
       )}
+      {data.isNoisy && hasMeasurements && numClbits > 0 && (
+        <div className="exp__postselect">
+          <label className="exp__postselect-toggle">
+            <input type="checkbox" checked={postSelectOn} onChange={(e) => setPostSelectOn(e.target.checked)} />
+            <span>post-select on</span>
+          </label>
+          <span>c[</span>
+          <select value={postClbit} onChange={(e) => setPostClbit(parseInt(e.target.value, 10))} disabled={!postSelectOn}>
+            {Array.from({ length: numClbits }, (_, k) => (
+              <option key={k} value={k}>{k}</option>
+            ))}
+          </select>
+          <span>] ==</span>
+          <select value={postValue} onChange={(e) => setPostValue(parseInt(e.target.value, 10) as 0 | 1)} disabled={!postSelectOn}>
+            <option value={0}>0</option>
+            <option value={1}>1</option>
+          </select>
+        </div>
+      )}
       <div className="exp__result">
-        <span className="exp__op">{opDisplay}</span>
-        <span className="exp__value">{value === null ? "—" : value.toFixed(4)}</span>
+        <span className="exp__op">{opDisplay}{postSelectOn && hasMeasurements ? ` | c[${postClbit}]=${postValue}` : ""}</span>
+        <span className="exp__value">
+          {value === null ? "—" : Number.isFinite(value) ? value.toFixed(4) : "no shots matched"}
+        </span>
         {data.isNoisy && (
           <span className="exp__noisy-tag">avg of {data.trajectories} trajectories</span>
         )}
@@ -299,9 +335,10 @@ function Optimizer({
           <option value="minimize">minimise</option>
           <option value="maximize">maximise</option>
         </select>
-        <select value={opt} onChange={(e) => setOpt(e.target.value as OptimizerKind)} title="Optimiser">
+        <select value={opt} onChange={(e) => setOpt(e.target.value as OptimizerKind)} title="Optimiser (QNG: Fubini-Study metric preconditioning, statevector mode only)">
           <option value="adam">Adam</option>
           <option value="sgd">SGD</option>
+          <option value="qng">QNG</option>
         </select>
         <label>steps
           <input type="number" min={1} max={500} value={steps} onChange={(e) => setSteps(parseInt(e.target.value || "30", 10))} />
@@ -335,10 +372,31 @@ function DiagnosticTools({
   observable: Observable;
   picked: Set<string>;
 }) {
-  const [busy, setBusy] = useState<"zne" | "landscape" | "plateau" | null>(null);
+  const [busy, setBusy] = useState<"zne" | "landscape" | "plateau" | "pec" | null>(null);
   const [zne, setZne] = useState<{ samples: Array<{ scale: number; value: number }>; extrapolated: number } | null>(null);
   const [landscape, setLandscape] = useState<{ grid: number[][]; symbols: string[] } | null>(null);
   const [plateau, setPlateau] = useState<{ varPerSym: number[]; symbols: string[] } | null>(null);
+  const [pec, setPec] = useState<{ value: number; trajectories: number; varianceOverhead: number; locations: number } | null>(null);
+
+  const runPec = () => {
+    if (!ctx.noise.enabled || busy) return;
+    setBusy("pec");
+    setTimeout(() => {
+      try {
+        // Lazy import to keep PEC out of the initial bundle for users who
+        // don't enable noise.
+        import("../sim/pec").then(({ pecExpectation }) => {
+          const result = pecExpectation(
+            ctx.circuit, ctx.paramValues, ctx.customGates, ctx.noise,
+            observable, Math.max(32, ctx.noise.trajectories),
+          );
+          setPec(result);
+        }).finally(() => setBusy(null));
+      } catch {
+        setBusy(null);
+      }
+    }, 0);
+  };
 
   const runZne = () => {
     if (!ctx.noise.enabled || busy) return;
@@ -406,6 +464,13 @@ function DiagnosticTools({
         >
           {busy === "zne" ? "…" : "ZNE"}
         </button>
+        <button
+          onClick={runPec}
+          disabled={!ctx.noise.enabled || busy !== null}
+          title="Probabilistic Error Cancellation (1q depolarising only): sign-weighted sampling against the inverse channel"
+        >
+          {busy === "pec" ? "…" : "PEC"}
+        </button>
       </div>
       {landscape && <LandscapeView grid={landscape.grid} symbols={landscape.symbols} />}
       {plateau && (
@@ -423,6 +488,15 @@ function DiagnosticTools({
         <div className="exp__tools-result">
           ZNE samples: {zne.samples.map((s) => `${s.scale}×: ${s.value.toFixed(4)}`).join(" · ")}
           <div className="exp__tools-extrap">→ ⟨P⟩(γ=0) ≈ {zne.extrapolated.toFixed(4)}</div>
+        </div>
+      )}
+      {pec && (
+        <div className="exp__tools-result">
+          PEC ⟨P⟩ ≈ {pec.value.toFixed(4)} ({pec.trajectories} shots, {pec.locations} 1q locations)
+          <div className="exp__tools-extrap">
+            variance overhead ≈ {pec.varianceOverhead.toExponential(2)}×
+            {pec.varianceOverhead > 1e6 && " — consider lowering 1q depolarising rate"}
+          </div>
         </div>
       )}
     </div>

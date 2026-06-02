@@ -11,6 +11,13 @@ import { newGateId } from "../editor/state";
  *   • Same-axis rotation merge: Rx(a)·Rx(b) → Rx(a + b); same for Ry,
  *     Rz, P. Parameters are concatenated symbolically — the expression
  *     evaluator handles "a + b" as a string.
+ *   • Pauli pair collapse: distinct Paulis on the same qubit fuse to the
+ *     third (X·Y → Z, Y·Z → X, Z·X → Y, and their reverses). The global
+ *     ±i phase is dropped — fine for any observable / probability measure
+ *     that doesn't care about global phase, which is everything we expose.
+ *   • H·CX·H fusion: H(t)·CX(c,t)·H(t) → CZ(c,t). The window is three gates
+ *     on the target qubit and is detected in a separate post-pass after the
+ *     pair-based passes converge (the main stack walker only sees pairs).
  *   • Adjacent-on-same-qubits-only — we don't reorder gates that touch
  *     different qubit sets, even when they'd commute. That's deliberate:
  *     unconditional commutation reordering can ruin user-curated layout,
@@ -44,6 +51,14 @@ const DAGGER_PAIRS: Record<string, string> = {
 
 const ROTATION_GATES = new Set(["rx", "ry", "rz", "p", "u1", "crx", "cry", "crz", "cp", "cu1"]);
 
+// X·Y → Z (and cyclic permutations); the reverses too. Result drops the
+// ±i global phase. Lookup keyed by `${a}${b}` over the Pauli set {x,y,z}.
+const PAULI_PRODUCT: Record<string, string> = {
+  xy: "z", yx: "z",
+  yz: "x", zy: "x",
+  zx: "y", xz: "y",
+};
+
 export function optimiseCircuit(circuit: Circuit): OptimiseResult {
   const before = circuit.gates.length;
   const rulesFired: Record<string, number> = {};
@@ -63,6 +78,7 @@ export function optimiseCircuit(circuit: Circuit): OptimiseResult {
     const remove = new Set<string>();
     const stacks: PlacedGate[][] = Array.from({ length: circuit.numQubits }, () => []);
     const merges: Array<{ keepId: string; killId: string; mergedParams: string[] }> = [];
+    const rewrites: Array<{ keepId: string; killId: string; newGateId: string }> = [];
 
     for (const g of gates) {
       if (remove.has(g.id)) continue;
@@ -91,6 +107,15 @@ export function optimiseCircuit(circuit: Circuit): OptimiseResult {
           changed = true;
           continue;
         }
+        if (sameQubitSet(common, g)) {
+          const pauliResult = tryPauliCollapse(common, g, rulesFired);
+          if (pauliResult) {
+            rewrites.push({ keepId: common.id, killId: g.id, newGateId: pauliResult });
+            remove.add(g.id);
+            changed = true;
+            continue;
+          }
+        }
         if (sameQubitSet(common, g) && tryMerge(common, g, rulesFired)) {
           // Merge: replace `common` with merged params (kept), drop `g`.
           merges.push({
@@ -105,18 +130,31 @@ export function optimiseCircuit(circuit: Circuit): OptimiseResult {
       }
       pushAll(stacks, g);
     }
-    // Apply merges + removals.
+    // Apply merges + rewrites + removals.
     const next: PlacedGate[] = [];
     for (const g of gates) {
       if (remove.has(g.id)) continue;
       const merge = merges.find((m) => m.keepId === g.id);
       if (merge) {
         next.push({ ...g, id: newGateId(), params: merge.mergedParams });
-      } else {
-        next.push(g);
+        continue;
       }
+      const rewrite = rewrites.find((r) => r.keepId === g.id);
+      if (rewrite) {
+        next.push({ ...g, id: newGateId(), gateId: rewrite.newGateId, params: [] });
+        continue;
+      }
+      next.push(g);
     }
     gates = next;
+  }
+
+  // Post-pass: H(t)·CX(c,t)·H(t) → CZ(c,t). Sweep to a fixed point so
+  // chains of CZ-conjugated fragments collapse fully.
+  for (let i = 0; i < 50; i++) {
+    const result = fuseHCXH(gates, rulesFired);
+    if (!result.changed) break;
+    gates = result.gates;
   }
 
   // ASAP re-pack columns.
@@ -179,6 +217,19 @@ function tryCancel(a: PlacedGate, b: PlacedGate, rules: Record<string, number>):
   return false;
 }
 
+function tryPauliCollapse(a: PlacedGate, b: PlacedGate, rules: Record<string, number>): string | null {
+  // Both must be uncontrolled single-qubit Paulis on the same qubit.
+  if (a.controls.length !== 0 || b.controls.length !== 0) return null;
+  if (a.targets.length !== 1 || b.targets.length !== 1) return null;
+  if (!(a.gateId === "x" || a.gateId === "y" || a.gateId === "z")) return null;
+  if (!(b.gateId === "x" || b.gateId === "y" || b.gateId === "z")) return null;
+  if (a.gateId === b.gateId) return null; // handled by self-inverse path
+  const result = PAULI_PRODUCT[`${a.gateId}${b.gateId}`];
+  if (!result) return null;
+  rules[`${a.gateId}·${b.gateId} → ${result}`] = (rules[`${a.gateId}·${b.gateId} → ${result}`] ?? 0) + 1;
+  return result;
+}
+
 function tryMerge(a: PlacedGate, b: PlacedGate, rules: Record<string, number>): boolean {
   if (a.gateId !== b.gateId) return false;
   if (!ROTATION_GATES.has(a.gateId)) return false;
@@ -202,6 +253,81 @@ function combineExpr(a: string, b: string): string {
   }
   const bSign = tb.startsWith("-") ? "" : "+";
   return `${ta} ${bSign} ${tb}`;
+}
+
+/**
+ * Detect H(t)·CX(c,t)·H(t) windows and replace with CZ(c,t). Returns the
+ * (possibly new) gate list and whether any fusion fired.
+ *
+ * The "previous gate on the target qubit" check is the right adjacency
+ * criterion: any other gate touching t between H and CX would have been the
+ * predecessor instead. The H is uncontrolled and single-qubit so it has no
+ * other dependencies to worry about.
+ */
+function fuseHCXH(
+  gates: PlacedGate[],
+  rules: Record<string, number>,
+): { gates: PlacedGate[]; changed: boolean } {
+  const sorted = [...gates].sort(
+    (a, b) => a.column - b.column || a.id.localeCompare(b.id),
+  );
+  // Per-qubit lists of (index into sorted).
+  const numQ = sorted.reduce(
+    (m, g) => Math.max(m, ...g.controls, ...g.targets),
+    -1,
+  ) + 1;
+  const perQ: number[][] = Array.from({ length: numQ }, () => []);
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    for (const q of [...g.controls, ...g.targets]) {
+      if (q < numQ) perQ[q].push(i);
+    }
+  }
+
+  const remove = new Set<string>();
+  const rewriteCXtoCZ = new Set<string>();
+  let changed = false;
+
+  const isPlainH = (g: PlacedGate, t: number) =>
+    g.gateId === "h" && g.controls.length === 0 && g.targets.length === 1 && g.targets[0] === t
+    && !g.condition && !g.controlStates?.some((s) => !s);
+
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    if (g.gateId !== "cx") continue;
+    if (g.condition || g.controlStates?.some((s) => !s)) continue;
+    if (g.controls.length !== 1 || g.targets.length !== 1) continue;
+    if (remove.has(g.id) || rewriteCXtoCZ.has(g.id)) continue;
+    const t = g.targets[0];
+    const list = perQ[t];
+    if (!list) continue;
+    const pos = list.indexOf(i);
+    if (pos <= 0 || pos >= list.length - 1) continue;
+    const prev = sorted[list[pos - 1]];
+    const next = sorted[list[pos + 1]];
+    if (remove.has(prev.id) || remove.has(next.id)) continue;
+    if (!isPlainH(prev, t) || !isPlainH(next, t)) continue;
+    // Fuse: drop both Hs, rewrite CX → CZ. The cz is symmetric so the
+    // control/target roles don't matter for semantics, but keep them
+    // matching the original CX's c→t for layout continuity.
+    remove.add(prev.id);
+    remove.add(next.id);
+    rewriteCXtoCZ.add(g.id);
+    rules["H·CX·H → CZ"] = (rules["H·CX·H → CZ"] ?? 0) + 1;
+    changed = true;
+  }
+
+  if (!changed) return { gates, changed };
+  const next: PlacedGate[] = [];
+  for (const g of gates) {
+    if (remove.has(g.id)) continue;
+    if (rewriteCXtoCZ.has(g.id)) {
+      next.push({ ...g, id: newGateId(), gateId: "cz" });
+      continue;
+    }
+    next.push(g);
+  }
+  return { gates: next, changed };
 }
 
 function pushAll(stacks: PlacedGate[][], g: PlacedGate): void {

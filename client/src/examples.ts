@@ -69,6 +69,9 @@ import uccsdLite4 from "../../examples/ansatz_uccsd_lite_4q.qasm?raw";
 import qaoaSquareP2 from "../../examples/qaoa_square_p2.qasm?raw";
 import teleportDynamic from "../../examples/teleport_dynamic.qasm?raw";
 import repeatUntilSuccess from "../../examples/repeat_until_success.qasm?raw";
+import surfacePlaquette from "../../examples/surface_code_plaquette.qasm?raw";
+import heisenbergXyz4 from "../../examples/heisenberg_xyz_trotter_4q.qasm?raw";
+import lihJw4 from "../../examples/lih_jw_trotter_4q.qasm?raw";
 
 export type Example = { id: string; label: string; qasm: string };
 
@@ -147,6 +150,7 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
       { id: "bit-flip", label: "Bit-flip code (3q)", qasm: bitFlip },
       { id: "steane", label: "Steane [[7,1,3]] encoder (7q)", qasm: steane },
       { id: "five-code", label: "5-qubit perfect code encoder (5q)", qasm: fiveCode },
+      { id: "surface-plaquette", label: "Surface code plaquette (6q, XXXX+ZZZZ)", qasm: surfacePlaquette },
     ],
   },
   {
@@ -154,6 +158,8 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
     items: [
       { id: "trotter-ising-6", label: "Ising Trotter, 6-spin chain", qasm: trotterIsing6 },
       { id: "trotter-xy-4", label: "XY model Trotter (4q)", qasm: trotterXy4 },
+      { id: "heisenberg-xyz-4", label: "Heisenberg XYZ Trotter step (4q)", qasm: heisenbergXyz4 },
+      { id: "lih-jw-4", label: "LiH (Jordan–Wigner, 4q Trotter step)", qasm: lihJw4 },
     ],
   },
   {

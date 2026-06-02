@@ -278,6 +278,14 @@ export function emitQasm3(circuit: Circuit): string {
   out.push('include "stdgates.inc";');
   out.push("");
 
+  // Round-trip qubit display names through a leading comment. The parser
+  // reads this back into Circuit.qubitNames.
+  if (circuit.qubitNames && circuit.qubitNames.some((s) => s && s.trim().length > 0)) {
+    const safe = (s: string) => (s ?? "").replace(/[\r\n,]/g, " ").trim();
+    out.push(`// qubit_names: ${circuit.qubitNames.map(safe).join(", ")}`);
+    out.push("");
+  }
+
   const symbols = collectFreeSymbols(circuit);
   if (symbols.length > 0) {
     for (const s of symbols) out.push(`input float ${s};`);
@@ -294,6 +302,10 @@ export function emitQasm3(circuit: Circuit): string {
     (a, b) => a.column - b.column || a.id.localeCompare(b.id),
   );
   for (const g of sorted) {
+    if (g.annotation && g.annotation.trim().length > 0) {
+      const safe = g.annotation.replace(/[\r\n]/g, " ");
+      out.push(`// note: ${safe}`);
+    }
     const lines = emitGate(g);
     if (g.condition) {
       // Wrap each emitted statement in `if (c[k] == v) { … }`.

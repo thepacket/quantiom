@@ -277,6 +277,23 @@ export function Inspector({ circuit, selectedGateId, dispatch, onSelect, onStepT
         </fieldset>
       )}
 
+      <fieldset className="inspector__group">
+        <legend>Annotation</legend>
+        <div className="inspector__row">
+          <input
+            type="text"
+            value={gate.annotation ?? ""}
+            placeholder="research note, label, citation…"
+            onChange={(e) => {
+              const text = e.target.value;
+              const patch = text.length > 0 ? { annotation: text } : { annotation: undefined };
+              dispatch({ type: "update-gate", id: gate.id, patch });
+            }}
+            title="Free-form text pinned to this gate. Round-trips through QASM as a // note: comment."
+          />
+        </div>
+      </fieldset>
+
       {def.description && <p className="inspector__desc">{def.description}</p>}
     </div>
   );

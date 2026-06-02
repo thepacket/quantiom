@@ -40,6 +40,14 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 
 /* ─── Editor layout ─────────────────────────────────────────────────── */
 .editor { display: grid; grid-template-columns: 280px 1fr 360px; grid-template-rows: auto 1fr; flex: 1; min-height: 0; height: 100%; }
+/* Presentation mode hides the gate palette and right-side panels so the
+   canvas + key visualizers get the screen. Inspector inside editor__center
+   collapses too; QasmPanel hides since it's in editor__right. */
+.editor--presentation { grid-template-columns: 0 1fr 0; }
+.editor--presentation .palette,
+.editor--presentation .editor__right,
+.editor--presentation .editor__splitter,
+.editor--presentation .inspector { display: none; }
 .editor__right { border-left: 1px solid var(--border); background: var(--panel); overflow: auto; min-width: 0; }
 /* Six grid rows for editor__center's children:
    TabStrip (auto) · toolbar (auto) · StepBar (auto) · canvas (1fr — grows
@@ -172,6 +180,14 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .gate--selected .gate__box--state,
 .gate--selected .gate__box--delay { stroke: var(--accent); stroke-width: 2; }
 .gate--past { opacity: 0.35; }
+.gate__annotation { fill: var(--muted); font-size: 9px; font-style: italic; pointer-events: auto; }
+.gate--match .gate__box,
+.gate--match .gate__box--target,
+.gate--match .gate__box--measure,
+.gate--match .gate__box--reset,
+.gate--match .gate__box--state,
+.gate--match .gate__box--delay,
+.gate--match .gate__box--custom { stroke: #ffcc33; stroke-width: 2.4; filter: drop-shadow(0 0 4px rgba(255, 204, 51, 0.55)); }
 .canvas__step-cursor { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 4; opacity: 0.7; }
 
 /* ─── Step bar ──────────────────────────────────────────────────────── */

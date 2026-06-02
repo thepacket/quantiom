@@ -8,6 +8,35 @@ import { Inspector } from "./Inspector";
 import { FileMenu } from "./FileMenu";
 import { StepBar } from "./StepBar";
 import { loadCustomGates, newCustomGateId, saveCustomGates, type CustomGate } from "./customGates";
+import type { Circuit } from "./types";
+
+/**
+ * Compute the set of gate ids matching a free-form find query. Matches on:
+ *   - gate id ("rx", "ccx")
+ *   - "qN" tokens (qubit indices the gate touches)
+ *   - any qubit display name (e.g. "data", "ancilla")
+ *   - parameter substring (raw or asciified — we match against the raw
+ *     symbolic text the user typed)
+ * Empty query → undefined (no highlight).
+ */
+function findMatches(circuit: Circuit, query: string): Set<string> | undefined {
+  const q = query.trim().toLowerCase();
+  if (!q) return undefined;
+  const matched = new Set<string>();
+  for (const g of circuit.gates) {
+    if (g.gateId.toLowerCase().includes(q)) { matched.add(g.id); continue; }
+    const qubits = [...g.controls, ...g.targets];
+    let hit = false;
+    for (const i of qubits) {
+      if (q === `q${i}`) { hit = true; break; }
+      const name = circuit.qubitNames?.[i]?.toLowerCase();
+      if (name && name.includes(q)) { hit = true; break; }
+    }
+    if (hit) { matched.add(g.id); continue; }
+    if (g.params.some((p) => p.toLowerCase().includes(q))) matched.add(g.id);
+  }
+  return matched;
+}
 import { decodeCircuitFromHash } from "./shareLink";
 import { inverseGates } from "./inverse";
 import { transpile, type TranspileTarget } from "../sim/transpile";
@@ -24,6 +53,7 @@ import { DensityPanel } from "../panels/DensityPanel";
 import { NoisePanel } from "../panels/NoisePanel";
 import { PhaseDiskPanel } from "../panels/PhaseDiskPanel";
 import { ResourcePanel } from "../panels/ResourcePanel";
+import { ComparePanel } from "../panels/ComparePanel";
 import { EquivalencePanel } from "../panels/EquivalencePanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
 import { MeasurementCountsPanel } from "../panels/MeasurementCountsPanel";
@@ -32,6 +62,7 @@ import { HamiltonianPanel } from "../panels/HamiltonianPanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector } from "../panels/useSimulation";
+import { useGPUNoisyProbabilities } from "../panels/useGPUNoisyProbabilities";
 import { loadNoise, saveNoise, type NoiseModel } from "../sim/noise";
 
 function HistoryButton({
@@ -319,6 +350,10 @@ export function CircuitEditor() {
 
   const [customGates, setCustomGates] = useState<CustomGate[]>(() => loadCustomGates());
   const [noise, setNoise] = useState<NoiseModel>(() => loadNoise());
+  const [presentation, setPresentation] = useState<boolean>(() => {
+    try { return localStorage.getItem("quantiom:presentation") === "1"; } catch { return false; }
+  });
+  const [findQuery, setFindQuery] = useState<string>("");
 
   useEffect(() => {
     saveCustomGates(customGates);
@@ -327,6 +362,10 @@ export function CircuitEditor() {
   useEffect(() => {
     saveNoise(noise);
   }, [noise]);
+
+  useEffect(() => {
+    try { localStorage.setItem("quantiom:presentation", presentation ? "1" : "0"); } catch { /* storage may be blocked */ }
+  }, [presentation]);
 
   // Auto-load circuit from URL hash (#c=<gzip+base64url>) once on mount.
   // Opens shared links into a new tab so the user doesn't lose their work.
@@ -377,6 +416,10 @@ export function CircuitEditor() {
   }, [circuit, pickedStep, effectiveStep]);
 
   const simState = useStatevector(steppedCircuit, paramValues, customGates, noise);
+  // Opt-in WebGPU fast path: only kicks in when noise is enabled and the
+  // circuit is in the GPU-supported subset (1-qubit + depolarising only).
+  // Falls back silently to the CPU result the moment any constraint fails.
+  const gpuProbs = useGPUNoisyProbabilities(steppedCircuit, paramValues, customGates, noise, true);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -420,7 +463,7 @@ export function CircuitEditor() {
   }, [dispatch, selectedGateId, setSelectedGateId, t]);
 
   return (
-    <div className="editor">
+    <div className={presentation ? "editor editor--presentation" : "editor"}>
       <header className="app__header">
         <div className="app__header-left">
           <h1>Quantiom</h1>
@@ -480,6 +523,21 @@ export function CircuitEditor() {
               }}
             />
             <button onClick={onSaveAsGate} title="Save the current circuit as a reusable custom gate">Save as gate</button>
+            <button
+              onClick={() => setPresentation((p) => !p)}
+              title={presentation ? "Exit presentation mode" : "Hide palette/inspector/QASM for screenshots"}
+            >
+              {presentation ? "Exit present" : "Present"}
+            </button>
+            <input
+              type="search"
+              className="editor__find"
+              placeholder="Find: gate / qN / param"
+              value={findQuery}
+              onChange={(e) => setFindQuery(e.target.value)}
+              title="Highlight gates by id, qubit (e.g. q3 or a name), or parameter substring"
+              style={{ width: 200 }}
+            />
             <TransformMenu
               hasCoupling={!!noise.coupling}
               onCompact={() => dispatch({ type: "compact-columns" })}
@@ -587,6 +645,7 @@ export function CircuitEditor() {
             onSelect={setSelectedGateId}
             currentStep={effectiveStep}
             customGates={customGates}
+            highlightedIds={findMatches(circuit, findQuery)}
           />
         </div>
         <InspectorSplitter />
@@ -603,7 +662,7 @@ export function CircuitEditor() {
           <ParameterPanel state={simState} values={paramValues} onChange={setParamValues} />
         </ErrorBoundary>
         <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="probabilities"><ProbabilityPanel state={simState} gpuProbabilities={gpuProbs} /></ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="expectation">
@@ -621,6 +680,16 @@ export function CircuitEditor() {
         <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
         <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} coupling={noise.coupling} /></ErrorBoundary>
+        <ErrorBoundary label="compare">
+          <ComparePanel
+            currentTabId={t.activeId}
+            tabs={t.tabs.map((x) => ({
+              id: x.id,
+              name: x.versioned.present.name ?? "Untitled",
+              circuit: x.versioned.present,
+            }))}
+          />
+        </ErrorBoundary>
         <ErrorBoundary label="equivalence">
           <EquivalencePanel
             circuit={circuit}

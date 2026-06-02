@@ -4,7 +4,13 @@ import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { sampleShots } from "../sim/sample";
 
-type Props = { state: SimState };
+type Props = {
+  state: SimState;
+  /** Optional GPU-computed probabilities that override `state.probabilities`
+   *  when present. Used by the WebGPU trajectory fast path in noise mode.
+   *  Length must equal 2^numQubits. */
+  gpuProbabilities?: number[] | null;
+};
 type Mode = "exact" | "shots";
 
 const BAR_H = 14;
@@ -29,19 +35,22 @@ function loadInitialShots(): number {
   return 1024;
 }
 
-export function ProbabilityPanel({ state }: Props) {
+export function ProbabilityPanel({ state, gpuProbabilities }: Props) {
   const collapsed = usePanelCollapsed();
   const data = dataOf(state);
   const [mode, setMode] = useState<Mode>(loadInitialMode);
   const [shots, setShots] = useState<number>(loadInitialShots);
+  const effectiveProbs = gpuProbabilities && data && gpuProbabilities.length === data.probabilities.length
+    ? gpuProbabilities
+    : data?.probabilities ?? null;
   // Bumping this nonce forces a fresh sample without changing other deps.
   const [sampleNonce, setSampleNonce] = useState(0);
 
   const counts = useMemo<number[] | null>(() => {
-    if (collapsed || mode !== "shots" || !data) return null;
-    return sampleShots(data.probabilities, shots);
+    if (collapsed || mode !== "shots" || !effectiveProbs) return null;
+    return sampleShots(effectiveProbs, shots);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, data, shots, sampleNonce, collapsed]);
+  }, [mode, effectiveProbs, shots, sampleNonce, collapsed]);
 
   const updateMode = (m: Mode) => {
     setMode(m);
@@ -53,10 +62,10 @@ export function ProbabilityPanel({ state }: Props) {
   };
 
   const copy = () => {
-    if (!data) return "";
+    if (!data || !effectiveProbs) return "";
     if (mode === "exact" || !counts) {
       return data.amplitudes
-        .map((a, i) => `|${a.basis}>  ${(data.probabilities[i] * 100).toFixed(2)}%`)
+        .map((a, i) => `|${a.basis}>  ${(effectiveProbs[i] * 100).toFixed(2)}%`)
         .join("\n");
     }
     return [
@@ -124,7 +133,10 @@ export function ProbabilityPanel({ state }: Props) {
               </button>
             </div>
           )}
-          <ProbabilityChart data={data} mode={mode} counts={counts} shots={shots} />
+          <ProbabilityChart data={data} probs={effectiveProbs ?? data.probabilities} mode={mode} counts={counts} shots={shots} />
+          {gpuProbabilities && (
+            <div className="prob__note">WebGPU: {gpuProbabilities.length} bins from trajectory average</div>
+          )}
         </>
       )}
     </PanelShell>
@@ -133,16 +145,18 @@ export function ProbabilityPanel({ state }: Props) {
 
 function ProbabilityChart({
   data,
+  probs,
   mode,
   counts,
   shots,
 }: {
   data: NonNullable<ReturnType<typeof dataOf>>;
+  probs: number[];
   mode: Mode;
   counts: number[] | null;
   shots: number;
 }) {
-  const exactProbs = data.probabilities.map((p) => p ?? 0);
+  const exactProbs = probs.map((p) => p ?? 0);
   const empirical = mode === "shots" && counts
     ? counts.map((c) => c / Math.max(1, shots))
     : exactProbs;

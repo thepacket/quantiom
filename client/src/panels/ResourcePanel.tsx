@@ -56,6 +56,12 @@ function ResourceBody({ circuit, coupling }: Props) {
           Clifford-only — would route to the tableau path at n &gt; 16.
         </div>
       )}
+      {r.arbitrary2q > 0 && (
+        <div className="resources__note">
+          {r.arbitrary2q} arbitrary 2q unitar{r.arbitrary2q === 1 ? "y" : "ies"} —
+          KAK decomposition would add ≈ {r.arbitrary2q * 3} CX + {r.arbitrary2q * 8} 1-qubit gates.
+        </div>
+      )}
       {violations !== null && (
         <div className={"resources__note" + (violations > 0 ? " resources__note--warn" : "")}>
           {violations > 0

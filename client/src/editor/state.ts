@@ -22,6 +22,7 @@ export type Action =
   | { type: "compact-columns" }
   | { type: "delete-range"; fromColumn: number; toColumn: number }
   | { type: "duplicate-range"; fromColumn: number; toColumn: number }
+  | { type: "rename-qubit"; index: number; name: string }
   | { type: "clear" };
 
 export type HistoryAction = Action | { type: "undo" } | { type: "redo" };
@@ -148,6 +149,15 @@ function reducer(state: Circuit, action: Action): Circuit {
       }));
       void span;
       return { ...state, gates: [...state.gates, ...cloned] };
+    }
+    case "rename-qubit": {
+      if (action.index < 0 || action.index >= state.numQubits) return state;
+      const names = [...(state.qubitNames ?? [])];
+      while (names.length < state.numQubits) names.push("");
+      names[action.index] = action.name;
+      // Trim trailing empty entries to keep the array tidy.
+      while (names.length > 0 && !names[names.length - 1]) names.pop();
+      return { ...state, qubitNames: names.length > 0 ? names : undefined };
     }
     case "clear":
       return { ...state, gates: [] };

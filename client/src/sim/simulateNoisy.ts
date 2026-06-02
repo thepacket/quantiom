@@ -143,6 +143,9 @@ export function simulateNoisy(
           damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
           if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
         }
+        if (noise.customKraus2q?.enabled) {
+          applyCustomKraus2(state, n, involved[0], involved[1], noise.customKraus2q.operators);
+        }
         applyCrosstalk(state, n, involved[0], involved[1], noise);
       } else {
         const d2 = perGateRate ?? noise.twoQubitDepolarising;
@@ -267,6 +270,87 @@ function applyCustomKraus(state: Float64Array, n: number, q: number, operators: 
     state[2 * i + 1] = K[0] * a_im + K[1] * a_re + K[2] * b_im + K[3] * b_re;
     state[2 * j] = K[4] * a_re - K[5] * a_im + K[6] * b_re - K[7] * b_im;
     state[2 * j + 1] = K[4] * a_im + K[5] * a_re + K[6] * b_im + K[7] * b_re;
+  }
+  const scale = 1 / Math.sqrt(ps[chosen]);
+  for (let k = 0; k < state.length; k++) state[k] *= scale;
+}
+
+/**
+ * Apply a user-defined two-qubit Kraus channel on qubits (q0, q1) by
+ * state-conditional sampling. Operators are 4×4 complex matrices in
+ * row-major [re, im] layout, so each operator is 32 floats. Mirrors
+ * `applyCustomKraus` for the 1q case.
+ *
+ * Cost: O(|operators| · 16 · 2^(n-2)) for probability accumulation and
+ * the same for the application step. Acceptable for the noise loop
+ * since it only runs on circuits the user explicitly opted into.
+ */
+function applyCustomKraus2(state: Float64Array, n: number, q0: number, q1: number, operators: ReadonlyArray<number[]>): void {
+  if (operators.length === 0) return;
+  if (q0 === q1) return;
+  const dim = 1 << n;
+  const m0 = 1 << (n - 1 - q0);
+  const m1 = 1 << (n - 1 - q1);
+
+  const ps = new Array<number>(operators.length).fill(0);
+  for (let i = 0; i < dim; i++) {
+    if ((i & m0) !== 0 || (i & m1) !== 0) continue;
+    const i00 = i;
+    const i01 = i | m1;
+    const i10 = i | m0;
+    const i11 = i | m0 | m1;
+    const aRe = state[2 * i00], aIm = state[2 * i00 + 1];
+    const bRe = state[2 * i01], bIm = state[2 * i01 + 1];
+    const cRe = state[2 * i10], cIm = state[2 * i10 + 1];
+    const dRe = state[2 * i11], dIm = state[2 * i11 + 1];
+    for (let k = 0; k < operators.length; k++) {
+      const K = operators[k];
+      for (let r = 0; r < 4; r++) {
+        const off = 8 * r;
+        const re =
+          K[off] * aRe - K[off + 1] * aIm +
+          K[off + 2] * bRe - K[off + 3] * bIm +
+          K[off + 4] * cRe - K[off + 5] * cIm +
+          K[off + 6] * dRe - K[off + 7] * dIm;
+        const im =
+          K[off] * aIm + K[off + 1] * aRe +
+          K[off + 2] * bIm + K[off + 3] * bRe +
+          K[off + 4] * cIm + K[off + 5] * cRe +
+          K[off + 6] * dIm + K[off + 7] * dRe;
+        ps[k] += re * re + im * im;
+      }
+    }
+  }
+  let total = 0;
+  for (const p of ps) total += p;
+  if (total < 1e-12) return;
+  const r = Math.random() * total;
+  let cum = 0;
+  let chosen = operators.length - 1;
+  for (let i = 0; i < operators.length; i++) {
+    cum += ps[i];
+    if (r <= cum) { chosen = i; break; }
+  }
+  const K = operators[chosen];
+  for (let i = 0; i < dim; i++) {
+    if ((i & m0) !== 0 || (i & m1) !== 0) continue;
+    const idxs = [i, i | m1, i | m0, i | m0 | m1];
+    const ins: number[][] = [];
+    for (const ix of idxs) ins.push([state[2 * ix], state[2 * ix + 1]]);
+    for (let row = 0; row < 4; row++) {
+      const off = 8 * row;
+      let re = 0, im = 0;
+      for (let col = 0; col < 4; col++) {
+        const krRe = K[off + 2 * col];
+        const krIm = K[off + 2 * col + 1];
+        const inRe = ins[col][0];
+        const inIm = ins[col][1];
+        re += krRe * inRe - krIm * inIm;
+        im += krRe * inIm + krIm * inRe;
+      }
+      state[2 * idxs[row]] = re;
+      state[2 * idxs[row] + 1] = im;
+    }
   }
   const scale = 1 / Math.sqrt(ps[chosen]);
   for (let k = 0; k < state.length; k++) state[k] *= scale;
@@ -514,27 +598,15 @@ export function noisyExpectationObservable(
   customGates: CustomGate[],
   noise: NoiseModel,
   obs: Observable,
+  postSelect?: { clbit: number; value: number },
 ): number {
-  if (obs.kind === "pauli") {
-    return noisyPauliExpectation(circuit, paramValues, customGates, noise, obs.paulis);
-  }
-  return noisyPauliSumExpectation(circuit, paramValues, customGates, noise, obs.terms);
+  const readout =
+    obs.kind === "pauli"
+      ? (state: Float64Array, n: number) => evalPaulis(state, n, obs.paulis)
+      : (state: Float64Array, n: number) => pauliSumExpectation(state, n, obs.terms);
+  return runTrajectoryAverage(circuit, paramValues, customGates, noise, readout, postSelect);
 }
 
-function noisyPauliSumExpectation(
-  circuit: Circuit,
-  paramValues: ParameterValues,
-  customGates: CustomGate[],
-  noise: NoiseModel,
-  terms: Array<{ coefficient: number; paulis: string }>,
-): number {
-  // Re-run the trajectory loop once and evaluate every term on each final
-  // trajectory state. Much cheaper than calling `noisyPauliExpectation` per
-  // term — single sim, T evaluations of |H|.
-  return runTrajectoryAverage(circuit, paramValues, customGates, noise, (state, n) =>
-    pauliSumExpectation(state, n, terms),
-  );
-}
 
 function runTrajectoryAverage(
   circuit: Circuit,
@@ -542,6 +614,7 @@ function runTrajectoryAverage(
   customGates: CustomGate[],
   noise: NoiseModel,
   observable: (state: Float64Array, n: number) => number,
+  postSelect?: { clbit: number; value: number },
 ): number {
   // Reusable single-pass driver. Mirrors the inner loop of
   // `noisyPauliExpectation` but parameterised on the per-trajectory readout.
@@ -578,6 +651,7 @@ function runTrajectoryAverage(
 
   const cReg = new Uint8Array(Math.max(1, circuit.numClbits));
   let sum = 0;
+  let kept = 0;
   for (let t = 0; t < T; t++) {
     const state = new Float64Array(2 * dim);
     state[0] = 1;
@@ -612,6 +686,9 @@ function runTrajectoryAverage(
           damp1(state, n, q, rateFor(noise, "amplitudeDamping", q), rateFor(noise, "phaseDamping", q));
           if (noise.customKraus?.enabled) applyCustomKraus(state, n, q, noise.customKraus.operators);
         }
+        if (noise.customKraus2q?.enabled) {
+          applyCustomKraus2(state, n, involved[0], involved[1], noise.customKraus2q.operators);
+        }
         applyCrosstalk(state, n, involved[0], involved[1], noise);
       } else {
         const d2 = perGateRate ?? noise.twoQubitDepolarising;
@@ -622,7 +699,18 @@ function runTrajectoryAverage(
         }
       }
     }
+    // Post-selection on a classical-bit outcome: drop trajectories whose
+    // final cReg doesn't match. The expectation is the conditional value
+    // E[⟨P⟩ | c[k] == v], so the denominator is the kept-trajectory count
+    // (NaN if no trajectory survives, signalling the panel to show "no data").
+    if (postSelect) {
+      if (cReg[postSelect.clbit] !== postSelect.value) continue;
+      kept++;
+    }
     sum += observable(state, n);
+  }
+  if (postSelect) {
+    return kept === 0 ? NaN : sum / kept;
   }
   return sum / T;
 }

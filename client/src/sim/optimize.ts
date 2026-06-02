@@ -25,7 +25,7 @@ import type { NoiseModel } from "./noise";
  * so the UI can show a live counter and let the user cancel.
  */
 
-export type OptimizerKind = "sgd" | "adam";
+export type OptimizerKind = "sgd" | "adam" | "qng";
 
 export type OptimizerOptions = {
   symbols: string[];
@@ -92,7 +92,26 @@ export function optimizeExpectation(
 
     // Apply update.
     let normSq = 0;
-    if (kind === "adam") {
+    if (kind === "qng") {
+      // Quantum Natural Gradient: precondition the gradient by the inverse
+      // of the Fubini-Study metric F. F_{ij} = Re[⟨∂_i ψ|∂_j ψ⟩ -
+      // ⟨∂_i ψ|ψ⟩⟨ψ|∂_j ψ⟩]. Numerical gradients of ψ via finite differences.
+      // Disabled in noise mode (the metric isn't defined on mixed states
+      // without density matrices).
+      if (noise?.enabled) {
+        return { steps: step + 1, finalValue: lastValue, finalParams: params, stopped: "cancelled" };
+      }
+      const k = symbols.length;
+      const metric = computeFubiniStudy(circuit, customGates, params, symbols, epsilon);
+      // Solve (F + λI) · u = grad with a small Tikhonov regulariser λ = 1e-3.
+      const lambda = 1e-3;
+      const reg = metric.map((row, i) => row.map((v, j) => v + (i === j ? lambda : 0)));
+      const step_dir = solveLinearSystem(reg, grad);
+      for (let i = 0; i < k; i++) {
+        params[symbols[i]] = (params[symbols[i]] ?? 0) - lr * step_dir[i];
+        normSq += grad[i] * grad[i];
+      }
+    } else if (kind === "adam") {
       const t = step + 1;
       const biasCorr1 = 1 - Math.pow(beta1, t);
       const biasCorr2 = 1 - Math.pow(beta2, t);
@@ -144,6 +163,109 @@ function evaluate(
 function toObservable(o: Pauli[] | Observable): Observable {
   if (Array.isArray(o)) return { kind: "pauli", paulis: o };
   return o;
+}
+
+/**
+ * Build the Fubini-Study metric tensor F at the current parameter point.
+ * F_{ij} = Re[⟨∂_i ψ|∂_j ψ⟩ − ⟨∂_i ψ|ψ⟩⟨ψ|∂_j ψ⟩], computed via central
+ * finite differences on the state vector. O((k+1) · 2^n) simulations per
+ * call; small-k VQE uses this happily.
+ */
+function computeFubiniStudy(
+  circuit: Circuit,
+  customGates: CustomGate[],
+  params: ParameterValues,
+  symbols: string[],
+  epsilon: number,
+): number[][] {
+  const k = symbols.length;
+  const baseResult = simulate(circuit, params, customGates);
+  if (baseResult.isStabilizer) {
+    return Array.from({ length: k }, () => new Array<number>(k).fill(0));
+  }
+  const dim = 1 << circuit.numQubits;
+  const psi = baseResult.state;
+  // ∂_i ψ as a Float64Array per symbol.
+  const dpsi: Float64Array[] = [];
+  for (let i = 0; i < k; i++) {
+    const sym = symbols[i];
+    const original = params[sym] ?? 0;
+    params[sym] = original + epsilon;
+    const plus = simulate(circuit, params, customGates).state;
+    params[sym] = original - epsilon;
+    const minus = simulate(circuit, params, customGates).state;
+    params[sym] = original;
+    const d = new Float64Array(2 * dim);
+    for (let j = 0; j < 2 * dim; j++) d[j] = (plus[j] - minus[j]) / (2 * epsilon);
+    dpsi.push(d);
+  }
+  // ⟨ψ|∂_i ψ⟩ — complex inner product.
+  const psiDotDi: Array<[number, number]> = dpsi.map((d) => innerProduct(psi, d, dim));
+  const F: number[][] = Array.from({ length: k }, () => new Array<number>(k).fill(0));
+  for (let i = 0; i < k; i++) {
+    for (let j = i; j < k; j++) {
+      const a = innerProduct(dpsi[i], dpsi[j], dim);
+      // ⟨∂_i ψ|ψ⟩ = conj(⟨ψ|∂_i ψ⟩)
+      const psiDi = psiDotDi[i];
+      const psiDj = psiDotDi[j];
+      // (conj(psiDi)) * psiDj
+      const subRe = psiDi[0] * psiDj[0] + psiDi[1] * psiDj[1];
+      const value = a[0] - subRe;
+      F[i][j] = value;
+      F[j][i] = value;
+    }
+  }
+  return F;
+}
+
+/** Re/Im inner product ⟨a|b⟩ = Σ conj(a_i) · b_i over interleaved arrays. */
+function innerProduct(a: Float64Array, b: Float64Array, dim: number): [number, number] {
+  let re = 0, im = 0;
+  for (let i = 0; i < dim; i++) {
+    const aRe = a[2 * i], aIm = a[2 * i + 1];
+    const bRe = b[2 * i], bIm = b[2 * i + 1];
+    re += aRe * bRe + aIm * bIm;
+    im += aRe * bIm - aIm * bRe;
+  }
+  return [re, im];
+}
+
+/**
+ * Solve A · x = b for x via Gauss-Jordan elimination with partial pivoting.
+ * Sized for small k (≤ ~20 free parameters); not optimised for big systems.
+ */
+function solveLinearSystem(Ain: number[][], bIn: number[]): number[] {
+  const n = bIn.length;
+  const A = Ain.map((row) => [...row]);
+  const b = [...bIn];
+  for (let i = 0; i < n; i++) {
+    // Partial pivot.
+    let maxRow = i;
+    let maxAbs = Math.abs(A[i][i]);
+    for (let r = i + 1; r < n; r++) {
+      const v = Math.abs(A[r][i]);
+      if (v > maxAbs) { maxAbs = v; maxRow = r; }
+    }
+    if (maxRow !== i) {
+      [A[i], A[maxRow]] = [A[maxRow], A[i]];
+      [b[i], b[maxRow]] = [b[maxRow], b[i]];
+    }
+    const pivot = A[i][i];
+    if (Math.abs(pivot) < 1e-14) {
+      // Singular; fall back to plain gradient direction for this row.
+      continue;
+    }
+    for (let c = i; c < n; c++) A[i][c] /= pivot;
+    b[i] /= pivot;
+    for (let r = 0; r < n; r++) {
+      if (r === i) continue;
+      const factor = A[r][i];
+      if (factor === 0) continue;
+      for (let c = i; c < n; c++) A[r][c] -= factor * A[i][c];
+      b[r] -= factor * b[i];
+    }
+  }
+  return b;
 }
 
 // Re-export for convenience even though only `optimizeExpectation` is the

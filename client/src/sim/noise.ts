@@ -74,6 +74,15 @@ export type NoiseModel = {
     name: string;
     operators: number[][];
   };
+  /** User-defined two-qubit Kraus channel. Each operator is a 4×4 complex
+   *  matrix as a row-major array of 32 floats. Applied after every 2-qubit
+   *  gate on the involved (q0, q1) pair via state-conditional sampling.
+   *  Channel should be trace-preserving (Σ Kᵢ† Kᵢ = I); not enforced. */
+  customKraus2q?: {
+    enabled: boolean;
+    name: string;
+    operators: number[][];
+  };
   /** Per-qubit overrides. Length matches the circuit width when set by
    *  the importer; out-of-range qubits fall back to the global rates. */
   perQubit?: PerQubitRates[];
@@ -133,6 +142,15 @@ export function loadNoise(): NoiseModel {
             name: typeof parsed.customKraus.name === "string" ? parsed.customKraus.name : "custom",
             operators: parsed.customKraus.operators
               .filter((op: unknown) => Array.isArray(op) && (op as unknown[]).length === 8 && (op as unknown[]).every((v) => Number.isFinite(v)))
+              .map((op: number[]) => [...op]),
+          }
+        : undefined,
+      customKraus2q: parsed.customKraus2q && typeof parsed.customKraus2q === "object" && Array.isArray(parsed.customKraus2q.operators)
+        ? {
+            enabled: !!parsed.customKraus2q.enabled,
+            name: typeof parsed.customKraus2q.name === "string" ? parsed.customKraus2q.name : "custom-2q",
+            operators: parsed.customKraus2q.operators
+              .filter((op: unknown) => Array.isArray(op) && (op as unknown[]).length === 32 && (op as unknown[]).every((v) => Number.isFinite(v)))
               .map((op: number[]) => [...op]),
           }
         : undefined,

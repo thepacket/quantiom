@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Circuit } from "./types";
 import type { HistoryAction } from "./state";
 import { emitQasm3 } from "../qasm/emit";
+import { emitQasm2 } from "../qasm/emitQasm2";
 import { emitQiskit } from "../qasm/emitQiskit";
 import { emitCirq } from "../qasm/emitCirq";
 import { emitBraket } from "../qasm/emitBraket";
 import { emitQSharp } from "../qasm/emitQSharp";
 import { emitPyQuil } from "../qasm/emitPyQuil";
 import { emitPytket } from "../qasm/emitPytket";
+import { emitQuantikz } from "../qasm/emitQuantikz";
 import { parseQasm3 } from "../qasm/parse";
 import { EXAMPLE_CATEGORIES, type Example } from "../examples";
 import { downloadCanvasSvg } from "./exportSvg";
@@ -79,12 +81,15 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 100);
   };
+  const onDownloadQasm2 = () => downloadText(emitQasm2(circuit), "_qasm2.qasm", "text/plain;charset=utf-8");
   const onDownloadQiskit = () => downloadText(emitQiskit(circuit), ".py", "text/x-python;charset=utf-8");
   const onDownloadCirq = () => downloadText(emitCirq(circuit), "_cirq.py", "text/x-python;charset=utf-8");
   const onDownloadBraket = () => downloadText(emitBraket(circuit), "_braket.py", "text/x-python;charset=utf-8");
   const onDownloadQSharp = () => downloadText(emitQSharp(circuit), ".qs", "text/plain;charset=utf-8");
   const onDownloadPyQuil = () => downloadText(emitPyQuil(circuit), "_pyquil.py", "text/x-python;charset=utf-8");
   const onDownloadPytket = () => downloadText(emitPytket(circuit), "_pytket.py", "text/x-python;charset=utf-8");
+  const onDownloadQuantikz = () => downloadText(emitQuantikz(circuit), ".tex", "text/x-tex;charset=utf-8");
+  const onDownloadJson = () => downloadText(JSON.stringify(circuit, null, 2), ".json", "application/json;charset=utf-8");
 
   const onShare = async () => {
     try {
@@ -118,12 +123,15 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
       <button onClick={onOpen} title="Open a .qasm file">Open</button>
       <button onClick={onDownload} title="Download as .qasm">.qasm</button>
       <ExportPicker
+        onQasm2={onDownloadQasm2}
         onQiskit={onDownloadQiskit}
         onCirq={onDownloadCirq}
         onBraket={onDownloadBraket}
         onQSharp={onDownloadQSharp}
         onPyQuil={onDownloadPyQuil}
         onPytket={onDownloadPytket}
+        onQuantikz={onDownloadQuantikz}
+        onJson={onDownloadJson}
         onSvg={() => downloadCanvasSvg(circuit.name)}
       />
       <button
@@ -138,20 +146,26 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
 }
 
 function ExportPicker({
+  onQasm2,
   onQiskit,
   onCirq,
   onBraket,
   onQSharp,
   onPyQuil,
   onPytket,
+  onQuantikz,
+  onJson,
   onSvg,
 }: {
+  onQasm2: () => void;
   onQiskit: () => void;
   onCirq: () => void;
   onBraket: () => void;
   onQSharp: () => void;
   onPyQuil: () => void;
   onPytket: () => void;
+  onQuantikz: () => void;
+  onJson: () => void;
   onSvg: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -182,12 +196,15 @@ function ExportPicker({
       {open && (
         <div className="examples-picker__pop" style={{ width: 240 }}>
           <div className="examples-picker__list">
+            {item("OpenQASM 2", "_qasm2.qasm — legacy", onQasm2)}
             {item("Qiskit", ".py — IBM", onQiskit)}
             {item("Cirq", "_cirq.py — Google", onCirq)}
             {item("Braket SDK", "_braket.py — AWS", onBraket)}
             {item("Q#", ".qs — Microsoft", onQSharp)}
             {item("PyQuil", "_pyquil.py — Rigetti", onPyQuil)}
             {item("pytket", "_pytket.py — Quantinuum", onPytket)}
+            {item("LaTeX (quantikz)", ".tex — for papers", onQuantikz)}
+            {item("JSON", ".json — raw IR", onJson)}
             {item("SVG", "vector canvas image", onSvg)}
           </div>
         </div>

@@ -40,6 +40,10 @@ export type Resources = {
   distinctQubits: number;
   /** Free parameter symbols referenced. */
   freeSymbols: number;
+  /** Count of arbitrary-2q-unitary (`u_arb_2`) placements. Each one would
+   *  decompose into 3 CX + 8 single-qubit gates via KAK; the panel uses
+   *  this for an implementation-cost estimate without actually decomposing. */
+  arbitrary2q: number;
 };
 
 const T_GATES = new Set(["t", "tdg"]);
@@ -59,6 +63,7 @@ export function estimateResources(circuit: Circuit): Resources {
   let tCount = 0;
   let cxCount = 0;
   let cliffordCount = 0;
+  let arbitrary2q = 0;
   let parallelDepth = 0;
   const tColumns = new Set<number>();
   const perQubitLength = new Array<number>(circuit.numQubits).fill(0);
@@ -96,6 +101,7 @@ export function estimateResources(circuit: Circuit): Resources {
     if (T_GATES.has(g.gateId)) { tCount++; tColumns.add(g.column); }
     if (g.gateId === "cx") cxCount++;
     if (CLIFFORD_GATES.has(g.gateId)) cliffordCount++;
+    if (g.gateId === "u_arb_2") arbitrary2q++;
 
     const def = GATES_BY_ID[g.gateId];
     if (def && def.params.length > 0) parameterized++;
@@ -130,5 +136,6 @@ export function estimateResources(circuit: Circuit): Resources {
     longestQubitLength: longest,
     distinctQubits: touchedQubits.size,
     freeSymbols: freeSymbols.size,
+    arbitrary2q,
   };
 }

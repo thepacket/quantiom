@@ -226,6 +226,7 @@ export function NoisePanel({ noise, onChange }: Props) {
         </fieldset>
 
         <CustomKrausEditor noise={noise} onChange={onChange} />
+        <CustomKraus2qEditor noise={noise} onChange={onChange} />
 
         {noise.perGate && Object.keys(noise.perGate).length > 0 && (
           <fieldset className="noise__group">
@@ -413,6 +414,97 @@ function parseKraus(text: string): number[][] {
   }
   if (out.length === 0) throw new Error("at least one operator required");
   if (out.length > 4) throw new Error("at most 4 operators supported");
+  return out;
+}
+
+function CustomKraus2qEditor({
+  noise,
+  onChange,
+}: {
+  noise: NoiseModel;
+  onChange: (next: NoiseModel) => void;
+}) {
+  const kraus = noise.customKraus2q;
+  // Identity on 4×4: row r has 1+0i at column r, 0 elsewhere. 32 floats.
+  const IDENTITY_2Q = (() => {
+    const op = new Array<number>(32).fill(0);
+    for (let r = 0; r < 4; r++) op[8 * r + 2 * r] = 1;
+    return op;
+  })();
+  const [text, setText] = useState(() => (kraus ? formatKraus2q(kraus.operators) : ""));
+  const [err, setErr] = useState<string | null>(null);
+
+  const toggle = (on: boolean) => {
+    if (on && !kraus) {
+      onChange({ ...noise, customKraus2q: { enabled: true, name: "custom 2q", operators: [IDENTITY_2Q] } });
+      setText(formatKraus2q([IDENTITY_2Q]));
+    } else if (kraus) {
+      onChange({ ...noise, customKraus2q: { ...kraus, enabled: on } });
+    }
+  };
+
+  const onTextChange = (t: string) => {
+    setText(t);
+    try {
+      const parsed = parseKraus2q(t);
+      onChange({
+        ...noise,
+        customKraus2q: {
+          enabled: kraus?.enabled ?? true,
+          name: kraus?.name ?? "custom 2q",
+          operators: parsed,
+        },
+      });
+      setErr(null);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  return (
+    <fieldset className="noise__group" disabled={!noise.enabled}>
+      <legend>Custom 2q Kraus channel</legend>
+      <label className="noise__enable" style={{ fontSize: 11 }}>
+        <input
+          type="checkbox"
+          checked={!!kraus?.enabled}
+          onChange={(e) => toggle(e.target.checked)}
+        />
+        <span>Apply after every 2-qubit gate on the involved pair</span>
+      </label>
+      <p className="noise__hint">
+        Each operator is a 4×4 complex matrix on its own line: 32 numbers,
+        row-major Re/Im pairs (Re00, Im00, Re01, Im01, …, Re33, Im33).
+        Should satisfy Σ Kᵢ† Kᵢ = I — not enforced.
+      </p>
+      <textarea
+        className="noise__kraus"
+        value={text}
+        onChange={(e) => onTextChange(e.target.value)}
+        rows={Math.max(2, (text.match(/\n/g) ?? []).length + 1)}
+        placeholder="1 0 0 0 0 0 0 0  0 0 1 0 0 0 0 0  0 0 0 0 1 0 0 0  0 0 0 0 0 0 1 0"
+      />
+      {err && <div className="noise__import-err">✗ {err}</div>}
+    </fieldset>
+  );
+}
+
+function formatKraus2q(operators: number[][]): string {
+  return operators.map((op) => op.map((v) => v.toString()).join(" ")).join("\n");
+}
+
+function parseKraus2q(text: string): number[][] {
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const out: number[][] = [];
+  for (const line of lines) {
+    const parts = line.split(/[\s,]+/).filter(Boolean).map(Number);
+    if (parts.length !== 32 || parts.some((v) => !Number.isFinite(v))) {
+      throw new Error(`each operator needs 32 numbers (got ${parts.length})`);
+    }
+    out.push(parts);
+  }
+  if (out.length === 0) throw new Error("at least one operator required");
+  if (out.length > 16) throw new Error("at most 16 operators supported");
   return out;
 }
 

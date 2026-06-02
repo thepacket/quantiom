@@ -213,6 +213,10 @@ export function parseQasm3(text: string): ParseResult {
       placed.condition = pendingCondition;
       pendingCondition = null;
     }
+    if (pendingAnnotation !== null) {
+      if (pendingAnnotation.length > 0) placed.annotation = pendingAnnotation;
+      pendingAnnotation = null;
+    }
     gates.push(placed);
   }
 
@@ -258,9 +262,24 @@ export function parseQasm3(text: string): ParseResult {
     }
   }
 
+  let qubitNames: string[] | undefined;
+  /** Annotation pulled from a `// note: …` comment that immediately
+   *  precedes the next gate statement. Cleared after the gate consumes it. */
+  let pendingAnnotation: string | null = null;
   for (let i = 0; i < lines.length; i++) {
     const lineNo = i + 1;
     const raw = lines[i];
+    // Detect the `// qubit_names: a, b, c` directive before stripping
+    // comments. It encodes optional per-qubit display labels.
+    const nameMatch = raw.match(/^\s*\/\/\s*qubit_names\s*:\s*(.*)$/i);
+    if (nameMatch) {
+      const list = splitTopLevel(nameMatch[1].trim(), ",").map((s) => s.trim());
+      if (list.some((s) => s.length > 0)) qubitNames = list;
+    }
+    const noteMatch = raw.match(/^\s*\/\/\s*note\s*:\s*(.*)$/i);
+    if (noteMatch) {
+      pendingAnnotation = noteMatch[1].trim();
+    }
     // Strip line comments.
     const code = raw.split("//")[0].trim();
     if (!code) continue;
@@ -461,5 +480,7 @@ export function parseQasm3(text: string): ParseResult {
     } // end statement loop
   }
 
-  return { ok: true, circuit: { numQubits, numClbits, gates }, warnings };
+  const circuit: Circuit = { numQubits, numClbits, gates };
+  if (qubitNames) circuit.qubitNames = qubitNames.slice(0, numQubits);
+  return { ok: true, circuit, warnings };
 }
