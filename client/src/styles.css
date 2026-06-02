@@ -41,7 +41,20 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 /* ─── Editor layout ─────────────────────────────────────────────────── */
 .editor { display: grid; grid-template-columns: 280px 1fr 360px; grid-template-rows: auto 1fr; flex: 1; min-height: 0; height: 100%; }
 .editor__right { border-left: 1px solid var(--border); background: var(--panel); overflow: auto; min-width: 0; }
-.editor__center { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; min-height: 0; }
+/* Six grid rows for editor__center's children:
+   TabStrip (auto) · toolbar (auto) · StepBar (auto) · canvas (1fr — grows
+   to fill remaining vertical space) · splitter (auto) · Inspector
+   (--inspector-h, defaults to auto when the user hasn't dragged). */
+.editor__center {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto var(--inspector-h, auto);
+  min-width: 0; min-height: 0;
+}
+.editor__splitter {
+  height: 6px; cursor: row-resize; background: var(--bg-2);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.editor__splitter:hover { background: var(--accent); opacity: 0.4; }
 .editor__toolbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg-2); gap: 12px; flex-wrap: wrap; row-gap: 6px; }
 .editor__counts { display: flex; align-items: center; gap: 6px; color: var(--muted); }
 .editor__counts span { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; color: var(--fg); }
@@ -371,7 +384,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .arb-matrix__cell--im { margin-top: 2px; color: #c4a96d; }
 
 /* ─── Inspector ─────────────────────────────────────────────────────── */
-.inspector { border-top: 1px solid var(--border); background: var(--panel); padding: 10px 12px; max-height: 38vh; overflow: auto; }
+.inspector { border-top: 1px solid var(--border); background: var(--panel); padding: 10px 12px; max-height: 60vh; min-height: 60px; overflow: auto; }
 .inspector--empty { color: var(--muted); font-size: 12px; }
 .inspector__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .inspector__name { font-size: 13px; color: var(--fg); }

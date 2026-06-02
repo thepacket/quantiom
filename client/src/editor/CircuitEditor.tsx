@@ -241,6 +241,72 @@ function TransformMenu({
   );
 }
 
+/**
+ * Draggable horizontal splitter between the canvas and the Inspector.
+ * Drag up → Inspector grows; drag down → Inspector shrinks. The user's
+ * choice persists in localStorage. We adjust the CSS custom property
+ * `--inspector-h` on document.documentElement so a single rule on the
+ * Inspector picks up the value without re-rendering anything.
+ *
+ * Bounded between 60 px (just the header) and 60% of viewport height.
+ */
+function InspectorSplitter() {
+  const STORAGE_KEY = "quantiom:inspector-h";
+  const draggingRef = useRef(false);
+  const startYRef = useRef(0);
+  const startHRef = useRef(0);
+
+  useEffect(() => {
+    const saved = parseInt(localStorage.getItem(STORAGE_KEY) ?? "", 10);
+    if (Number.isFinite(saved) && saved > 0) {
+      document.documentElement.style.setProperty("--inspector-h", `${saved}px`);
+    }
+  }, []);
+
+  const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingRef.current = true;
+    startYRef.current = e.clientY;
+    const current = getComputedStyle(document.documentElement).getPropertyValue("--inspector-h").trim();
+    const px = parseInt(current.endsWith("px") ? current : "0", 10);
+    startHRef.current = px || guessCurrentInspectorHeight();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    const delta = startYRef.current - e.clientY; // drag up = positive
+    const next = clamp(startHRef.current + delta, 60, window.innerHeight * 0.6);
+    document.documentElement.style.setProperty("--inspector-h", `${Math.round(next)}px`);
+  };
+  const onUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    const current = getComputedStyle(document.documentElement).getPropertyValue("--inspector-h").trim();
+    const px = parseInt(current.endsWith("px") ? current : "0", 10);
+    if (px > 0) {
+      try { localStorage.setItem(STORAGE_KEY, String(px)); } catch { /* ignore */ }
+    }
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  };
+
+  return (
+    <div
+      className="editor__splitter"
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+      title="Drag to resize the Inspector panel"
+    />
+  );
+}
+
+function clamp(v: number, lo: number, hi: number): number { return Math.max(lo, Math.min(hi, v)); }
+function guessCurrentInspectorHeight(): number {
+  const el = document.querySelector(".inspector") as HTMLElement | null;
+  return el ? el.getBoundingClientRect().height : 200;
+}
+
 export function CircuitEditor() {
   const t = useTabs();
   const circuit = t.activeCircuit;
@@ -523,6 +589,7 @@ export function CircuitEditor() {
             customGates={customGates}
           />
         </div>
+        <InspectorSplitter />
         <Inspector
           circuit={circuit}
           dispatch={dispatch}
