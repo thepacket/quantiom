@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { PanelShell } from "./PanelShell";
-import { buildTrotterCircuit, parsePauliSum, pauliSumQubitCount, type PauliTerm } from "../sim/trotter";
+import { buildTrotterCircuit, parsePauliSum, pauliSumQubitCount, type PauliTerm, type TrotterOrder, type TrotterMode } from "../sim/trotter";
 import type { Circuit } from "../editor/types";
 
 type Props = {
@@ -27,6 +27,9 @@ function Body({ onLoadInNewTab }: Props) {
   const [steps, setSteps] = useState<number>(1);
   const [delta, setDelta] = useState<string>("t");
   const [name, setName] = useState<string>(PRESETS[0].name);
+  const [mode, setMode] = useState<TrotterMode>("trotter");
+  const [order, setOrder] = useState<TrotterOrder>(1);
+  const [samples, setSamples] = useState<number>(32);
 
   const parsed = useMemo<{ ok: true; terms: PauliTerm[]; n: number } | { ok: false; error: string }>(() => {
     try {
@@ -42,6 +45,9 @@ function Body({ onLoadInNewTab }: Props) {
     const circuit = buildTrotterCircuit(parsed.terms, {
       steps: Math.max(1, Math.min(20, Math.floor(steps))),
       delta: delta || "t",
+      order,
+      mode,
+      samples: Math.max(1, Math.min(2048, Math.floor(samples))),
       name,
     });
     onLoadInNewTab(circuit, name);
@@ -85,6 +91,32 @@ function Body({ onLoadInNewTab }: Props) {
         <div className="panel__error">✗ {parsed.error}</div>
       )}
       <div className="hamil__config">
+        <label>mode
+          <select value={mode} onChange={(e) => setMode(e.target.value as TrotterMode)}>
+            <option value="trotter">Trotter</option>
+            <option value="qdrift">QDrift</option>
+          </select>
+        </label>
+        {mode === "trotter" ? (
+          <label>order
+            <select value={order} onChange={(e) => setOrder(parseInt(e.target.value, 10) as TrotterOrder)}>
+              <option value={1}>1 (first-order)</option>
+              <option value={2}>2 (Strang)</option>
+              <option value={4}>4 (Suzuki)</option>
+            </select>
+          </label>
+        ) : (
+          <label>samples
+            <input
+              type="number"
+              min={1}
+              max={2048}
+              value={samples}
+              onChange={(e) => setSamples(parseInt(e.target.value || "32", 10))}
+              style={{ width: 64 }}
+            />
+          </label>
+        )}
         <label>steps
           <input
             type="number"
@@ -109,7 +141,7 @@ function Body({ onLoadInNewTab }: Props) {
           className="hamil__build"
           onClick={generate}
           disabled={!parsed.ok}
-          title="Generate the Trotter circuit and open in a new tab"
+          title={mode === "qdrift" ? "QDrift is stochastic — each Generate emits a different circuit" : "Generate the Trotter circuit and open in a new tab"}
         >
           Generate
         </button>

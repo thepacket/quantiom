@@ -24,11 +24,32 @@ import { newGateId } from "../editor/state";
 
 export type PauliTerm = { coefficient: number; paulis: string };
 
+export type TrotterOrder = 1 | 2 | 4;
+export type TrotterMode = "trotter" | "qdrift";
+
 export type TrotterOptions = {
-  /** Total Trotter steps. The circuit applies the first-order step S times. */
+  /** Total Trotter steps. The circuit applies the elementary step S times. */
   steps: number;
   /** Symbolic per-step duration. Default "t" — drives the animation clock. */
   delta: string;
+  /**
+   * Splitting order:
+   *   • 1 — first-order Trotter (default).
+   *   • 2 — second-order symmetric Strang splitting.
+   *   • 4 — fourth-order Suzuki, nested 5× second-order.
+   */
+  order?: TrotterOrder;
+  /**
+   * Compilation mode:
+   *   • "trotter" — deterministic product formula (default).
+   *   • "qdrift" — Campbell 2019 random compiler: per step, sample N
+   *     terms proportional to |h_k|, apply each as a Rz rotation of
+   *     angle 2·λ·δ/N where λ = Σ|h_k|. Stochastic — every Generate
+   *     emits a different circuit.
+   */
+  mode?: TrotterMode;
+  /** QDrift sample count per step. Default 32. */
+  samples?: number;
   /** Optional name override; otherwise inferred from the source. */
   name?: string;
 };
@@ -76,42 +97,165 @@ export function pauliSumQubitCount(terms: PauliTerm[]): number {
   return terms.length > 0 ? terms[0].paulis.length : 0;
 }
 
-/** Build a circuit implementing `steps` first-order Trotter steps of e^{-iHδ}. */
+/** Build a circuit implementing the requested splitting of e^{-iHδ}. */
 export function buildTrotterCircuit(terms: PauliTerm[], options: TrotterOptions): Circuit {
   const n = pauliSumQubitCount(terms);
   const delta = options.delta || "t";
+  const order: TrotterOrder = options.order ?? 1;
+  const mode: TrotterMode = options.mode ?? "trotter";
   const gates: PlacedGate[] = [];
   let column = 0;
 
+  const labelBits: string[] = [];
+  labelBits.push(`${options.steps}×`);
+  if (mode === "qdrift") labelBits.push(`QDrift N=${options.samples ?? 32}`);
+  else labelBits.push(`order ${order}`);
+  const defaultName = `Trotter (${labelBits.join(", ")})`;
+
   for (let s = 0; s < options.steps; s++) {
-    for (const term of terms) {
-      const subgates = exponentiatePauliString(term, n, delta, column);
-      if (subgates.length === 0) continue;
-      const lastCol = subgates.reduce((m, g) => Math.max(m, g.column), column);
-      gates.push(...subgates);
-      column = lastCol + 1;
-      // Insert a barrier between terms within a step so the canvas shows
-      // the structure clearly. Barriers also stop the optimiser from
-      // commuting gates across step boundaries.
-      gates.push({
-        id: newGateId(),
-        gateId: "barrier",
-        column,
-        controls: [],
-        targets: Array.from({ length: n }, (_, i) => i),
-        clbits: [],
-        params: [],
-      });
-      column++;
+    if (mode === "qdrift") {
+      column = appendQDrift(gates, terms, n, delta, options.samples ?? 32, column);
+    } else if (order === 1) {
+      column = appendFirstOrder(gates, terms, n, delta, "1", column);
+    } else if (order === 2) {
+      column = appendSecondOrder(gates, terms, n, delta, "1", column);
+    } else {
+      column = appendFourthOrder(gates, terms, n, delta, column);
     }
+    // Barrier between steps so the canvas shows the structure.
+    gates.push({
+      id: newGateId(),
+      gateId: "barrier",
+      column,
+      controls: [],
+      targets: Array.from({ length: n }, (_, i) => i),
+      clbits: [],
+      params: [],
+    });
+    column++;
   }
 
   return {
     numQubits: n,
     numClbits: 0,
-    name: options.name ?? `Trotter step (${options.steps}×)`,
+    name: options.name ?? defaultName,
     gates,
   };
+}
+
+/** Append the forward sweep Π_k e^{-i h_k P_k δ·scale}, returning the next column. */
+function appendFirstOrder(
+  gates: PlacedGate[],
+  terms: PauliTerm[],
+  n: number,
+  delta: string,
+  scale: string,
+  startColumn: number,
+): number {
+  let column = startColumn;
+  for (const term of terms) {
+    const scaledTerm: PauliTerm = scale === "1"
+      ? term
+      : { coefficient: term.coefficient, paulis: term.paulis };
+    const effectiveDelta = scale === "1" ? delta : `(${scale})*(${delta})`;
+    const subgates = exponentiatePauliString(scaledTerm, n, effectiveDelta, column);
+    if (subgates.length === 0) continue;
+    const lastCol = subgates.reduce((m, g) => Math.max(m, g.column), column);
+    gates.push(...subgates);
+    column = lastCol + 1;
+  }
+  return column;
+}
+
+/** Append the reverse sweep (terms in reverse order) — used by Strang. */
+function appendReverseOrder(
+  gates: PlacedGate[],
+  terms: PauliTerm[],
+  n: number,
+  delta: string,
+  scale: string,
+  startColumn: number,
+): number {
+  return appendFirstOrder(gates, [...terms].reverse(), n, delta, scale, startColumn);
+}
+
+/** Symmetric Strang splitting: Π e^{-i h_k P_k δ/2} · Π_reverse e^{-i h_k P_k δ/2}. */
+function appendSecondOrder(
+  gates: PlacedGate[],
+  terms: PauliTerm[],
+  n: number,
+  delta: string,
+  scale: string,
+  startColumn: number,
+): number {
+  const half = scale === "1" ? "1/2" : `(${scale})/2`;
+  let column = appendFirstOrder(gates, terms, n, delta, half, startColumn);
+  column = appendReverseOrder(gates, terms, n, delta, half, column);
+  return column;
+}
+
+/**
+ * Suzuki fourth-order: U₄(δ) = U₂(α δ)² · U₂((1-4α) δ) · U₂(α δ)²
+ * with α = 1 / (4 − 4^(1/3)) ≈ 0.4145.
+ */
+function appendFourthOrder(
+  gates: PlacedGate[],
+  terms: PauliTerm[],
+  n: number,
+  delta: string,
+  startColumn: number,
+): number {
+  const alpha = "0.4144907717943757";          // 1 / (4 - 4^(1/3))
+  const oneMinus4Alpha = "-0.6579630807919028"; // 1 - 4·alpha
+  let column = startColumn;
+  column = appendSecondOrder(gates, terms, n, delta, alpha, column);
+  column = appendSecondOrder(gates, terms, n, delta, alpha, column);
+  column = appendSecondOrder(gates, terms, n, delta, oneMinus4Alpha, column);
+  column = appendSecondOrder(gates, terms, n, delta, alpha, column);
+  column = appendSecondOrder(gates, terms, n, delta, alpha, column);
+  return column;
+}
+
+/**
+ * QDrift step. Given Σ h_k P_k with λ = Σ|h_k|, sample `samples` terms
+ * weighted by |h_k|/λ. Each sampled term becomes a rotation about its
+ * Pauli with angle τ = 2·λ·δ / samples (signed by sgn(h_k)).
+ */
+function appendQDrift(
+  gates: PlacedGate[],
+  terms: PauliTerm[],
+  n: number,
+  delta: string,
+  samples: number,
+  startColumn: number,
+): number {
+  const weights = terms.map((t) => Math.abs(t.coefficient));
+  const lambda = weights.reduce((a, b) => a + b, 0);
+  if (lambda === 0) return startColumn;
+  const cum: number[] = [];
+  let acc = 0;
+  for (const w of weights) { acc += w / lambda; cum.push(acc); }
+  // Effective rotation per sample is 2λδ/N (signed by sgn(h_k)).
+  // exponentiatePauliString() already inserts a factor of 2, so we pass
+  // λδ/N — the doubling makes the on-circuit Rz angle the right 2λδ/N.
+  const tauMag = `${formatNumber(lambda / samples)}*${delta}`;
+  let column = startColumn;
+  for (let s = 0; s < samples; s++) {
+    const r = Math.random();
+    let idx = 0;
+    while (idx < cum.length && r > cum[idx]) idx++;
+    if (idx >= terms.length) idx = terms.length - 1;
+    const term = terms[idx];
+    const sign = term.coefficient >= 0 ? "" : "-";
+    const angle = `${sign}${tauMag}`;
+    const synthetic: PauliTerm = { coefficient: 1, paulis: term.paulis };
+    const subgates = exponentiatePauliString(synthetic, n, angle, column);
+    if (subgates.length === 0) continue;
+    const lastCol = subgates.reduce((m, g) => Math.max(m, g.column), column);
+    gates.push(...subgates);
+    column = lastCol + 1;
+  }
+  return column;
 }
 
 /** Emit gates implementing e^{-i h P δ} on a multi-qubit Pauli string. */
