@@ -37,9 +37,13 @@ export type OptimiseResult = {
 const SELF_INVERSE = new Set([
   "i", "x", "y", "z", "h",
   "cx", "cy", "cz", "ch",
-  "swap", "iswap", "dcx",
+  "swap", "dcx",
   "ccx", "ccz", "cswap",
   "c3x", "c4x",
+  // NOTE: iSWAP is NOT in this list. iSWAP² = diag(1, −1, −1, 1) = Z⊗Z,
+  // not the identity, so cancelling two adjacent iSWAPs would silently
+  // drop a Z·Z. The fuseISwapPair post-pass rewrites the pair to Z(a)·Z(b)
+  // instead — same net effect, correct semantics.
 ]);
 
 const DAGGER_PAIRS: Record<string, string> = {
@@ -192,6 +196,14 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
   // chains of CZ-conjugated fragments collapse fully.
   for (let i = 0; i < 50; i++) {
     const result = fuseHCXH(gates, rulesFired);
+    if (!result.changed) break;
+    gates = result.gates;
+  }
+
+  // Post-pass: iSWAP·iSWAP → Z(a)·Z(b). Same semantics — see comment on
+  // SELF_INVERSE about why iSWAP isn't in that set.
+  for (let i = 0; i < 50; i++) {
+    const result = fuseISwapPair(gates, rulesFired);
     if (!result.changed) break;
     gates = result.gates;
   }
@@ -398,6 +410,82 @@ function fuseHCXH(
     if (remove.has(g.id)) continue;
     if (rewriteCXtoCZ.has(g.id)) {
       next.push({ ...g, id: newGateId(), gateId: "cz" });
+      continue;
+    }
+    next.push(g);
+  }
+  return { gates: next, changed };
+}
+
+/**
+ * Detect adjacent iSWAP·iSWAP on the same qubit pair and rewrite to
+ * Z(a)·Z(b). iSWAP² = diag(1, −1, −1, 1) = Z⊗Z, so this preserves
+ * semantics exactly. The two iSWAPs collapse from 2 entangling gates
+ * to 2 cheap single-qubit Z gates — and the Z gates then chain into
+ * the existing power-merge / self-inverse passes for further reduction.
+ */
+function fuseISwapPair(
+  gates: PlacedGate[],
+  rules: Record<string, number>,
+): { gates: PlacedGate[]; changed: boolean } {
+  const sorted = [...gates].sort(
+    (a, b) => a.column - b.column || a.id.localeCompare(b.id),
+  );
+  const numQ = sorted.reduce(
+    (m, g) => Math.max(m, ...g.controls, ...g.targets),
+    -1,
+  ) + 1;
+  const perQ: number[][] = Array.from({ length: numQ }, () => []);
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    for (const q of [...g.controls, ...g.targets]) {
+      if (q < numQ) perQ[q].push(i);
+    }
+  }
+
+  const isPlainISwap = (g: PlacedGate) =>
+    g.gateId === "iswap"
+    && g.controls.length === 0 && g.targets.length === 2
+    && !g.condition && !g.controlStates?.some((s) => !s);
+
+  const remove = new Set<string>();
+  const insertZAfter = new Map<string, [number, number]>();
+  let changed = false;
+
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    if (!isPlainISwap(g)) continue;
+    if (remove.has(g.id)) continue;
+    const [a, b] = g.targets;
+    if (a < 0 || b < 0 || a >= numQ || b >= numQ) continue;
+    const listA = perQ[a]; const listB = perQ[b];
+    const posA = listA.indexOf(i); const posB = listB.indexOf(i);
+    if (posA <= 0 || posB <= 0) continue;
+    // Both qubits' adjacency must point at the same predecessor; otherwise
+    // a third gate is interposed on one of them.
+    if (listA[posA - 1] !== listB[posB - 1]) continue;
+    const prev = sorted[listA[posA - 1]];
+    if (!isPlainISwap(prev) || remove.has(prev.id)) continue;
+    if (prev.targets[0] !== a && prev.targets[0] !== b) continue;
+    if (prev.targets[1] !== a && prev.targets[1] !== b) continue;
+    // Fuse: drop both iSWAPs, queue two Z gates on the released qubits.
+    remove.add(prev.id);
+    remove.add(g.id);
+    insertZAfter.set(g.id, [a, b]);
+    rules["iswap·iswap → Z·Z"] = (rules["iswap·iswap → Z·Z"] ?? 0) + 1;
+    changed = true;
+  }
+
+  if (!changed) return { gates, changed };
+  const next: PlacedGate[] = [];
+  for (const g of gates) {
+    if (remove.has(g.id)) {
+      const zPair = insertZAfter.get(g.id);
+      if (zPair) {
+        const [a, b] = zPair;
+        next.push({ ...g, id: newGateId(), gateId: "z", controls: [], targets: [a], params: [] });
+        next.push({ ...g, id: newGateId(), gateId: "z", controls: [], targets: [b], params: [] });
+      }
       continue;
     }
     next.push(g);
