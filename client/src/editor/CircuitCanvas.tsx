@@ -416,6 +416,9 @@ function PlacedGateView({
 
   if (!def) return null;
 
+  const tooltip = `${def.name} (${def.id})
+qubits: ${all.join(", ")}
+column ${gate.column}${gate.params.length > 0 ? `\nparams: ${gate.params.join(", ")}` : ""}${gate.condition ? `\nif c[${gate.condition.clbit}] == ${gate.condition.value}` : ""}`;
   return (
     <g
       className={"gate" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "")}
@@ -425,6 +428,7 @@ function PlacedGateView({
         onClick();
       }}
     >
+      <title>{tooltip}</title>
       {/* vertical connector for multi-qubit gates */}
       {lo !== hi && (
         <line x1={x} y1={rowY(lo)} x2={x} y2={rowY(hi)} className="gate__connector" />

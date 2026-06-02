@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { PanelShell } from "./PanelShell";
+import { CouplingMapView } from "./CouplingMapView";
 import { importIbmBackend, type NoiseModel, type PerQubitRates } from "../sim/noise";
 
 type Props = {
@@ -138,6 +139,9 @@ export function NoisePanel({ noise, onChange }: Props) {
                 {noise.coupling.reduce((sum, nbrs) => sum + nbrs.length, 0) / 2} edges, {noise.coupling.length} qubits
               </span>
             </div>
+          )}
+          {noise.coupling && noise.coupling.length > 1 && (
+            <CouplingMapView coupling={noise.coupling} size={200} />
           )}
         </fieldset>
 

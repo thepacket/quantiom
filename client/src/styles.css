@@ -440,6 +440,10 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .noise__coupling-edges { color: var(--accent); }
 .noise__kraus { width: 100%; min-height: 36px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; font-family: ui-monospace, monospace; font-size: 10px; padding: 4px 6px; resize: vertical; }
 .noise__kraus:focus { outline: none; border-color: var(--accent); }
+.coupling-svg { display: block; margin: 4px auto; border: 1px solid var(--border); border-radius: 3px; }
+.coupling-edge { stroke: var(--border); stroke-width: 1.2; }
+.coupling-node { fill: var(--accent); }
+.coupling-label { fill: var(--bg); font-size: 8px; font-family: ui-monospace, monospace; font-weight: 600; }
 
 .statevector__ket { padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow-x: auto; font-size: 15px; }
 .statevector__ket .katex-display { margin: 0; }
