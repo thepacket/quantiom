@@ -11,6 +11,7 @@ import { loadCustomGates, newCustomGateId, saveCustomGates, type CustomGate } fr
 import { decodeCircuitFromHash } from "./shareLink";
 import { inverseGates } from "./inverse";
 import { transpile, type TranspileTarget } from "../sim/transpile";
+import { routeCircuit } from "../sim/router";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -241,6 +242,23 @@ export function CircuitEditor() {
             >
               Append U†
             </button>
+            {noise.coupling && (
+              <button
+                onClick={() => {
+                  const result = routeCircuit(circuit, noise.coupling!);
+                  t.newTab(result.circuit, result.circuit.name);
+                  window.alert(
+                    `Routed to coupling map:\n` +
+                    `  violations:    ${result.violationsBefore}\n` +
+                    `  SWAPs added:   ${result.swapsInserted}\n` +
+                    `  total gates:   ${circuit.gates.length} → ${result.circuit.gates.length}`,
+                  );
+                }}
+                title="Insert SWAPs to satisfy the imported coupling map"
+              >
+                Route
+              </button>
+            )}
             <TranspileButton
               onTranspile={(target) => {
                 const result = transpile(circuit, target);
@@ -303,7 +321,7 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
-        <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} /></ErrorBoundary>
+        <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} coupling={noise.coupling} /></ErrorBoundary>
         <ErrorBoundary label="equivalence">
           <EquivalencePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>

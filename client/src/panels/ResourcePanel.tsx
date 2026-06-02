@@ -1,25 +1,30 @@
 import { useMemo } from "react";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { estimateResources } from "../sim/resources";
+import { countConnectivityViolations } from "../sim/router";
 import type { Circuit } from "../editor/types";
 
-type Props = { circuit: Circuit };
+type Props = { circuit: Circuit; coupling?: number[][] };
 
 /**
  * Resource estimation. Pure derived from the IR, so it doesn't depend on
  * sim results — bumps even when the simulator is disabled or stuck.
  */
-export function ResourcePanel({ circuit }: Props) {
+export function ResourcePanel({ circuit, coupling }: Props) {
   return (
     <PanelShell id="resources" title="Resources" defaultCollapsed>
-      <ResourceBody circuit={circuit} />
+      <ResourceBody circuit={circuit} coupling={coupling} />
     </PanelShell>
   );
 }
 
-function ResourceBody({ circuit }: Props) {
+function ResourceBody({ circuit, coupling }: Props) {
   const collapsed = usePanelCollapsed();
   const r = useMemo(() => (collapsed ? null : estimateResources(circuit)), [circuit, collapsed]);
+  const violations = useMemo(
+    () => (collapsed || !coupling ? null : countConnectivityViolations(circuit, coupling)),
+    [circuit, coupling, collapsed],
+  );
   if (!r) return null;
   const tFraction = r.totalGates > 0 ? (r.tCount / r.totalGates) * 100 : 0;
   const isClifford = r.totalGates > 0 && r.tCount === 0 && r.parameterized === 0;
@@ -49,6 +54,13 @@ function ResourceBody({ circuit }: Props) {
       {isClifford && (
         <div className="resources__note">
           Clifford-only — would route to the tableau path at n &gt; 16.
+        </div>
+      )}
+      {violations !== null && (
+        <div className={"resources__note" + (violations > 0 ? " resources__note--warn" : "")}>
+          {violations > 0
+            ? `${violations} two-qubit gate${violations === 1 ? "" : "s"} violate the imported coupling map. Use "Route" to insert SWAPs.`
+            : `All two-qubit gates fit the imported coupling map.`}
         </div>
       )}
     </div>
