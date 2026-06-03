@@ -124,6 +124,38 @@ function splitTopLevel(s: string, sep = ","): string[] {
   return out;
 }
 
+/**
+ * Split a gate application "name(params) operands" into its parts.
+ * Scans for the matching close paren with depth tracking so nested parens
+ * inside a parameter expression (e.g. `rz(2*(π/2))`) don't terminate the
+ * param list early. Returns null if the string doesn't look like a gate
+ * application (no operands, or unbalanced parens). `paramsStr` is null when
+ * there is no parameter list at all (distinct from an empty `()`).
+ */
+function splitGateHead(
+  s: string,
+): { name: string; paramsStr: string | null; argStr: string } | null {
+  const nameM = s.match(/^([A-Za-z_]\w*)\s*/);
+  if (!nameM) return null;
+  const name = nameM[1];
+  let i = nameM[0].length;
+  let paramsStr: string | null = null;
+  if (s[i] === "(") {
+    let depth = 0;
+    let j = i;
+    for (; j < s.length; j++) {
+      if (s[j] === "(") depth++;
+      else if (s[j] === ")" && --depth === 0) break;
+    }
+    if (depth !== 0) return null; // unbalanced parens
+    paramsStr = s.slice(i + 1, j);
+    i = j + 1;
+  }
+  const argStr = s.slice(i).trim();
+  if (!argStr) return null;
+  return { name, paramsStr, argStr };
+}
+
 type Reg = { kind: "q" | "c"; index: number };
 
 function parseReg(s: string): Reg {
@@ -409,14 +441,14 @@ export function parseQasm3(text: string): ParseResult {
           for (let k = 0; k < count; k++) chain.push(isCtrl);
           rest = rest.slice(mm[0].length);
         }
-        const baseM = rest.match(/^([A-Za-z_]\w*)\s*(?:\(([^)]*)\))?\s+(.+)$/);
+        const baseM = splitGateHead(rest);
         if (!baseM) {
           warnings.push({ line: lineNo, message: `modifier chain without base: "${stmt}"` });
           continue;
         }
-        const baseRaw = baseM[1].toLowerCase();
-        const paramsStr = baseM[2] ?? "";
-        const argStr = baseM[3];
+        const baseRaw = baseM.name.toLowerCase();
+        const paramsStr = baseM.paramsStr ?? "";
+        const argStr = baseM.argStr;
         const params = paramsStr
           ? splitTopLevel(paramsStr).map((p) => greekify(p.trim()))
           : [];
@@ -449,16 +481,16 @@ export function parseQasm3(text: string): ParseResult {
       }
 
       // Standard gate: name(params) q[i], q[j];
-      m = stmt.match(/^([A-Za-z_]\w*)\s*(?:\(([^)]*)\))?\s+(.+)$/);
-      if (m) {
-        const nameRaw = m[1].toLowerCase();
+      const gateM = splitGateHead(stmt);
+      if (gateM) {
+        const nameRaw = gateM.name.toLowerCase();
         const irId = QASM_TO_IR[nameRaw];
         if (!irId) {
-          warnings.push({ line: lineNo, message: `unknown gate "${m[1]}" — skipped` });
+          warnings.push({ line: lineNo, message: `unknown gate "${gateM.name}" — skipped` });
           continue;
         }
-        const paramsStr = m[2] ?? "";
-        const argStr = m[3];
+        const paramsStr = gateM.paramsStr ?? "";
+        const argStr = gateM.argStr;
         const params = paramsStr
           ? splitTopLevel(paramsStr).map((p) => greekify(p.trim()))
           : [];
