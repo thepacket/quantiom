@@ -82,7 +82,7 @@ export function StatevectorPanel({ state }: Props) {
         <>
           <label className="panel__toggle">
             <input type="checkbox" checked={hideZeros} onChange={(e) => setHideZeros(e.target.checked)} />
-            hide zeros
+            hide 0's
           </label>
           {canExport && (
             <>
