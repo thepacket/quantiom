@@ -15,6 +15,7 @@ RUN cd client && npm ci
 # The .git directory is included (see .dockerignore) so the build can read
 # the current short SHA.
 COPY examples/ examples/
+COPY docs/ docs/
 COPY .git/ .git/
 COPY client/ client/
 

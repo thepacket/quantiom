@@ -6,7 +6,6 @@ Dockerfile
 fly.toml
 README.md
 CLAUDE.md
-docs/
 LICENSE
 CONTRIBUTING.md
 SECURITY.md
