@@ -3,6 +3,8 @@
 **A browser-native research-grade quantum circuit editor, simulator,
 workstation, and visualizer.**
 
+![Quantiom — a 4-qubit LiH Jordan–Wigner Trotter step, with the AI chat panel explaining the circuit in rendered LaTeX alongside the statevector, probabilities, and Bloch panels](screenshots/quantiom.png)
+
 Quantiom is a multi-tab editor over a 64-gate palette, three
 simulators (pure-TypeScript `Float64Array` statevector ≤ 20 qubits,
 Aaronson–Gottesman tableau ≤ 1024 qubits with **Pauli frame tracking
