@@ -1,23 +1,26 @@
 import type { ParameterValues } from "../sim/simulate";
 
 /**
- * Record the circuit canvas as a WebM video while the `t` parameter
- * sweeps one period (0 → 2π).
+ * Record a DOM subtree as a WebM video while the `t` parameter sweeps
+ * one period (0 → 2π).
  *
- * Pipeline:
- *   1. Locate the canvas SVG element.
- *   2. Allocate an offscreen <canvas> of matching pixel dimensions.
- *   3. Open a captureStream() + MediaRecorder pair.
- *   4. Step `t` across the period in `totalFrames` increments. After
- *      each step, wait one rAF for React to re-render, serialise the
- *      SVG to a data URL, paint it onto the canvas.
- *   5. Stop the recorder, blob → object URL → trigger download.
+ * Pipeline per frame:
+ *   1. Set `t`, wait two animation frames for React + simulator.
+ *   2. Wrap the target element in an SVG `<foreignObject>` with the
+ *      page's stylesheets inlined.
+ *   3. Serialise to data URL, load through `<img>`, paint onto a
+ *      capture canvas.
  *
- * Browser support: MediaRecorder + video/webm work in Chromium and
- * Firefox; Safari is patchier. The function throws when MediaRecorder
- * is missing so the UI can offer an alert instead of failing silently.
+ * The `<foreignObject>` path lets us record an arbitrary HTML tree
+ * (e.g. the right-side panel column with its nested Bloch SVGs and
+ * probability bars), not just a single SVG.
+ *
+ * Browser support: works in Chromium and Firefox. Safari's
+ * `foreignObject` implementation is patchier and may produce blank
+ * frames. The function throws when MediaRecorder is missing.
  */
 export async function recordAnimationWebM(opts: {
+  target: Element;
   setParamValues: (v: ParameterValues) => void;
   currentParams: ParameterValues;
   duration_ms: number;
@@ -27,10 +30,8 @@ export async function recordAnimationWebM(opts: {
   if (typeof MediaRecorder === "undefined") {
     throw new Error("MediaRecorder is not supported in this browser");
   }
-  const svg = document.querySelector<SVGSVGElement>(".canvas__svg");
-  if (!svg) throw new Error("circuit canvas not found");
 
-  const bbox = svg.getBoundingClientRect();
+  const bbox = opts.target.getBoundingClientRect();
   const W = Math.max(160, Math.floor(bbox.width));
   const H = Math.max(160, Math.floor(bbox.height));
 
@@ -41,7 +42,6 @@ export async function recordAnimationWebM(opts: {
   if (!ctx) throw new Error("2D context unavailable");
 
   const stream = canvas.captureStream(opts.fps);
-  // Prefer VP9 then VP8 then default — VP9 has noticeably smaller files.
   const mimeCandidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
   const mime = mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m)) ?? "video/webm";
   const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4_000_000 });
@@ -56,11 +56,9 @@ export async function recordAnimationWebM(opts: {
     for (let frame = 0; frame < totalFrames; frame++) {
       const t = (frame / (totalFrames - 1)) * period;
       opts.setParamValues({ ...opts.currentParams, t });
-      // Wait two animation frames so the simulator + render finishes.
       await waitFrame();
       await waitFrame();
-      // Render SVG → canvas.
-      const serialised = new XMLSerializer().serializeToString(svg);
+      const serialised = serialiseElementWithStyles(opts.target, W, H);
       const encoded = encodeURIComponent(serialised);
       const dataUrl = `data:image/svg+xml,${encoded}`;
       await new Promise<void>((resolve, reject) => {
@@ -93,4 +91,71 @@ export async function recordAnimationWebM(opts: {
 
 function waitFrame(): Promise<void> {
   return new Promise((r) => requestAnimationFrame(() => r()));
+}
+
+let cachedStyles: string | null = null;
+
+/**
+ * Collect every readable CSS rule from the document's stylesheets.
+ * Cross-origin sheets throw on `.cssRules` — we skip them. Cached for
+ * the page's lifetime since stylesheets don't change between record
+ * invocations.
+ */
+function collectInlineStyles(): string {
+  if (cachedStyles !== null) return cachedStyles;
+  const parts: string[] = [];
+  for (const sheet of Array.from(document.styleSheets)) {
+    let rules: CSSRuleList | null = null;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    if (!rules) continue;
+    for (const rule of Array.from(rules)) {
+      parts.push(rule.cssText);
+    }
+  }
+  cachedStyles = parts.join("\n");
+  return cachedStyles;
+}
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const XHTML_NS = "http://www.w3.org/1999/xhtml";
+
+/**
+ * Wrap a cloned DOM subtree in an SVG `<foreignObject>` carrying every
+ * same-origin CSS rule inline. The resulting SVG string is suitable for
+ * a `data:` URL load through `<img>`. The dark background fill matches
+ * the editor theme so transparent regions don't show through.
+ */
+function serialiseElementWithStyles(target: Element, W: number, H: number): string {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("xmlns", SVG_NS);
+  svg.setAttribute("width", String(W));
+  svg.setAttribute("height", String(H));
+
+  const fo = document.createElementNS(SVG_NS, "foreignObject");
+  fo.setAttribute("x", "0");
+  fo.setAttribute("y", "0");
+  fo.setAttribute("width", String(W));
+  fo.setAttribute("height", String(H));
+
+  const xhtmlContainer = document.createElementNS(XHTML_NS, "div");
+  xhtmlContainer.setAttribute(
+    "style",
+    `width:${W}px;height:${H}px;background:#0d0e10;overflow:hidden;`,
+  );
+
+  const styleEl = document.createElementNS(XHTML_NS, "style");
+  styleEl.textContent = collectInlineStyles();
+  xhtmlContainer.appendChild(styleEl);
+
+  const clone = target.cloneNode(true) as Element;
+  xhtmlContainer.appendChild(clone);
+
+  fo.appendChild(xhtmlContainer);
+  svg.appendChild(fo);
+
+  return new XMLSerializer().serializeToString(svg);
 }

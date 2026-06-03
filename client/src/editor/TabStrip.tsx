@@ -9,7 +9,6 @@ type Props = {
   onReorder: (fromId: string, toId: string) => void;
   onRename: (id: string, name: string) => void;
   onNew: () => void;
-  onDuplicate: (id: string) => void;
 };
 
 /**
@@ -27,7 +26,6 @@ export function TabStrip({
   onReorder,
   onRename,
   onNew,
-  onDuplicate,
 }: Props) {
   const dragId = useRef<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -94,14 +92,6 @@ export function TabStrip({
         );
       })}
       <button className="tabstrip__add" onClick={onNew} title="New tab">+</button>
-      <div className="tabstrip__spacer" />
-      <button
-        className="tabstrip__dup"
-        onClick={() => onDuplicate(activeId)}
-        title="Duplicate active tab"
-      >
-        Duplicate
-      </button>
     </div>
   );
 }

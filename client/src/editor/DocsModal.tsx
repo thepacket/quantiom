@@ -18,8 +18,10 @@ const TABS: Tab[] = [
   { id: "panels", label: "Panel reference", content: panelsMd },
 ];
 
-export function DocsModal({ onClose }: { onClose: () => void }) {
-  const [active, setActive] = useState(TABS[0].id);
+export function DocsModal({ onClose, initialTab }: { onClose: () => void; initialTab?: string }) {
+  const [active, setActive] = useState(
+    initialTab && TABS.some((t) => t.id === initialTab) ? initialTab : TABS[0].id,
+  );
   const tab = TABS.find((t) => t.id === active) ?? TABS[0];
   return (
     <div

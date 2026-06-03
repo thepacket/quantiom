@@ -40,6 +40,7 @@ function findMatches(circuit: Circuit, query: string): Set<string> | undefined {
 }
 import { decodeCircuitFromHash } from "./shareLink";
 import { parseQasm3 } from "../qasm/parse";
+import { emitQasm3 } from "../qasm/emit";
 import { inverseGates } from "./inverse";
 import { transpile, type TranspileTarget } from "../sim/transpile";
 import { routeCircuit } from "../sim/router";
@@ -70,113 +71,6 @@ import { useStatevector, dataOf } from "../panels/useSimulation";
 import { useGPUNoisyProbabilities } from "../panels/useGPUNoisyProbabilities";
 import { loadNoise, saveNoise, type NoiseModel } from "../sim/noise";
 
-function HistoryButton({
-  canUndo,
-  canRedo,
-  onJumpBack,
-  onJumpForward,
-}: {
-  canUndo: boolean;
-  canRedo: boolean;
-  onJumpBack: (n: number) => void;
-  onJumpForward: (n: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const jumps = [5, 10, 25, 100];
-  return (
-    <span style={{ position: "relative" }}>
-      <button onClick={() => setOpen((o) => !o)} title="Jump multiple undo / redo steps at once">History…</button>
-      {open && (
-        <div className="examples-picker__pop" style={{ width: 180, top: "100%", marginTop: 4, padding: 6 }} onMouseLeave={() => setOpen(false)}>
-          <div style={{ color: "var(--muted)", fontSize: 10, padding: "2px 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>back</div>
-          <div style={{ display: "flex", gap: 2 }}>
-            {jumps.map((n) => (
-              <button key={`b${n}`} disabled={!canUndo} onClick={() => { onJumpBack(n); setOpen(false); }} style={{ flex: 1, fontSize: 10 }}>
-                {n}
-              </button>
-            ))}
-          </div>
-          <div style={{ color: "var(--muted)", fontSize: 10, padding: "2px 4px", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>forward</div>
-          <div style={{ display: "flex", gap: 2 }}>
-            {jumps.map((n) => (
-              <button key={`f${n}`} disabled={!canRedo} onClick={() => { onJumpForward(n); setOpen(false); }} style={{ flex: 1, fontSize: 10 }}>
-                {n}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </span>
-  );
-}
-
-/** localStorage key for the cross-tab gate clipboard. */
-const CLIPBOARD_KEY = "quantiom:clipboard:v1";
-
-function SelectionButton({
-  maxColumn,
-  onDelete,
-  onDuplicate,
-  onCopy,
-  onPaste,
-}: {
-  maxColumn: number;
-  onDelete: (lo: number, hi: number) => void;
-  onDuplicate: (lo: number, hi: number) => void;
-  onCopy: (lo: number, hi: number) => void;
-  onPaste: (atColumn: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [from, setFrom] = useState(0);
-  const [to, setTo] = useState(0);
-  const clipboardHas = typeof window !== "undefined" && !!localStorage.getItem(CLIPBOARD_KEY);
-  return (
-    <span style={{ position: "relative" }}>
-      <button onClick={() => setOpen((o) => !o)} title="Operate on a column range">Select…</button>
-      {open && (
-        <div
-          className="examples-picker__pop"
-          style={{ width: 240, top: "100%", marginTop: 4, padding: 8 }}
-          onMouseLeave={() => setOpen(false)}
-        >
-          <div style={{ display: "flex", gap: 4, alignItems: "center", fontSize: 11, marginBottom: 6 }}>
-            <span style={{ color: "var(--muted)" }}>cols</span>
-            <input
-              type="number"
-              min={0}
-              max={maxColumn}
-              value={from}
-              onChange={(e) => setFrom(parseInt(e.target.value || "0", 10))}
-              style={{ width: 56, fontSize: 11 }}
-            />
-            <span style={{ color: "var(--muted)" }}>–</span>
-            <input
-              type="number"
-              min={0}
-              max={maxColumn}
-              value={to}
-              onChange={(e) => setTo(parseInt(e.target.value || "0", 10))}
-              style={{ width: 56, fontSize: 11 }}
-            />
-          </div>
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-            <button onClick={() => { onDuplicate(from, to); setOpen(false); }}>Duplicate</button>
-            <button onClick={() => { onCopy(from, to); setOpen(false); }} title="Copy gates in range to the cross-tab clipboard">Copy</button>
-            <button
-              onClick={() => { onPaste(maxColumn + 1); setOpen(false); }}
-              disabled={!clipboardHas}
-              title={clipboardHas ? "Paste clipboard gates at the end of the circuit" : "Clipboard is empty"}
-            >
-              Paste
-            </button>
-            <button onClick={() => { if (window.confirm(`Delete gates in columns ${from}–${to}?`)) { onDelete(from, to); setOpen(false); } }}>Delete</button>
-          </div>
-        </div>
-      )}
-    </span>
-  );
-}
-
 function RecordButton({ onRecord }: { onRecord: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   return (
@@ -188,6 +82,12 @@ function RecordButton({ onRecord }: { onRecord: () => Promise<void> }) {
       }}
       disabled={busy}
       title="Record one period of the t-animation as a WebM video (3 s at 30 fps)"
+      style={{
+        background: "var(--accent-2)",
+        color: "#0d0e10",
+        borderColor: "var(--accent-2)",
+        fontWeight: 600,
+      }}
     >
       {busy ? "Recording…" : "Record"}
     </button>
@@ -304,6 +204,140 @@ function TransformMenu({
 }
 
 /**
+ * Edit menu — groups undo / redo (and future range editing entries) into
+ * one dropdown. Sits to the right of File in the top toolbar. Keyboard
+ * shortcuts (⌘Z / ⇧⌘Z) remain the primary path; this menu is for
+ * discoverability + a stable home for clipboard-style operations.
+ */
+function EditMenu({
+  canUndo, canRedo, onUndo, onRedo, onCopyCircuit, onPasteCircuit, onDuplicateTab, onClear,
+}: {
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  onCopyCircuit: () => void;
+  onPasteCircuit: () => void;
+  onDuplicateTab: () => void;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  return (
+    <span style={{ position: "relative" }} ref={wrapRef}>
+      <button onClick={() => setOpen((o) => !o)} title="Undo, redo">
+        Edit
+      </button>
+      {open && (
+        <div className="examples-picker__pop" style={{ width: 240, top: "100%", marginTop: 4 }}>
+          <div className="examples-picker__list">
+            <button
+              className="examples-picker__item"
+              disabled={!canUndo}
+              onClick={() => { setOpen(false); onUndo(); }}
+            >
+              <span>Undo</span>
+              <span className="export-picker__hint">⌘Z / Ctrl+Z</span>
+            </button>
+            <button
+              className="examples-picker__item"
+              disabled={!canRedo}
+              onClick={() => { setOpen(false); onRedo(); }}
+            >
+              <span>Redo</span>
+              <span className="export-picker__hint">⇧⌘Z / Ctrl+Shift+Z</span>
+            </button>
+            <div className="examples-picker__cat-label">Clipboard</div>
+            <button
+              className="examples-picker__item"
+              onClick={() => { setOpen(false); onCopyCircuit(); }}
+            >
+              <span>Copy Circuit</span>
+              <span className="export-picker__hint">current circuit as QASM 3 → clipboard</span>
+            </button>
+            <button
+              className="examples-picker__item"
+              onClick={() => { setOpen(false); onPasteCircuit(); }}
+            >
+              <span>Paste Circuit</span>
+              <span className="export-picker__hint">QASM in clipboard → new tab</span>
+            </button>
+            <div className="examples-picker__cat-label">Circuit</div>
+            <button
+              className="examples-picker__item"
+              onClick={() => { setOpen(false); onDuplicateTab(); }}
+            >
+              <span>Duplicate</span>
+              <span className="export-picker__hint">copy current tab into a new one</span>
+            </button>
+            <button
+              className="examples-picker__item"
+              onClick={() => { setOpen(false); onClear(); }}
+            >
+              <span>Clear</span>
+              <span className="export-picker__hint">remove all gates from the current tab</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
+
+/**
+ * Help menu — opens the DocsModal on a specific tab. Last entry on the
+ * toolbar. Add new doc tabs to DocsModal's TABS list and surface them
+ * here so users find them.
+ */
+function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  const items: Array<{ id: string; label: string; hint: string }> = [
+    { id: "tutorial", label: "Tutorial", hint: "hands-on Bell → VQE walkthrough" },
+    { id: "panels", label: "Panel reference", hint: "what every right-side panel shows" },
+  ];
+  return (
+    <span style={{ position: "relative" }} ref={wrapRef}>
+      <button onClick={() => setOpen((o) => !o)} title="Tutorials and reference documentation">
+        Help
+      </button>
+      {open && (
+        <div className="examples-picker__pop" style={{ width: 280, top: "100%", marginTop: 4, right: 0 }}>
+          <div className="examples-picker__list">
+            {items.map((it) => (
+              <button
+                key={it.id}
+                className="examples-picker__item"
+                onClick={() => { setOpen(false); onOpen(it.id); }}
+              >
+                <span>{it.label}</span>
+                <span className="export-picker__hint">{it.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
+
+/**
  * Draggable horizontal splitter between the canvas and the Inspector.
  * Drag up → Inspector grows; drag down → Inspector shrinks. The user's
  * choice persists in localStorage. We adjust the CSS custom property
@@ -383,7 +417,7 @@ export function CircuitEditor() {
   const [noise, setNoise] = useState<NoiseModel>(() => loadNoise());
   const [findQuery, setFindQuery] = useState<string>("");
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const [showDocs, setShowDocs] = useState(false);
+  const [showDocs, setShowDocs] = useState<null | string>(null);
 
   useEffect(() => {
     saveCustomGates(customGates);
@@ -601,7 +635,7 @@ export function CircuitEditor() {
 
   return (
     <div className="editor">
-      {showDocs && <DocsModal onClose={() => setShowDocs(false)} />}
+      {showDocs !== null && <DocsModal initialTab={showDocs} onClose={() => setShowDocs(null)} />}
       {showShortcuts && (
         <div
           onClick={() => setShowShortcuts(false)}
@@ -646,19 +680,7 @@ export function CircuitEditor() {
           <span className="app__tagline">circuit editor · simulator · visualizer</span>
         </div>
         <div className="app__title">{circuit.name ?? "Untitled"}</div>
-        <div className="app__header-right">
-          <button
-            onClick={() => setShowDocs(true)}
-            title="Open documentation — panel reference and hands-on tutorial"
-            style={{
-              background: "transparent", border: "1px solid var(--border)",
-              color: "var(--fg)", borderRadius: 4, padding: "4px 10px",
-              fontSize: 12, cursor: "pointer",
-            }}
-          >
-            ? Docs
-          </button>
-        </div>
+        <div className="app__header-right" />
       </header>
       <GatePalette customGates={customGates} onRemoveCustomGate={removeCustomGate} />
       <div className="editor__center">
@@ -670,7 +692,6 @@ export function CircuitEditor() {
           onReorder={t.reorderTab}
           onRename={t.renameTab}
           onNew={() => t.newTab()}
-          onDuplicate={t.duplicateTab}
         />
         <div className="editor__toolbar">
           <div className="editor__counts">
@@ -681,64 +702,7 @@ export function CircuitEditor() {
             <button onClick={() => dispatch({ type: "remove-clbit" })} title="Remove a classical bit">−</button>
             <span>{circuit.numClbits} clbits</span>
             <button onClick={() => dispatch({ type: "add-clbit" })} title="Add a classical bit">+</button>
-          </div>
-          <div className="editor__actions">
-            <FileMenu circuit={circuit} dispatch={dispatch} onLoadInNewTab={(c, name) => t.newTab(c, name)} />
             <span className="editor__sep">·</span>
-            <button
-              onClick={() => dispatch({ type: "undo" })}
-              disabled={!undoState.canUndo}
-              title="Undo (⌘Z / Ctrl+Z)"
-            >
-              Undo
-            </button>
-            <button
-              onClick={() => dispatch({ type: "redo" })}
-              disabled={!undoState.canRedo}
-              title="Redo (⇧⌘Z / Ctrl+Shift+Z)"
-            >
-              Redo
-            </button>
-            <HistoryButton
-              canUndo={undoState.canUndo}
-              canRedo={undoState.canRedo}
-              onJumpBack={(n) => {
-                for (let i = 0; i < n; i++) dispatch({ type: "undo" });
-              }}
-              onJumpForward={(n) => {
-                for (let i = 0; i < n; i++) dispatch({ type: "redo" });
-              }}
-            />
-            <button onClick={onSaveAsGate} title="Save the current circuit as a reusable custom gate">Save as gate</button>
-            <button
-              onClick={() => {
-                // Append a measure gate on every qubit. Auto-allocate clbits
-                // when there aren't enough. Place all in the same column,
-                // immediately after the highest existing column.
-                const n = circuit.numQubits;
-                if (n === 0) return;
-                const needClbits = n - circuit.numClbits;
-                for (let i = 0; i < needClbits; i++) dispatch({ type: "add-clbit" });
-                const startCol = circuit.gates.reduce((m, g) => Math.max(m, g.column), -1) + 1;
-                for (let q = 0; q < n; q++) {
-                  dispatch({
-                    type: "place-gate",
-                    gate: {
-                      id: `m_${Date.now()}_${q}`,
-                      gateId: "measure",
-                      controls: [],
-                      targets: [q],
-                      clbits: [q],
-                      params: [],
-                      column: startCol,
-                    },
-                  });
-                }
-              }}
-              title="Append a measure on every qubit (auto-allocates classical bits)"
-            >
-              Measure all
-            </button>
             <input
               type="search"
               className="editor__find"
@@ -748,6 +712,45 @@ export function CircuitEditor() {
               title="Highlight gates by id, qubit (e.g. q3 or a name), or parameter substring"
               style={{ width: 200 }}
             />
+          </div>
+          <div className="editor__actions">
+            <FileMenu circuit={circuit} dispatch={dispatch} onLoadInNewTab={(c, name) => t.newTab(c, name)} />
+            <EditMenu
+              canUndo={undoState.canUndo}
+              canRedo={undoState.canRedo}
+              onUndo={() => dispatch({ type: "undo" })}
+              onRedo={() => dispatch({ type: "redo" })}
+              onCopyCircuit={async () => {
+                try {
+                  await navigator.clipboard.writeText(emitQasm3(circuit));
+                } catch (e) {
+                  window.alert(`Clipboard write failed: ${e instanceof Error ? e.message : String(e)}`);
+                }
+              }}
+              onPasteCircuit={async () => {
+                let text: string;
+                try {
+                  text = await navigator.clipboard.readText();
+                } catch (e) {
+                  window.alert(`Clipboard read failed: ${e instanceof Error ? e.message : String(e)}`);
+                  return;
+                }
+                if (!text.trim()) {
+                  window.alert("Clipboard is empty.");
+                  return;
+                }
+                const result = parseQasm3(text);
+                if (!result.ok) {
+                  window.alert(`Parse error on line ${result.line}: ${result.error}`);
+                  return;
+                }
+                t.newTab(result.circuit, "Pasted");
+              }}
+              onDuplicateTab={() => t.duplicateTab(t.activeId)}
+              onClear={() => dispatch({ type: "clear" })}
+            />
+            <span className="editor__sep">·</span>
+            <button onClick={onSaveAsGate} title="Save the current circuit as a reusable custom gate">Save as Gate</button>
             <TransformMenu
               hasCoupling={!!noise.coupling}
               onCompact={() => dispatch({ type: "compact-columns" })}
@@ -836,75 +839,36 @@ export function CircuitEditor() {
                 t.newTab(c, c.name);
               }}
             />
-            {simState.kind === "ready" && simState.data.freeSymbols.includes("t") && (
-              <RecordButton
-                onRecord={async () => {
-                  const baseName = (circuit.name ?? "circuit").toLowerCase().replace(/[^a-z0-9]+/g, "_") || "circuit";
-                  try {
-                    await recordAnimationWebM({
-                      setParamValues,
-                      currentParams: paramValues,
-                      duration_ms: 3000,
-                      fps: 30,
-                      filename: `${baseName}.webm`,
-                    });
-                  } catch (e) {
-                    window.alert(`Recording failed: ${e instanceof Error ? e.message : String(e)}`);
-                  }
-                }}
-              />
-            )}
-            <SelectionButton
-              maxColumn={maxColumn}
-              onDelete={(lo, hi) => dispatch({ type: "delete-range", fromColumn: lo, toColumn: hi })}
-              onDuplicate={(lo, hi) => dispatch({ type: "duplicate-range", fromColumn: lo, toColumn: hi })}
-              onCopy={(lo, hi) => {
-                // Normalise the column range so paste at any target column
-                // works. Stash gate skeletons (no ids — paste generates fresh
-                // ones) in localStorage so the clipboard survives reloads
-                // and crosses tabs / browser windows.
-                const a = Math.min(lo, hi), b = Math.max(lo, hi);
-                const slice = circuit.gates
-                  .filter((g) => g.column >= a && g.column <= b)
-                  .map((g) => ({
-                    gateId: g.gateId,
-                    controls: g.controls,
-                    targets: g.targets,
-                    clbits: g.clbits,
-                    params: g.params,
-                    column: g.column - a, // normalise so leftmost = 0
-                    controlStates: g.controlStates,
-                    condition: g.condition,
-                    annotation: g.annotation,
-                  }));
-                try {
-                  localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(slice));
-                } catch { /* quota — give up silently */ }
+            <button
+              onClick={() => {
+                // Append a measure gate on every qubit. Auto-allocate clbits
+                // when there aren't enough. Place all in the same column,
+                // immediately after the highest existing column.
+                const n = circuit.numQubits;
+                if (n === 0) return;
+                const needClbits = n - circuit.numClbits;
+                for (let i = 0; i < needClbits; i++) dispatch({ type: "add-clbit" });
+                const startCol = circuit.gates.reduce((m, g) => Math.max(m, g.column), -1) + 1;
+                for (let q = 0; q < n; q++) {
+                  dispatch({
+                    type: "place-gate",
+                    gate: {
+                      id: `m_${Date.now()}_${q}`,
+                      gateId: "measure",
+                      controls: [],
+                      targets: [q],
+                      clbits: [q],
+                      params: [],
+                      column: startCol,
+                    },
+                  });
+                }
               }}
-              onPaste={(atColumn) => {
-                try {
-                  const raw = localStorage.getItem(CLIPBOARD_KEY);
-                  if (!raw) return;
-                  const slice = JSON.parse(raw) as Array<Omit<import("./types").PlacedGate, "id"> & { column: number }>;
-                  // Skip gates whose qubit indices don't fit in the current
-                  // tab; the user can resize qubits manually before pasting.
-                  for (const s of slice) {
-                    const allQs = [...(s.controls ?? []), ...(s.targets ?? [])];
-                    if (allQs.some((q) => q < 0 || q >= circuit.numQubits)) continue;
-                    if ((s.clbits ?? []).some((c) => c < 0 || c >= circuit.numClbits)) continue;
-                    dispatch({
-                      type: "place-gate",
-                      gate: {
-                        ...s,
-                        id: `paste_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                        column: atColumn + s.column,
-                      },
-                    });
-                  }
-                } catch { /* ignore malformed clipboard */ }
-              }}
-            />
-            <button onClick={() => dispatch({ type: "clear" })} title="Clear circuit">Clear</button>
+              title="Append a measure on every qubit (auto-allocates classical bits)"
+            >
+              Measure All
+            </button>
+            <HelpMenu onOpen={(tabId) => setShowDocs(tabId)} />
           </div>
         </div>
         <StepBar maxColumn={maxColumn} step={effectiveStep} onChange={setPickedStep} />
@@ -958,6 +922,30 @@ export function CircuitEditor() {
           </select>
           {autoShots && (
             <span className="editor__right-bar-tick" title={`tick ${shotsTick}`}>● {shotsTick}</span>
+          )}
+          {simState.kind === "ready" && simState.data.freeSymbols.includes("t") && (
+            <RecordButton
+              onRecord={async () => {
+                const baseName = (circuit.name ?? "circuit").toLowerCase().replace(/[^a-z0-9]+/g, "_") || "circuit";
+                const target = document.querySelector(".editor__right");
+                if (!target) {
+                  window.alert("Right panel column not found.");
+                  return;
+                }
+                try {
+                  await recordAnimationWebM({
+                    target,
+                    setParamValues,
+                    currentParams: paramValues,
+                    duration_ms: 3000,
+                    fps: 30,
+                    filename: `${baseName}.webm`,
+                  });
+                } catch (e) {
+                  window.alert(`Recording failed: ${e instanceof Error ? e.message : String(e)}`);
+                }
+              }}
+            />
           )}
         </div>
         <ErrorBoundary label="parameters">

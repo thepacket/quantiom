@@ -120,9 +120,12 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
         style={{ display: "none" }}
         onChange={onFile}
       />
-      <button onClick={onOpen} title="Open a .qasm file">Open</button>
-      <button onClick={onDownload} title="Download as .qasm">.qasm</button>
-      <ExportPicker
+      <FileDropdown
+        onOpenExamples={() => setExamplesOpen(true)}
+        onOpenQasm={onOpen}
+        onDownloadQasm={onDownload}
+        onShare={onShare}
+        shareStatus={shareStatus}
         onQasm2={onDownloadQasm2}
         onQiskit={onDownloadQiskit}
         onCirq={onDownloadCirq}
@@ -134,18 +137,23 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
         onJson={onDownloadJson}
         onSvg={() => downloadCanvasSvg(circuit.name)}
       />
-      <button
-        onClick={onShare}
-        title="Copy a shareable URL that encodes the entire circuit in the link's hash"
-      >
-        {shareStatus === "copied" ? "✓ link" : shareStatus === "failed" ? "fail" : "Share"}
-      </button>
       <ExamplesPicker open={examplesOpen} onToggle={() => setExamplesOpen((o) => !o)} onPick={onExamplePick} />
     </div>
   );
 }
 
-function ExportPicker({
+/**
+ * Consolidated File menu. Replaces the old three standalone buttons
+ * (Open / .qasm / Export…) with one dropdown. Export targets render as
+ * a labelled sub-section below the import / download primary items —
+ * same flat-with-category-label pattern as TransformMenu.
+ */
+function FileDropdown({
+  onOpenExamples,
+  onOpenQasm,
+  onDownloadQasm,
+  onShare,
+  shareStatus,
   onQasm2,
   onQiskit,
   onCirq,
@@ -157,6 +165,11 @@ function ExportPicker({
   onJson,
   onSvg,
 }: {
+  onOpenExamples: () => void;
+  onOpenQasm: () => void;
+  onDownloadQasm: () => void;
+  onShare: () => void;
+  shareStatus: "idle" | "copied" | "failed";
   onQasm2: () => void;
   onQiskit: () => void;
   onCirq: () => void;
@@ -190,12 +203,23 @@ function ExportPicker({
   );
   return (
     <div className="examples-picker" ref={wrapRef}>
-      <button className="examples-picker__btn" onClick={() => setOpen((o) => !o)} title="Export to SDK code">
-        Export…
+      <button className="examples-picker__btn" onClick={() => setOpen((o) => !o)} title="Open, download, export">
+        File
       </button>
       {open && (
-        <div className="examples-picker__pop" style={{ width: 240 }}>
+        <div className="examples-picker__pop" style={{ width: 260 }}>
           <div className="examples-picker__list">
+            {item("Examples…", "browse the example circuit library", onOpenExamples)}
+            {item("Open QASM…", "load a .qasm file from disk", onOpenQasm)}
+            {item("Download QASM", "save current circuit as .qasm", onDownloadQasm)}
+            {item(
+              shareStatus === "copied" ? "Share — ✓ link copied"
+                : shareStatus === "failed" ? "Share — failed"
+                : "Share",
+              "copy a shareable URL (circuit encoded in the link's hash)",
+              onShare,
+            )}
+            <div className="examples-picker__cat-label">Export →</div>
             {item("OpenQASM 2", "_qasm2.qasm — legacy", onQasm2)}
             {item("Qiskit", ".py — IBM", onQiskit)}
             {item("Cirq", "_cirq.py — Google", onCirq)}
@@ -257,10 +281,7 @@ function ExamplesPicker({
   }, [query]);
 
   return (
-    <div className="examples-picker" ref={wrapRef}>
-      <button className="examples-picker__btn" onClick={onToggle} title="Browse 62 example circuits">
-        Examples…
-      </button>
+    <div className="examples-picker" ref={wrapRef} style={{ display: open ? undefined : "none" }}>
       {open && (
         <div className="examples-picker__pop">
           <input
