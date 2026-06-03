@@ -361,7 +361,9 @@ host plus `/api/health`.
   ripped out. See `feedback_client_side_simulator` memory.
 - **Sonorizer.** Built, shipped, explicitly removed as "useless,
   uninteresting." Don't bring it back.
-- **Q-sphere.** Tried, rejected as "too large then not required."
+- ~~**Q-sphere.**~~ Was once rejected as "too large"; **reopened and
+  SHIPPED 2026-06-03** (`QSpherePanel`, default-collapsed, n ≤ 6). Kept
+  compact. Don't re-reject it.
 - **In-tool tutorials, guided lessons.** Editor-first; the example
   library is the education.
 - **Density-matrix mode beyond what trajectories give.** 4ⁿ memory
@@ -379,8 +381,14 @@ host plus `/api/health`.
   queue, billing). The six SDK exports cover the "I want to run on a
   QPU" workflow.
 - **Pulse-level / OpenPulse.** Different field; out of scope.
-- **Continuous-variable, qudits, topological, networks, annealing.**
-  Different paradigms; out of scope.
+- **Continuous-variable, qudits, topological, networks, annealing**
+  as *simulation paradigms*. Different physics; out of scope. (Note: the
+  **spin Husimi-Q** `HusimiPanel` ships as a qubit phase-space view — a
+  CV-*analogue* visualiser, not a CV simulator. That's fine.)
+- **ZX rewriting / T-count reduction (PyZX-grade).** The ZX *diagram*
+  (`ZXPanel`) ships; automated spider-fusion / phase-gadget rewriting to
+  minimise T-count is a separate research effort (same class as
+  Solovay-Kitaev), still off the table.
 - **MPS / tensor-network simulation.** Real engineering project for a
   niche use case.
 - **Solovay–Kitaev / Ross–Selinger** exact rotation approximation in
