@@ -37,13 +37,18 @@ export type OptimiseResult = {
 const SELF_INVERSE = new Set([
   "i", "x", "y", "z", "h",
   "cx", "cy", "cz", "ch",
-  "swap", "dcx",
+  "swap",
   "ccx", "ccz", "cswap",
   "c3x", "c4x",
   // NOTE: iSWAP is NOT in this list. iSWAP² = diag(1, −1, −1, 1) = Z⊗Z,
   // not the identity, so cancelling two adjacent iSWAPs would silently
   // drop a Z·Z. The fuseISwapPair post-pass rewrites the pair to Z(a)·Z(b)
   // instead — same net effect, correct semantics.
+  // NOTE: DCX is NOT in this list either. DCX = CX(a,b)·CX(b,a) has order
+  // 3 (DCX² is a 3-cycle on {|01⟩,|10⟩,|11⟩}, equal to DCX⁻¹), so cancelling
+  // two adjacent DCXs would silently drop a non-trivial permutation. The
+  // collapseDcxTriple post-pass removes three consecutive same-ordered DCXs
+  // (DCX³ = I) — the correct identity.
 ]);
 
 const DAGGER_PAIRS: Record<string, string> = {
@@ -232,6 +237,15 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
     // SELF_INVERSE about why iSWAP isn't in that set.
     for (let i = 0; i < 50; i++) {
       const result = fuseISwapPair(gates, rulesFired);
+      if (!result.changed) break;
+      gates = result.gates;
+      outerChanged = true;
+    }
+
+    // Post-pass: DCX·DCX·DCX → I. DCX has order 3 (DCX² = DCX⁻¹), so only
+    // triples annihilate. See SELF_INVERSE note.
+    for (let i = 0; i < 50; i++) {
+      const result = collapseDcxTriple(gates, rulesFired);
       if (!result.changed) break;
       gates = result.gates;
       outerChanged = true;
@@ -608,6 +622,73 @@ function fuseISwapPair(
     next.push(g);
   }
   return { gates: next, changed };
+}
+
+/**
+ * Detect three consecutive same-ordered DCX gates on the same qubit pair
+ * and remove all three (DCX³ = I). Two DCXs do NOT cancel: DCX² is a
+ * 3-cycle permutation on the non-|00⟩ basis, equal to DCX⁻¹. The triple is
+ * the smallest power that returns to identity.
+ *
+ * We require the three DCXs to be adjacent on BOTH qubits (no interposed
+ * gate touches either wire), AND to have the same targets order — DCX is
+ * directional, so DCX(a,b) ≠ DCX(b,a) (in fact they're inverses of each
+ * other; that pair-cancel case is a future micro-opt, left out here).
+ */
+function collapseDcxTriple(
+  gates: PlacedGate[],
+  rules: Record<string, number>,
+): { gates: PlacedGate[]; changed: boolean } {
+  const sorted = [...gates].sort(
+    (a, b) => a.column - b.column || a.id.localeCompare(b.id),
+  );
+  const numQ = sorted.reduce(
+    (m, g) => Math.max(m, ...g.controls, ...g.targets),
+    -1,
+  ) + 1;
+  const perQ: number[][] = Array.from({ length: numQ }, () => []);
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    for (const q of [...g.controls, ...g.targets]) {
+      if (q < numQ) perQ[q].push(i);
+    }
+  }
+
+  const isPlainDcx = (g: PlacedGate) =>
+    g.gateId === "dcx"
+    && g.controls.length === 0 && g.targets.length === 2
+    && !g.condition && !g.controlStates?.some((s) => !s);
+
+  const remove = new Set<string>();
+  let changed = false;
+
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    if (!isPlainDcx(g)) continue;
+    if (remove.has(g.id)) continue;
+    const [a, b] = g.targets;
+    if (a < 0 || b < 0 || a >= numQ || b >= numQ) continue;
+    const listA = perQ[a]; const listB = perQ[b];
+    const posA = listA.indexOf(i); const posB = listB.indexOf(i);
+    if (posA <= 0 || posB <= 0) continue;
+    if (posA >= listA.length - 1 || posB >= listB.length - 1) continue;
+    if (listA[posA - 1] !== listB[posB - 1]) continue;
+    if (listA[posA + 1] !== listB[posB + 1]) continue;
+    const prev = sorted[listA[posA - 1]];
+    const next = sorted[listA[posA + 1]];
+    if (!isPlainDcx(prev) || !isPlainDcx(next)) continue;
+    if (remove.has(prev.id) || remove.has(next.id)) continue;
+    if (prev.targets[0] !== a || prev.targets[1] !== b) continue;
+    if (next.targets[0] !== a || next.targets[1] !== b) continue;
+    remove.add(prev.id);
+    remove.add(g.id);
+    remove.add(next.id);
+    rules["dcx·dcx·dcx → I"] = (rules["dcx·dcx·dcx → I"] ?? 0) + 1;
+    changed = true;
+  }
+
+  if (!changed) return { gates, changed };
+  return { gates: gates.filter((g) => !remove.has(g.id)), changed };
 }
 
 /**
