@@ -70,11 +70,14 @@ Live: **<https://quantiom.fly.dev>**
   conventions of all eight SDK / LaTeX emitters.
 
 All four are also rendered inside the app — open the toolbar **Help**
-menu. They're imported at build time, no network fetch.
+menu. They're imported at build time, no network fetch. The **About**
+item (next to Help) shows the version, GitHub link, authorship, and
+licence.
 
 Quantiom is moving fast and the surface to verify is wide — 64 gates,
-three simulator backends, an AI chat assistant, ~24 panels, OpenQASM 3
-round-trip, and nine code/format emitters. Expect rough edges; bug
+three simulator backends, an AI chat assistant, ~40 panels (24 of them
+entanglement / dynamics / state visualisers), OpenQASM 3 round-trip,
+and nine code/format emitters. Expect rough edges; bug
 reports against any of it are welcome.
 
 ## Authorship
@@ -556,6 +559,12 @@ is still 100% client-side.
   log to console and skip silently. Auto-open fires once per reply,
   not once per render, so reloading the page doesn't re-open old
   suggestions.
+- **Rendered replies.** Assistant messages render as **markdown**
+  (headings, lists, tables, bold/italic, inline code) and **LaTeX via
+  KaTeX** — inline `$…$` / `\(…\)`, display `$$…$$` / `\[…\]`, with
+  Dirac braket macros (`\ket`, `\bra`, `\braket`, `\expval`, `\tr`).
+  Your own messages stay literal; fenced QASM keeps its code-block +
+  auto-open treatment.
 - **Model picker.** Live-fetches the full OpenRouter catalog with
   search; click any model to switch. Choice persists per browser.
 - **Streaming responses** via SSE, with a Stop button to cancel

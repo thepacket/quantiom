@@ -27,7 +27,7 @@ materialised there. Use the Bloch panel instead when you're past the
 stabilizer threshold.
 
 **Controls.**
-- **Hide zeros** — omits rows below 10⁻¹⁰ magnitude. Keeps the table
+- **Hide 0's** — omits rows below 10⁻¹⁰ magnitude. Keeps the table
   readable on circuits with hundreds of basis states but only a
   handful populated.
 - **Top-K cap** — caps the table at 64 rows by default. A "Show all
@@ -41,7 +41,7 @@ stabilizer threshold.
 out-of-memory immediately; the cap exists to prevent that.
 
 **Tip.** When debugging a circuit that "should be" in a known state,
-toggle Hide zeros and compare the surviving rows against the textbook
+toggle Hide 0's and compare the surviving rows against the textbook
 expression — easier than reading a sparse 256-row dense table by eye.
 
 ---
@@ -1031,6 +1031,13 @@ question without typing.
 **QASM auto-open.** Any QASM 3 code block in the LLM's reply gets a
 button to open it as a new tab. Useful for "rewrite this Bell pair
 as a Z-basis cat state" workflows.
+
+**Rendered replies.** Assistant messages render as **markdown** —
+headings, lists, tables, bold/italic, inline code — and **LaTeX via
+KaTeX**: inline `$…$` / `\(…\)` and display `$$…$$` / `\[…\]`, including
+Dirac braket macros (`\ket`, `\bra`, `\braket`, `\expval`, `\tr`). Your
+own messages stay literal, and fenced QASM blocks keep their
+code-block + auto-open treatment.
 
 **Tip.** Use it as a tutor, not an oracle. The LLM is great at
 explaining concepts and proposing sequence changes; verify any

@@ -27,7 +27,7 @@ their compute when collapsed.
         │            client/ (Vite + React + TS)           │
         │                                                  │
         │  editor/    ←→   sim/       ←→   panels/         │
-        │   IR, tabs,      simulate +      ~24 panels,     │
+        │   IR, tabs,      simulate +      ~40 panels,     │
         │   undo, DnD,     stabilizer +    each pure       │
         │   QASM round-    noisy traj +    function of     │
         │   trip glue,     WebGPU paths    SimResult       │
@@ -54,8 +54,8 @@ client/src/
   editor/       circuit IR, undo, tabs, drag-and-drop, custom gates,
                 share links, recorder, docs modal, the main editor shell
   sim/          the simulator core (this is the brain)
-  qasm/         OpenQASM 3 parse + emit + six SDK code emitters
-  panels/       ~18 collapsible peer panels
+  qasm/         OpenQASM 3 parse + emit + eight SDK / LaTeX emitters
+  panels/       ~40 collapsible peer panels (24 visualisers)
   styles.css    all styles in one file
 server/         FastAPI shell — static host + health endpoint
 examples/       88 .qasm files in 10 categories, imported via Vite ?raw
@@ -245,12 +245,15 @@ pills.
   paints each frame to a capture canvas, encodes via MediaRecorder.
   The Record button captures `.editor__right` (the whole right
   panel column) as `t` sweeps.
-- `DocsModal.tsx` — in-app modal that renders `docs/panels.md` and
-  `docs/tutorial.md` (and this file once it's wired in) via a
-  ~150-line in-house markdown formatter. No runtime dep.
+- `Markdown.tsx` — small in-house markdown + LaTeX (KaTeX) formatter,
+  no runtime dep. Shared by `DocsModal` and the AI chat panel.
+- `DocsModal.tsx` — in-app modal that renders the four `docs/*.md`
+  files (panels, tutorial, architecture, qasm) through `Markdown`.
+- `AboutModal.tsx` — toolbar **About** dialog: name, version, GitHub
+  link, authorship, MIT copyright.
 - `CircuitEditor.tsx` — the main editor shell. Top toolbar, tab
   strip, canvas, inspector, right-panel column. The toolbar's File
-  / Edit / Help dropdown components live here.
+  / Edit / Help dropdown components + the About button live here.
 - `CircuitCanvas.tsx` — the SVG canvas. Hosts the gate rendering
   layer (SVG) plus a transparent `.canvas__cells` HTML overlay
   that owns drag-and-drop (the HTML DnD API doesn't play nicely
@@ -311,6 +314,8 @@ qasm/emitQSharp.ts   Microsoft Q#
 qasm/emitPyQuil.ts   Rigetti PyQuil
 qasm/emitPytket.ts   Quantinuum pytket (half-turn angle convention)
 qasm/emitQuantikz.ts LaTeX (quantikz) for papers
+qasm/exportLower.ts  pre-emit decompositions for gates lacking a native
+                     SDK method (r→Rz·Rx·Rz, √Y→Ry, IonQ→Rz·RXX·Rz)
 ```
 
 The parser is intentionally tolerant — OpenQASM 2 files with

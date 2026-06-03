@@ -194,6 +194,14 @@ translation as the QASM 3 emitter, and all fall back to a `# … no
 direct mapping` comment for gates a target can't express, so nothing is
 silently lost.
 
+**Export lowering.** A few gates have no direct method in most SDKs but
+decompose exactly into gates every emitter supports — `qasm/exportLower.ts`
+rewrites them before emission: `r(θ,φ)→Rz(−φ)·Rx(θ)·Rz(φ)`,
+`√Y→Ry(π/2)` (global phase dropped), `GPi(φ)→R(π,φ)`, `GPi2(φ)→R(π/2,φ)`,
+`MS(φ₀,φ₁,θ)→Rz·RXX·Rz`. Braket is the exception — it has the IonQ
+natives directly, so it emits `circuit.gpi/.gpi2/.ms` and Cirq emits
+native `FSimGate` / `SWAP**±0.5`.
+
 | Export | File | Target | Angle units | Notes |
 |---|---|---|---|---|
 | OpenQASM 2 | `_qasm2.qasm` | OpenQASM 2.0 | radians | legacy `qreg`/`creg`; `measure q -> c` |

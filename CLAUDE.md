@@ -325,6 +325,11 @@ host plus `/api/health`.
   — through the shared `panels/Tex.tsx` (which defines quantum braket
   macros `\ket`/`\bra`/`\braket`/`\expval`/`\tr`). The chat system
   prompt tells the model to write math in `$…$` / `$$…$$`.
+  `client/src/editor/AboutModal.tsx` — the toolbar **About** button
+  (next to Help) opens it; shows name, version, description, GitHub
+  URL, the "Developed by Claude Code in collaboration with Andre
+  Paquette" line, and the MIT copyright. The repo also has a root
+  `LICENSE` (MIT, © 2026 Andre Paquette) + `THIRD_PARTY_LICENSES.md`.
 
 ## Conventions
 
