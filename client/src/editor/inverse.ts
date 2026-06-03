@@ -37,11 +37,14 @@ const DAGGER_PAIRS: Record<string, string> = {
   s: "sdg", sdg: "s",
   t: "tdg", tdg: "t",
   sx: "sxdg", sxdg: "sx",
+  sy: "sydg", sydg: "sy",
   csx: "csxdg", csxdg: "csx",
+  sqrtswap: "sqrtswapdg", sqrtswapdg: "sqrtswap",
 };
 
 const SINGLE_ANGLE_GATES = new Set([
   "rx", "ry", "rz", "p", "u1",
+  "r", // R(θ,φ)† = R(−θ, φ): negate θ, keep φ
   "rxx", "ryy", "rzz", "rzx",
   "crx", "cry", "crz", "cp", "cu1",
   "mcp",
@@ -102,6 +105,11 @@ export function invertGate(g: PlacedGate): PlacedGate | null {
   }
   if (g.gateId === "xx_plus_yy" || g.gateId === "xx_minus_yy") {
     out.params = [negateExpr(g.params[0] ?? "0"), g.params[1] ?? "0"];
+    return out;
+  }
+  if (g.gateId === "fsim") {
+    // fSim(θ,φ)† = fSim(−θ, −φ).
+    out.params = [negateExpr(g.params[0] ?? "0"), negateExpr(g.params[1] ?? "0")];
     return out;
   }
   // u_arb / u_arb_2 — would need conjugate transpose at sim time; not

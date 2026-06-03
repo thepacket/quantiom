@@ -1,4 +1,5 @@
 import type { Circuit, PlacedGate } from "../editor/types";
+import { exportLower } from "./exportLower";
 
 /**
  * Emit a pytket (Quantinuum) Python program from a Circuit IR. Targets
@@ -24,6 +25,8 @@ function piParts(expr: string): string {
 }
 
 function emitGate(g: PlacedGate): string[] {
+  const lowered = exportLower(g);
+  if (lowered) return lowered.flatMap(emitGate);
   const t = g.targets[0];
   const t1 = g.targets[1];
   const c0 = g.controls[0];

@@ -3,7 +3,7 @@
 **A browser-native research-grade quantum circuit editor, simulator,
 workstation, and visualizer.**
 
-Quantiom is a multi-tab editor over a 55-gate palette, three
+Quantiom is a multi-tab editor over a 61-gate palette, three
 simulators (pure-TypeScript `Float64Array` statevector ≤ 20 qubits,
 Aaronson–Gottesman tableau ≤ 1024 qubits with **Pauli frame tracking
 for depolarising noise**, and a quantum-trajectory noise simulator
@@ -72,7 +72,7 @@ Live: **<https://quantiom.fly.dev>**
 All four are also rendered inside the app — open the toolbar **Help**
 menu. They're imported at build time, no network fetch.
 
-Quantiom is moving fast and the surface to verify is wide — 55 gates,
+Quantiom is moving fast and the surface to verify is wide — 61 gates,
 three simulator backends, an AI chat assistant, ~24 panels, OpenQASM 3
 round-trip, and nine code/format emitters. Expect rough edges; bug
 reports against any of it are welcome.
@@ -119,16 +119,16 @@ them is the maintainer's.
   rename, × to close (confirms when dirty), + for a fresh tab; clone
   the active tab with **Edit → Duplicate**. ⌘/Ctrl+1..9 jumps to tab N;
   ⌘/Ctrl+T opens a new one.
-- **55-gate palette** across 13 categories, with category-coloured
+- **61-gate palette** across 13 categories, with category-coloured
   borders, search box, and collapsible category groups:
   - Identity & Pauli (I, X, Y, Z)
-  - Clifford + T (H, S, S†, √X, √X†, T, T†)
-  - Phase & Rotation (P, RX, RY, RZ)
+  - Clifford + T (H, S, S†, √X, √X†, √Y, √Y†, T, T†)
+  - Phase & Rotation (P, RX, RY, RZ, **R(θ,φ)** — equatorial-axis rotation)
   - General U (U, U1, U2, U3, **`u_arb`** — arbitrary 2×2,
     **`u_arb_2`** — arbitrary 4×4)
   - Two-qubit Clifford (CX, CY, CZ, CH, C√X, C√X†, SWAP, iSWAP, DCX, ECR)
   - Controlled rotations (CRX, CRY, CRZ, CP, CU, CU1, CU3)
-  - Ising / native (RXX, RYY, RZZ, RZX, XX+YY, XX−YY)
+  - Ising / native (RXX, RYY, RZZ, RZX, XX+YY, XX−YY, **fSim(θ,φ)**, **√SWAP**, **√SWAP†**)
   - Three-qubit (CCX, CCZ, CSWAP, RCCX, RC3X)
   - Multi-controlled (C3X, C4X, MCX, MCP, MCU — variable arity)
   - State prep (|0⟩, |1⟩, |+⟩, |−⟩, |i⟩, |−i⟩, Initialize — arbitrary

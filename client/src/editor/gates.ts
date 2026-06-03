@@ -46,6 +46,8 @@ export const GATES: GateDef[] = [
   def({ id: "sdg", symbol: "S†", name: "S-dagger", category: "clifford-t", description: "Inverse of S." }),
   def({ id: "sx", symbol: "√X", name: "√X (SX)", category: "clifford-t", description: "Square root of X." }),
   def({ id: "sxdg", symbol: "√X†", name: "√X-dagger", category: "clifford-t", description: "Inverse of √X." }),
+  def({ id: "sy", symbol: "√Y", name: "√Y (SY)", category: "clifford-t", description: "Square root of Y (= e^{iπ/4}·RY(π/2)). Clifford." }),
+  def({ id: "sydg", symbol: "√Y†", name: "√Y-dagger", category: "clifford-t", description: "Inverse of √Y." }),
   def({ id: "t", symbol: "T", name: "T (√S)", category: "clifford-t", description: "π/4 phase gate. √S." }),
   def({ id: "tdg", symbol: "T†", name: "T-dagger", category: "clifford-t", description: "Inverse of T." }),
 
@@ -54,6 +56,7 @@ export const GATES: GateDef[] = [
   def({ id: "rx", symbol: "RX", name: "Rotation X", category: "phase-rotation", params: [theta], description: "Rotation by θ about X." }),
   def({ id: "ry", symbol: "RY", name: "Rotation Y", category: "phase-rotation", params: [theta], description: "Rotation by θ about Y." }),
   def({ id: "rz", symbol: "RZ", name: "Rotation Z", category: "phase-rotation", params: [theta], description: "Rotation by θ about Z." }),
+  def({ id: "r", symbol: "R", name: "Rotation R(θ,φ)", category: "phase-rotation", params: [theta, phi], description: "Rotation by θ about the equatorial axis at angle φ: exp(−iθ/2 (cosφ·X + sinφ·Y)). R(θ,0)=RX, R(θ,π/2)=RY. The trapped-ion single-qubit primitive." }),
 
   // ─── General U gates ───────────────────────────────────────────────────
   def({ id: "u", symbol: "U", name: "U(θ,φ,λ)", category: "general-u", params: [theta, phi, lambda], description: "Most general single-qubit unitary." }),
@@ -106,6 +109,9 @@ export const GATES: GateDef[] = [
   def({ id: "rzx", symbol: "RZX", name: "RZX", category: "ising-native", numTargets: 2, params: [theta] }),
   def({ id: "xx_plus_yy", symbol: "XX+YY", name: "XX + YY", category: "ising-native", numTargets: 2, params: [theta, beta] }),
   def({ id: "xx_minus_yy", symbol: "XX−YY", name: "XX − YY", category: "ising-native", numTargets: 2, params: [theta, beta] }),
+  def({ id: "fsim", symbol: "fSim", name: "fSim(θ,φ)", category: "ising-native", numTargets: 2, params: [theta, phi], description: "Google native: XY rotation by θ + controlled-phase φ on |11⟩. Generalises iSWAP (θ=−π/2,φ=0) and CZ (θ=0,φ=π)." }),
+  def({ id: "sqrtswap", symbol: "√SWAP", name: "√SWAP", category: "ising-native", numTargets: 2, description: "Square root of SWAP; squares to SWAP. A maximally-entangling-at-half partial swap (not Clifford)." }),
+  def({ id: "sqrtswapdg", symbol: "√SWAP†", name: "√SWAP-dagger", category: "ising-native", numTargets: 2, description: "Inverse of √SWAP." }),
 
   // ─── Three-qubit ───────────────────────────────────────────────────────
   def({ id: "ccx", symbol: "X", name: "Toffoli (CCX)", category: "three-qubit", numControls: 2, targetGlyph: "x-target", description: "Doubly-controlled X." }),

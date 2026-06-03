@@ -1,4 +1,5 @@
 import type { Circuit, PlacedGate } from "../editor/types";
+import { exportLower } from "./exportLower";
 
 /**
  * Emit a PyQuil program from a Circuit IR. Targets Rigetti's `Program`
@@ -19,6 +20,8 @@ function asciify(s: string): string {
 }
 
 function emitGate(g: PlacedGate): string[] {
+  const lowered = exportLower(g);
+  if (lowered) return lowered.flatMap(emitGate);
   const t = g.targets[0];
   const t1 = g.targets[1];
   const c0 = g.controls[0];

@@ -1,4 +1,5 @@
 import type { Circuit, PlacedGate } from "../editor/types";
+import { exportLower } from "./exportLower";
 
 /**
  * Emit a Cirq Python program from a Circuit IR.
@@ -26,6 +27,8 @@ function asciify(s: string): string {
 function q(i: number): string { return `qs[${i}]`; }
 
 function emitGate(g: PlacedGate): string[] {
+  const lowered = exportLower(g);
+  if (lowered) return lowered.flatMap(emitGate);
   const target = g.targets[0];
   const ctrls = g.controls;
 
@@ -109,8 +112,11 @@ function emitGate(g: PlacedGate): string[] {
   if (g.gateId === "ch") return [`c.append(cirq.H.controlled()(${q(ctrls[0])}, ${q(target)}))`];
   if (g.gateId === "swap") return [`c.append(cirq.SWAP(${q(g.targets[0])}, ${q(g.targets[1])}))`];
   if (g.gateId === "iswap") return [`c.append(cirq.ISWAP(${q(g.targets[0])}, ${q(g.targets[1])}))`];
+  if (g.gateId === "sqrtswap") return [`c.append((cirq.SWAP**0.5)(${q(g.targets[0])}, ${q(g.targets[1])}))`];
+  if (g.gateId === "sqrtswapdg") return [`c.append((cirq.SWAP**-0.5)(${q(g.targets[0])}, ${q(g.targets[1])}))`];
 
   // Two-qubit parameterised
+  if (g.gateId === "fsim") return [`c.append(cirq.FSimGate(theta=${asciify(g.params[0])}, phi=${asciify(g.params[1])})(${q(g.targets[0])}, ${q(g.targets[1])}))`];
   if (g.gateId === "rxx") return [`c.append(cirq.XXPowGate(exponent=(${asciify(g.params[0])})/pi)(${q(g.targets[0])}, ${q(g.targets[1])}))`];
   if (g.gateId === "ryy") return [`c.append(cirq.YYPowGate(exponent=(${asciify(g.params[0])})/pi)(${q(g.targets[0])}, ${q(g.targets[1])}))`];
   if (g.gateId === "rzz") return [`c.append(cirq.ZZPowGate(exponent=(${asciify(g.params[0])})/pi)(${q(g.targets[0])}, ${q(g.targets[1])}))`];

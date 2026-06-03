@@ -1,4 +1,5 @@
 import type { Circuit, PlacedGate } from "../editor/types";
+import { exportLower } from "./exportLower";
 
 /**
  * Emit a Qiskit Python program from a Circuit IR. The output is a
@@ -75,6 +76,8 @@ function ctrlState(g: PlacedGate): string {
 }
 
 function emitGate(g: PlacedGate): string[] {
+  const lowered = exportLower(g);
+  if (lowered) return lowered.flatMap(emitGate);
   // Markers
   if (g.gateId === "barrier") {
     return [`qc.barrier(${qubitList(g.targets)})`];

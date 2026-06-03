@@ -50,6 +50,17 @@ export const M_SXdg: Matrix = [
   [c(0.5, 0.5), c(0.5, -0.5)],
 ];
 
+// √Y and its inverse (Clifford). √Y = e^{iπ/4}·RY(π/2); squares to Y.
+export const M_SY: Matrix = [
+  [c(0.5, 0.5), c(-0.5, -0.5)],
+  [c(0.5, 0.5), c(0.5, 0.5)],
+];
+
+export const M_SYdg: Matrix = [
+  [c(0.5, -0.5), c(0.5, -0.5)],
+  [c(-0.5, 0.5), c(0.5, -0.5)],
+];
+
 export const M_T: Matrix = [
   [ONE, ZERO],
   [ZERO, expi(Math.PI / 4)],
@@ -89,6 +100,19 @@ export const M_RZ = (theta: number): Matrix => [
   [ZERO, expi(theta / 2)],
 ];
 
+// R(θ,φ) — rotation by θ about the equatorial axis at angle φ:
+// exp(−iθ/2 (cosφ·X + sinφ·Y)). R(θ,0)=RX(θ), R(θ,π/2)=RY(θ).
+export const M_R = (theta: number, phi: number): Matrix => {
+  const co = Math.cos(theta / 2);
+  const si = Math.sin(theta / 2);
+  const sp = Math.sin(phi);
+  const cp = Math.cos(phi);
+  return [
+    [c(co), c(-si * sp, -si * cp)],
+    [c(si * sp, -si * cp), c(co)],
+  ];
+};
+
 export const M_U = (theta: number, phi: number, lam: number): Matrix => {
   const co = Math.cos(theta / 2);
   const si = Math.sin(theta / 2);
@@ -127,6 +151,21 @@ export const M_DCX: Matrix = [
   [ZERO, ZERO, ZERO, ONE],
   [ZERO, ONE, ZERO, ZERO],
   [ZERO, ZERO, ONE, ZERO],
+];
+
+// √SWAP — partial-swap entangler; squares to SWAP. Not Clifford.
+export const M_SQRTSWAP: Matrix = [
+  [ONE, ZERO, ZERO, ZERO],
+  [ZERO, c(0.5, 0.5), c(0.5, -0.5), ZERO],
+  [ZERO, c(0.5, -0.5), c(0.5, 0.5), ZERO],
+  [ZERO, ZERO, ZERO, ONE],
+];
+
+export const M_SQRTSWAPdg: Matrix = [
+  [ONE, ZERO, ZERO, ZERO],
+  [ZERO, c(0.5, -0.5), c(0.5, 0.5), ZERO],
+  [ZERO, c(0.5, 0.5), c(0.5, -0.5), ZERO],
+  [ZERO, ZERO, ZERO, ONE],
 ];
 
 export const M_ECR: Matrix = (() => {
@@ -189,6 +228,20 @@ export const M_RZX = (theta: number): Matrix => {
     [inegSi, coC, ZERO, ZERO],
     [ZERO, ZERO, coC, isi],
     [ZERO, ZERO, isi, coC],
+  ];
+};
+
+// fSim(θ,φ) — Google's native two-qubit gate: an iSWAP-like XY rotation by
+// θ plus a controlled-phase φ on |11⟩. Generalises iSWAP (θ=−π/2, φ=0) and
+// CZ (θ=0, φ=π).
+export const M_FSIM = (theta: number, phi: number): Matrix => {
+  const co = c(Math.cos(theta));
+  const isi = c(0, -Math.sin(theta));
+  return [
+    [ONE, ZERO, ZERO, ZERO],
+    [ZERO, co, isi, ZERO],
+    [ZERO, isi, co, ZERO],
+    [ZERO, ZERO, ZERO, expi(-phi)],
   ];
 };
 
@@ -264,6 +317,8 @@ export function buildMatrix(
     case "sdg": return M_Sdg;
     case "sx": return M_SX;
     case "sxdg": return M_SXdg;
+    case "sy": return M_SY;
+    case "sydg": return M_SYdg;
     case "t": return M_T;
     case "tdg": return M_Tdg;
     // Parameterized single-qubit
@@ -271,6 +326,7 @@ export function buildMatrix(
     case "rx": return M_RX(params[0]);
     case "ry": return M_RY(params[0]);
     case "rz": return M_RZ(params[0]);
+    case "r": return M_R(params[0], params[1]);
     case "u": return M_U(params[0], params[1], params[2]);
     case "u1": return M_U1(params[0]);
     case "u2": return M_U2(params[0], params[1]);
@@ -297,7 +353,10 @@ export function buildMatrix(
     case "iswap": return M_iSWAP;
     case "dcx": return M_DCX;
     case "ecr": return M_ECR;
+    case "sqrtswap": return M_SQRTSWAP;
+    case "sqrtswapdg": return M_SQRTSWAPdg;
     // Two-qubit parameterized
+    case "fsim": return M_FSIM(params[0], params[1]);
     case "rxx": return M_RXX(params[0]);
     case "ryy": return M_RYY(params[0]);
     case "rzz": return M_RZZ(params[0]);
