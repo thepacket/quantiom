@@ -246,6 +246,34 @@ the panel is open (default-collapsed), so it costs nothing until asked.
 
 ---
 
+## Space–time ⟨Z⟩
+
+The many-body "space–time diagram": rows are qubits (q0 on top),
+columns are circuit time steps, and each cell's colour is ⟨Z_q⟩ after
+that column — blue for +1 (|0⟩ / spin up), warm for −1 (|1⟩ / spin
+down), faint near 0. The whole dynamics is one static picture.
+
+**When available.** Any circuit with at least one gate. Capped at
+14 qubits × 80 columns.
+
+**What you see.**
+- **Kicked-Ising / Floquet**: horizontal stripes that flip sign every
+  drive period — the period-doubling signature of a discrete time
+  crystal (set the kick g ≈ π).
+- **Trotterised chain**: excitations spreading outward along a light
+  cone from where they started.
+- **A bare X / flip**: that qubit's row turning warm at the column
+  where the flip lands.
+- **Static / diagonal circuit**: flat rows.
+
+**How it's built.** Re-simulates the circuit truncated after each
+column and reads each qubit's Bloch ⟨Z⟩. One simulation per column, so
+it's an opt-in (default-collapsed) view rather than a per-frame one.
+Circuits with mid-circuit measurement show the seeded single-trajectory
+collapse per prefix.
+
+---
+
 ## Hamiltonian → Trotter
 
 Paste a Pauli-sum Hamiltonian (e.g. `0.5 * X1 X2 + 0.3 * Z0`) and the

@@ -632,3 +632,12 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .mutinfo__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .mutinfo__swatch--mi { background: var(--accent-2); }
 .mutinfo__swatch--s { background: var(--accent); }
+
+/* ─── Space–time ⟨Z⟩ map ───────────────────────────────────────────── */
+.spacetime { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.spacetime__svg { display: block; }
+.spacetime__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.spacetime__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+.spacetime__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.spacetime__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.spacetime__swatch--zero { background: var(--bg-2); border: 1px solid var(--border); }
