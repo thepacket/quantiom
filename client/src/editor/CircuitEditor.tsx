@@ -6,6 +6,7 @@ import { CircuitCanvas } from "./CircuitCanvas";
 import { GatePalette } from "./GatePalette";
 import { Inspector } from "./Inspector";
 import { FileMenu } from "./FileMenu";
+import { DocsModal } from "./DocsModal";
 import { StepBar } from "./StepBar";
 import { loadCustomGates, newCustomGateId, saveCustomGates, type CustomGate } from "./customGates";
 import type { Circuit } from "./types";
@@ -382,6 +383,7 @@ export function CircuitEditor() {
   const [noise, setNoise] = useState<NoiseModel>(() => loadNoise());
   const [findQuery, setFindQuery] = useState<string>("");
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showDocs, setShowDocs] = useState(false);
 
   useEffect(() => {
     saveCustomGates(customGates);
@@ -599,6 +601,7 @@ export function CircuitEditor() {
 
   return (
     <div className="editor">
+      {showDocs && <DocsModal onClose={() => setShowDocs(false)} />}
       {showShortcuts && (
         <div
           onClick={() => setShowShortcuts(false)}
@@ -643,7 +646,19 @@ export function CircuitEditor() {
           <span className="app__tagline">circuit editor · simulator · visualizer</span>
         </div>
         <div className="app__title">{circuit.name ?? "Untitled"}</div>
-        <div className="app__header-right" />
+        <div className="app__header-right">
+          <button
+            onClick={() => setShowDocs(true)}
+            title="Open documentation — panel reference and hands-on tutorial"
+            style={{
+              background: "transparent", border: "1px solid var(--border)",
+              color: "var(--fg)", borderRadius: 4, padding: "4px 10px",
+              fontSize: 12, cursor: "pointer",
+            }}
+          >
+            ? Docs
+          </button>
+        </div>
       </header>
       <GatePalette customGates={customGates} onRemoveCustomGate={removeCustomGate} />
       <div className="editor__center">

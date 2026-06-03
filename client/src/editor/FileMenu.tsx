@@ -288,7 +288,7 @@ function ExamplesPicker({
                     key={ex.id}
                     className="examples-picker__item"
                     onClick={() => onPick(ex)}
-                    title={ex.id}
+                    title={ex.description || ex.id}
                   >
                     {ex.label}
                   </button>
