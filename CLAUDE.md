@@ -110,7 +110,9 @@ host plus `/api/health`.
     cancellation, dagger-pair, same-axis rotation merge, Pauli
     collapse, **power-merge** (T·T → S, S·S → Z, √X·√X → X), H·CX·H
     → CZ, **H·X·H → Z / H·Z·H → X / H·Y·H → Y** Hadamard-Pauli
-    sandwiches, **3-CX → SWAP synthesis**, iSWAP·iSWAP → Z·Z. Deep
+    sandwiches, **CX-conjugation cancellation** (X(t)·CX·X(t) → CX,
+    Z(c)·CX·Z(c) → CX), **3-CX → SWAP synthesis**, iSWAP·iSWAP → Z·Z,
+    DCX·DCX·DCX → I. Deep
     mode adds commute-through-diagonals (rotations + T/S hop past
     Z-stabilized control of CX/CY/CCX/etc. to find merge partners
     — **T-conjugation through CX**). Reports rule counts; capped

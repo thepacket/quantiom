@@ -219,6 +219,16 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
       outerChanged = true;
     }
 
+    // Post-pass: CX-conjugation cancellation. X(t)·CX·X(t) → CX and
+    // Z(c)·CX·Z(c) → CX. Drops the conjugating Pauli pair; the freed slots
+    // can expose further merges, so sweep to a fixed point.
+    for (let i = 0; i < 50; i++) {
+      const result = fuseCXConjugation(gates, rulesFired);
+      if (!result.changed) break;
+      gates = result.gates;
+      outerChanged = true;
+    }
+
     // Post-pass: H(q)·P(q)·H(q) basis-change windows.
     //   H·X·H → Z,  H·Z·H → X,  H·Y·H → −Y → Y (global phase dropped).
     // Three single-qubit gates collapse to one. Foundational Bell-basis
@@ -460,6 +470,75 @@ function fuseHCXH(
     next.push(g);
   }
   return { gates: next, changed };
+}
+
+/**
+ * CX-conjugation cancellation. Two commutation identities where the
+ * conjugating Pauli pair passes trivially through the CX and annihilates:
+ *
+ *   X(t) · CX(c,t) · X(t)  →  CX(c,t)   (X on the *target* commutes through)
+ *   Z(c) · CX(c,t) · Z(c)  →  CX(c,t)   (Z on the *control* commutes through)
+ *
+ * (X on control or Z on target do NOT cancel — they propagate a Pauli to
+ * the other wire — so those are deliberately excluded.) Each match removes
+ * two single-qubit gates while leaving the CX intact. The freed Pauli slots
+ * often expose further self-inverse / Pauli-collapse merges on the same
+ * wire, so this runs to a fixed point like the other post-passes.
+ */
+function fuseCXConjugation(
+  gates: PlacedGate[],
+  rules: Record<string, number>,
+): { gates: PlacedGate[]; changed: boolean } {
+  const sorted = [...gates].sort(
+    (a, b) => a.column - b.column || a.id.localeCompare(b.id),
+  );
+  const numQ = sorted.reduce(
+    (m, g) => Math.max(m, ...g.controls, ...g.targets),
+    -1,
+  ) + 1;
+  const perQ: number[][] = Array.from({ length: numQ }, () => []);
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    for (const q of [...g.controls, ...g.targets]) {
+      if (q < numQ) perQ[q].push(i);
+    }
+  }
+
+  const isPlain = (g: PlacedGate, gateId: string, q: number) =>
+    g.gateId === gateId && g.controls.length === 0 && g.targets.length === 1 && g.targets[0] === q
+    && !g.condition && !g.controlStates?.some((s) => !s);
+
+  const remove = new Set<string>();
+  let changed = false;
+
+  // For a CX, the Pauli flanking it on `wire` (adjacent on that wire's
+  // timeline) must both be the given gate and unused; if so, drop them.
+  const tryFlank = (cxIndex: number, wire: number, pauli: string, ruleName: string) => {
+    const list = perQ[wire];
+    if (!list) return;
+    const pos = list.indexOf(cxIndex);
+    if (pos <= 0 || pos >= list.length - 1) return;
+    const prev = sorted[list[pos - 1]];
+    const next = sorted[list[pos + 1]];
+    if (remove.has(prev.id) || remove.has(next.id)) return;
+    if (!isPlain(prev, pauli, wire) || !isPlain(next, pauli, wire)) return;
+    remove.add(prev.id);
+    remove.add(next.id);
+    rules[ruleName] = (rules[ruleName] ?? 0) + 1;
+    changed = true;
+  };
+
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    if (g.gateId !== "cx") continue;
+    if (g.condition || g.controlStates?.some((s) => !s)) continue;
+    if (g.controls.length !== 1 || g.targets.length !== 1) continue;
+    tryFlank(i, g.targets[0], "x", "X(t)·CX·X(t) → CX");
+    tryFlank(i, g.controls[0], "z", "Z(c)·CX·Z(c) → CX");
+  }
+
+  if (!changed) return { gates, changed };
+  return { gates: gates.filter((g) => !remove.has(g.id)), changed };
 }
 
 /**
