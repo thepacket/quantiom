@@ -27,7 +27,7 @@ their compute when collapsed.
         │            client/ (Vite + React + TS)           │
         │                                                  │
         │  editor/    ←→   sim/       ←→   panels/         │
-        │   IR, tabs,      simulate +      ~18 panels,     │
+        │   IR, tabs,      simulate +      ~24 panels,     │
         │   undo, DnD,     stabilizer +    each pure       │
         │   QASM round-    noisy traj +    function of     │
         │   trip glue,     WebGPU paths    SimResult       │
@@ -117,15 +117,14 @@ you need.
 
 ### WebGPU foundation (`webgpuTraj.ts`)
 
-A staged work-in-progress. The compute shader runs T independent
-1q-only depolarising-noise trajectories in parallel; the API is
-`tryRunWebGPUTrajectories(...)` plus `isWebGPUAvailable()` for the
-UI status chip. **Currently wired into**: Probabilities + Bloch +
-single-Pauli expectations + Pauli-sum (K-batched) expectations.
-**Not yet wired into**: Optimise / Landscape / Plateau / ZNE
-parameter sweeps, because those loops in `optimize.ts` are
-synchronous and consuming a `Promise<SimResult>` from them needs
-an async refactor through four call sites. Activation is staged.
+The compute shader runs T independent 1q-only depolarising-noise
+trajectories in parallel; the API is `tryRunWebGPUTrajectories(...)`
+plus `isWebGPUAvailable()` for the UI status chip. **Wired into**:
+Probabilities + Bloch + single-Pauli expectations + Pauli-sum
+(K-batched) expectations, and the Optimise / Landscape / Plateau / ZNE
+parameter sweeps in `optimize.ts` — those four loops are now async and
+route each noisy evaluation through this path (with CPU fallback when
+the circuit doesn't fit the supported subset).
 
 ### What lives in `sim/`
 
@@ -162,19 +161,28 @@ sim/optimize.ts         Parameter-shift gradient descent (SGD + Adam) +
 sim/optimisePasses.ts   Peephole rewriter with outer fixed-point loop
                         (self-inverse, dagger-pair, rotation-merge,
                         Pauli-collapse, power-merge, HPH sandwich,
-                        3-CX → SWAP, iSWAP², T-conjugation through CX,
-                        DCX³ → I)
+                        CX-conjugation cancellation, 3-CX → SWAP,
+                        iSWAP², T-conjugation through CX, DCX³ → I)
 sim/equivalence.ts      Full-unitary (n ≤ 8) or sampled-column (n > 8)
                         equivalence + process fidelity + trace distance
+sim/kak.ts              Cartan KAK decomposition of a 4×4 unitary
+                        (faithful Cirq magic-basis port); never throws
 sim/transpile.ts        Three native targets: Clifford+T, IBM heavy-hex,
-                        Rigetti
+                        Rigetti. Arbitrary 2q gates KAK-decomposed on
+                        the IBM/Rigetti (continuous-rotation) targets
 sim/router.ts           Greedy SWAP router on a coupling map
 sim/tomography.ts       Process tomography (n ≤ 4) — Pauli decomposition,
                         χ-matrix construction, optional noise mode
 sim/trotter.ts          Pauli-sum parser + Trotter circuit builder
                         (orders 1 / 2 / 4 / qDRIFT)
 sim/compile.ts          Transpile → Optimise → Route → Optimise pipeline
-sim/webgpuTraj.ts       WebGPU compute-shader foundation
+sim/webgpuTraj.ts       WebGPU compute-shader path (Probabilities/Bloch/
+                        Pauli expectations + the async optimise loops)
+sim/entanglement.ts     von Neumann entropy, mutual-information matrix,
+                        entanglement (Schmidt) spectrum
+sim/correlations.ts     connected ⟨Z_iZ_j⟩ correlations
+sim/spacetime.ts        per-qubit ⟨Z⟩ vs circuit column
+sim/tsweep.ts           per-qubit ⟨Z⟩ vs the t clock
 ```
 
 ### The peephole optimiser
@@ -270,9 +278,13 @@ identical to the early-Tier-0 simulator on its hot path.
 
 Each panel is a pure function of `SimResult` + its own controls.
 The list — Statevector, Probabilities, Bloch, PhaseDisk,
-Expectation, Density, Noise, Resources, Equivalence, Syndromes,
-MeasurementCounts, Tomography, Hamiltonian, QASM, Parameters,
-ReducedDensityMatrix, Compare, Chat — is in CLAUDE.md.
+Expectation, Density, MutualInfo, Schmidt (entanglement spectrum),
+Correlations (ZZ), SpaceTime ⟨Z⟩, TSweep, LightCone (causal cone),
+Noise, Resources, Equivalence, Syndromes, MeasurementCounts,
+Tomography, Hamiltonian, QASM, Parameters, Compare, Chat — is in
+CLAUDE.md. (The LightCone panel is unusual: it doesn't render a chart,
+it drives a dimming overlay on the circuit canvas via a `coneIds`
+prop.)
 
 Panels are also responsible for their own export buttons (Copy
 CSV / JSON / SVG) and for any one-click computations (Optimise,

@@ -124,7 +124,19 @@ host plus `/api/health`.
   - `transpile.ts`: three target gate sets — Clifford+T (textbook
     6-CX + 7-T Toffoli), IBM heavy-hex {RZ, SX, CX} (5-pulse U3),
     Rigetti {RZ, RX(±π/2), CZ}. Reports gate counts and T-count
-    before/after.
+    before/after. Arbitrary 2-qubit gates (u_arb_2, iSWAP, DCX, ECR,
+    numeric RXX/RYY/RZZ) route through KAK on the continuous-rotation
+    targets (IBM + Rigetti); the full list fully lowers to the native
+    set (lowerEach recurses). Clifford+T leaves them skipped (arbitrary
+    angles can't be exact — no Solovay-Kitaev).
+  - `kak.ts`: Cartan KAK decomposition of an arbitrary 4×4 unitary
+    into (A1⊗A2)·RXX·RYY·RZZ·(B1⊗B2) + global phase. Faithful port of
+    Cirq's magic-basis KAK (bidiagonalize_real_matrix_pair_with_
+    symmetric_products + kron_factor_4x4_to_2x2s + so4_to_magic_su2s +
+    KAK_GAMMA angle extraction). `decomposeKAK4x4(U)` returns null on
+    any numerical edge (try/catch; rank-deficient Re(Uₘ) handled).
+    Verified at machine precision on CNOT + Haar. Harness:
+    `client/scripts/test-kak.ts`.
   - `router.ts`: greedy SWAP router. Maintains logical→physical
     mapping; for each 2q gate, BFS shortest path on coupling graph,
     inserts SWAPs to bring qubits adjacent, applies the gate, commits
@@ -146,6 +158,15 @@ host plus `/api/health`.
     Transpile → Optimise → Route → Optimise as one pipeline; returns
     final circuit + per-stage metrics. Toolbar "Compile…" button
     invokes it.
+  - `entanglement.ts`: `vonNeumannEntropy` / `densityEigenvalues`
+    (eigenvalues of a complex-Hermitian ρ via the real-symmetric
+    embedding), `mutualInformationMatrix` (pairwise I(i:j)),
+    `entanglementSpectrum` (Schmidt coefficients across a cut). Powers
+    the entanglement panels.
+  - `correlations.ts`: `zzCorrelations` — connected ⟨Z_iZ_j⟩−⟨Z_i⟩⟨Z_j⟩.
+  - `spacetime.ts`: `spaceTimeZ` — per-qubit ⟨Z⟩ after each column
+    (re-simulates each prefix). `tsweep.ts`: `tSweepZ` — ⟨Z_q⟩(t) over
+    one period of the `t` clock.
   - `webgpuTraj.ts`: WebGPU foundation. `getWebGPUDevice()` (cached),
     `isWebGPUAvailable()`, `webGPUAdapterInfo()` for the UI status
     chip. `tryRunWebGPUTrajectories(circuit, params, customGates,
@@ -153,11 +174,11 @@ host plus `/api/health`.
     **1-qubit-gate-only circuits with depolarising noise** (no 2q,
     no T1/T2, no custom Kraus, no measurements/conditions/reset).
     FP32 throughout. WGSL compute shader; one thread per trajectory;
-    pre-rolled per-(trajectory, op) randoms on CPU. Foundation only —
-    not yet wired into the live simulate-noisy path (those loops are
-    synchronous and consuming Promise<SimResult> needs an async
-    refactor through optimise/landscape/plateau/ZNE; activation is
-    staged).
+    pre-rolled per-(trajectory, op) randoms on CPU. Extended to emit
+    per-qubit Bloch + K-batched multi-qubit Pauli expectations. The
+    Optimise / Landscape / Plateau / ZNE loops in `optimize.ts` are now
+    async and route each noisy evaluation through this GPU path (with
+    CPU fallback), so the K× Pauli-sum speedup is live there.
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
     anti-controls and `if (c[k] == v) …` wrappers for conditional
@@ -190,8 +211,13 @@ host plus `/api/health`.
   - `inverse.ts`: per-gate dagger rules; `inverseGates(circuit, lo,
     hi)` returns the reversed-and-daggered gates appended to the
     circuit. Powers the toolbar's "Append U†" button.
-  - `recordAnimation.ts`: SVG → canvas → MediaRecorder pipeline.
-    Sweeps `t` across [0, 2π) over N frames, dumps a WebM video.
+  - `recordAnimation.ts`: DOM-subtree → SVG `<foreignObject>` (with
+    same-origin CSS inlined) → canvas → MediaRecorder pipeline. Sweeps
+    `t` across [0, 2π) over N frames, dumps a WebM video. The toolbar
+    Record button captures the whole `.editor__right` panel column.
+  - `lightcone.ts`: `computeLightCone(circuit, target, dir)` — pure
+    topological backward/forward causal cone (set of gate ids); drives
+    the Causal-cone canvas dimming overlay.
 - `client/src/panels/` (collapsible, persisted)
   - `StatevectorPanel`, `ProbabilityPanel`, `BlochPanel`,
     `PhaseDiskPanel`, `ExpectationPanel` (with the Optimise +
@@ -202,19 +228,28 @@ host plus `/api/health`.
     `SyndromePanel`, `MeasurementCountsPanel`, `TomographyPanel`
     (heatmap + Hinton + noise toggle), `HamiltonianPanel`,
     `QasmPanel`, `ParameterPanel`.
+  - Entanglement / dynamics visualisers (all statevector-only,
+    default-collapsed, capped, verified against known states):
+    `MutualInfoPanel` (I(i:j) heatmap), `SchmidtPanel` (entanglement
+    spectrum across a cut), `CorrelationPanel` (connected ⟨Z_iZ_j⟩
+    heatmap), `SpaceTimePanel` (⟨Z_q⟩ vs column), `TSweepPanel`
+    (⟨Z_q⟩(t) traces), `LightConePanel` (causal-cone selector → canvas
+    dimming via `CircuitCanvas` coneIds prop).
   - `CouplingMapView.tsx`: shared SVG render of an adjacency list as
     a node-link graph (circular layout ≤ 24 qubits, grid above).
 - `server/` — FastAPI shell: `/api/health` + static-file mount.
-- `examples/` — 88 hand-written OpenQASM 3 example circuits across
+- `examples/` — 93 hand-written OpenQASM 3 example circuits across
   10 categories, imported into the client via Vite `?raw`. Each file
   has a header comment block; `extractDescription` in
   `client/src/examples.ts` pulls it out as a tooltip for the file
   picker.
-- `docs/` — markdown documentation. `panels.md` is a per-panel
-  reference; `tutorial.md` is a six-section hands-on walkthrough.
-  Imported into the app via `client/src/editor/DocsModal.tsx` (with
-  a small in-house markdown renderer — no extra runtime dependency)
-  and surfaced through the `? Docs` header button.
+- `docs/` — markdown documentation: `panels.md` (per-panel
+  reference), `tutorial.md` (six-section hands-on walkthrough),
+  `architecture.md` (codebase map / data flow / fast paths),
+  `qasm.md` (OpenQASM round-trip + the eight SDK emitters). All four
+  are imported into the app via `client/src/editor/DocsModal.tsx`
+  (small in-house markdown renderer, no extra runtime dependency) and
+  surfaced as tabs through the toolbar **Help** menu.
 
 ## Conventions
 

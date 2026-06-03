@@ -15,7 +15,9 @@ Quantum Natural Gradient (Fubini–Study metric)** optimisers,
 the 1q-depolarising / phase-damping / 2q-depolarising channels, plus
 **conditional ⟨P⟩** post-selected on a classical-bit outcome. A
 one-click **Compile…** pipeline runs Transpile → Optimise → Route →
-Optimise to a target native gate set, reporting per-stage gate counts.
+Optimise to a target native gate set, reporting per-stage gate counts;
+arbitrary two-qubit unitaries are **KAK-decomposed** (Cartan, faithful
+Cirq port) for the IBM and Rigetti targets.
 The Hamiltonian panel emits **Trotter circuits at order 1 / 2 (Strang)
 / 4 (Suzuki) or QDrift** random compilation. Process tomography
 reconstructs the χ matrix in heatmap or Hinton view; equivalence-
@@ -25,8 +27,13 @@ and 2q custom Kraus**, readout — all importable from IBM
 `BackendProperties` JSON (T1, T2, per-gate gate_error, readout error,
 coupling map). **WebGPU** trajectory parallelism feeds the
 Probabilities panel directly when the circuit fits the 1q-gate +
-depolarising support set; the foundation for activating Optimise /
-Landscape / Plateau / ZNE on the GPU is in place. An **AI chat panel
+depolarising support set, and the Optimise / Landscape / Plateau / ZNE
+loops route each noisy evaluation through it too (CPU fallback when the
+circuit doesn't fit). A column of **entanglement & dynamics
+visualisers** — mutual-information map, entanglement spectrum across a
+cut, ZZ correlations, a space–time ⟨Z⟩ diagram, t-sweep traces, and a
+causal-cone canvas overlay — sits alongside the statevector / Bloch /
+probability panels. An **AI chat panel
 at the bottom of the canvas** talks to OpenRouter (any of ~340 models,
 your own key), receives the current circuit as OpenQASM 3 on every
 turn, and **auto-opens any OpenQASM block in the reply as a new tab**.
@@ -46,12 +53,19 @@ Live: **<https://quantiom.fly.dev>**
 - **[Panel reference](docs/panels.md)** — every user-facing panel:
   what it shows, when it's available, key controls, default-fast
   behaviour, and a "Tip" callout for the non-obvious things.
+- **[Architecture](docs/architecture.md)** — codebase map: data flow
+  (editor → simulate → panels), the noise / Clifford / WebGPU fast
+  paths, the optimise→transpile→route pipeline, storage keys, and the
+  performance invariants.
+- **[OpenQASM & export](docs/qasm.md)** — the round-trip contract,
+  the `// qubit_names:` / `// note:` comment directives, and the
+  conventions of all eight SDK / LaTeX emitters.
 
-Both are also rendered inside the app — click **`? Docs`** in the
-header. They're imported at build time, no network fetch.
+All four are also rendered inside the app — open the toolbar **Help**
+menu. They're imported at build time, no network fetch.
 
 Quantiom is moving fast and the surface to verify is wide — 55 gates,
-three simulator backends, an AI chat assistant, ~18 panels, OpenQASM 3
+three simulator backends, an AI chat assistant, ~24 panels, OpenQASM 3
 round-trip, and nine code/format emitters. Expect rough edges; bug
 reports against any of it are welcome.
 
@@ -74,14 +88,15 @@ them is the maintainer's.
 ## Shape
 
 - **client/** — Vite + React + TypeScript. UI, simulators, parameter
-  expression evaluator, OpenQASM 3 round-trip, six SDK emitters,
-  share links, noise model, autodiff optimiser, transpiler, router,
+  expression evaluator, OpenQASM 3 round-trip, eight SDK / LaTeX
+  emitters, share links, noise model, autodiff optimiser, transpiler, router,
   Trotter / Hamiltonian builder, tomography, equivalence checker.
 - **server/** — minimal FastAPI app whose only job is `/api/health`
   for Fly's checks and serving the built client as static files.
-- **docs/** — in-app documentation (Tutorial walkthrough + Panel
-  reference) rendered in a modal via the `? Docs` header button.
-- **examples/** — 88 hand-written OpenQASM 3 example circuits across
+- **docs/** — in-app documentation (Tutorial, Panel reference,
+  Architecture, OpenQASM & export) rendered in a modal via the toolbar
+  **Help** menu.
+- **examples/** — 93 hand-written OpenQASM 3 example circuits across
   10 categories, searchable from the file menu. Every entry has a
   pedagogical header explaining the concept, the technique, and what
   to observe in which panel — the same text is the hover tooltip in
@@ -93,8 +108,8 @@ them is the maintainer's.
   circuits open with per-tab undo history, parameter values, selected
   gate, and step-through position. Shared across tabs: the custom-gate
   palette and the noise model. Drag a pill to reorder, double-click to
-  rename, × to close (confirms when dirty), + for a fresh tab,
-  Duplicate to clone the active tab. ⌘/Ctrl+1..9 jumps to tab N;
+  rename, × to close (confirms when dirty), + for a fresh tab; clone
+  the active tab with **Edit → Duplicate**. ⌘/Ctrl+1..9 jumps to tab N;
   ⌘/Ctrl+T opens a new one.
 - **55-gate palette** across 13 categories, with category-coloured
   borders, search box, and collapsible category groups:
@@ -145,7 +160,12 @@ them is the maintainer's.
   circuit as a reusable block; the new tile appears under a pink
   "Your gates" category in the palette. Right-click to delete.
   Persisted in localStorage.
-- **Toolbar actions**
+- **Toolbar layout** — a compact menu bar: **File · Edit · Save as
+  Gate · Transform… · Measure All · Help** on the left, the qubit /
+  classical-bit counters and the **Find** box on the right. The menus
+  size themselves to their longest item.
+- **Transform… menu** — the circuit-rewriting actions, grouped in one
+  dropdown:
   - **Compact** — ASAP-repacks columns; pulls every gate as far left
     as it can go without collision.
   - **Append U†** — appends the inverse of the current circuit
@@ -179,27 +199,34 @@ them is the maintainer's.
     router that walks the circuit, BFS-finds shortest paths on the
     coupling graph, and inserts SWAPs to satisfy connectivity.
     Reports SWAPs added and the gate-count delta.
-  - **Record** (appears when `t` is a free symbol) — captures one
-    period of the t-animation as a WebM video using
-    `MediaRecorder` + canvas captureStream. 3 seconds at 30 fps.
-  - **Select…** — popover with column range inputs and Duplicate /
-    Delete buttons. Clones or removes all gates in `[from, to]`.
-  - **History…** — multi-step undo / redo: "back 5/10/25/100" or
-    matching forward jumps in one click.
-  - **Find** — toolbar search box; matches by gate id, `qN` /
-    user-renamed qubit name, or parameter substring; matching gates
-    glow with a yellow outline on the canvas.
+  - **Random Clifford…** — drops a random Clifford circuit of a chosen
+    size into a new tab (exercises the stabilizer fast path).
+- **Find** — toolbar search box; matches by gate id, `qN` /
+  user-renamed qubit name, or parameter substring; matching gates
+  glow with a yellow outline on the canvas.
+- **Rectangle selection** — hold the left mouse on empty canvas space
+  and drag a box; every gate it touches gets a dashed highlight ring.
+  The Edit menu's **Copy / Cut / Paste Selection** then act on that
+  set (the gate clipboard survives across tabs).
+- **Record** (in the right-panel "auto shots" row, when `t` is a free
+  symbol) — captures one period of the t-animation as a WebM video
+  (`MediaRecorder` + canvas captureStream, 3 s at 30 fps). It records
+  the whole right-hand panel column — Bloch spheres, probability bars,
+  every open visualiser — by snapshotting that DOM subtree per frame.
+- **File menu** — **Examples…** (typeahead search across 93 circuits,
+  with QASM-header tooltips on hover), **Open QASM…**, **Download
+  QASM**, **Share** (URL-hash link), and an **Export →** section
+  (OpenQASM 2 · Qiskit · Cirq · Braket · Q# · PyQuil · pytket ·
+  **LaTeX (quantikz)** for papers · **JSON** raw IR · SVG). Opening a
+  file or example creates a new tab so your current work stays.
+- **Edit menu** — Undo, Redo; **Copy / Paste Circuit** (the whole
+  circuit as OpenQASM 3, to/from the system clipboard — Paste opens a
+  new tab); **Copy / Cut / Paste Selection** (the rectangle-selected
+  gates); **Duplicate** (clone the tab) and **Clear**.
 - **Undo / redo** — Cmd/Ctrl + Z, Cmd/Ctrl + Shift + Z (or Ctrl + Y);
   100 entries; consecutive parameter or QASM edits coalesce within
   500 ms.
 - **Auto-save** to `localStorage`; tabs restore on refresh.
-- **File menu** — Open `.qasm`, Download `.qasm`, **Examples…**
-  (typeahead search across 88 circuits, with QASM-header tooltips
-  on hover), **Export…** popover
-  (OpenQASM 2 · Qiskit · Cirq · Braket · Q# · PyQuil · pytket ·
-  **LaTeX (quantikz)** for papers · **JSON** raw IR · SVG), Share
-  link. Opening a file or example creates a new tab so your current
-  work stays.
 - **Dark theme** throughout.
 - **Title bar** — the current circuit's name is shown centered. The
   Quantiom logo on the left shows the running build's semver, commit
@@ -402,6 +429,24 @@ nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
     estimate is honestly labelled as partial.
 - **Reduced density matrix** — pick a qubit subset (≤ 4), see the
   2^|S| × 2^|S| matrix and `Tr(ρ²)` purity. Default-collapsed.
+- **Mutual information** — n×n heatmap of pairwise quantum mutual
+  information I(i:j) = S(ρ_i) + S(ρ_j) − S(ρ_ij); diagonal is each
+  qubit's own entropy. Reads entanglement topology: GHZ is all-to-all,
+  cluster states are structured, product states blank. (≤ 12 qubits.)
+- **Entanglement spectrum** — pick a bipartition; bar chart of the
+  squared Schmidt coefficients plus the von Neumann entropy and
+  Schmidt rank — the area-law/volume-law and MPS-bond-dimension read.
+- **ZZ correlations** — diverging heatmap of the connected correlator
+  ⟨Z_iZ_j⟩ − ⟨Z_i⟩⟨Z_j⟩ (aligned / anti-aligned); diagonal is the
+  local Z variance.
+- **Space–time ⟨Z⟩** — qubits × columns heatmap of ⟨Z_q⟩ after each
+  step: Floquet period-doubling stripes, Trotter light cones, all in
+  one static picture.
+- **t-sweep ⟨Z⟩(t)** — for `t`-driven circuits, line traces of each
+  qubit's ⟨Z⟩ over one period — read Rabi/Larmor frequencies without
+  watching the animation.
+- **Causal cone** — pick a target qubit and direction; the canvas dims
+  every gate outside that qubit's backward/forward light cone.
 - **Resources** — total gates, 1-qubit / 2-qubit / multi-qubit
   breakdown, **T-count and T-depth** (parallel T-layer count) and
   CX count, parallel depth, longest-qubit length, distinct qubits,

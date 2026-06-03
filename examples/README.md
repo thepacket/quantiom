@@ -66,3 +66,9 @@ parameters → noise → ZNE → PEC → VQE using six of these examples.
 | [amplitude_estimation_2q.qasm](amplitude_estimation_2q.qasm) | 2 | Brassard-Høyer-Mosca-Tapp seed, one counting qubit |
 | [quantum_random_walk_cycle.qasm](quantum_random_walk_cycle.qasm) | 3 | Coined quantum walk on the 4-node cycle |
 | [quantum_fourier_addition_4q.qasm](quantum_fourier_addition_4q.qasm) | 4 | 2-bit Draper addition in the Fourier basis |
+| [surface_code_logical_ops.qasm](surface_code_logical_ops.qasm) | 6 | [[4,2,2]] code: a logical X̄ leaves both stabilizer syndromes at 0 |
+| [qaoa_3sat_3var.qasm](qaoa_3sat_3var.qasm) | 3 | QAOA for MAX-3-SAT, one round; phase-the-violating-assignment cost |
+| [qsp_primer_1q.qasm](qsp_primer_1q.qasm) | 1 | Quantum signal processing: interleaved signal + phase rotations |
+| [kicked_ising_floquet_4q.qasm](kicked_ising_floquet_4q.qasm) | 4 | Kicked-Ising Floquet drive, 4 periods (discrete time crystal at g≈π) |
+| [ghz_metrology_3q.qasm](ghz_metrology_3q.qasm) | 3 | GHZ Ramsey interferometer — Heisenberg-limited 3φ fringe |
+| [shor_period_finding_15.qasm](shor_period_finding_15.qasm) | 7 | Shor period-finding for N=15, a=4; counting register peaks at 0/4 → r=2 |
