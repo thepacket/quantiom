@@ -202,6 +202,13 @@ host plus `/api/health`.
   - `tanner.ts`: `tannerGraph` — bipartite check graph; each measurement
     is a check whose support is the backward causal cone of the measured
     qubit (reuses `editor/lightcone.computeLightCone`).
+  - `qsphere.ts`: `qSphere` — basis states on a sphere (latitude =
+    Hamming weight, size = |amp|, hue = phase), n ≤ 6. `husimi.ts`:
+    `husimiQ` — spin coherent-state Husimi Q(θ,φ)=|⟨θ,φ|ψ⟩|² grid
+    (always non-negative; complement to Wigner), n ≤ 7. `zx.ts`:
+    `zxDiagram` — circuit → ZX diagram (Z/X spiders + phases, H-boxes,
+    CX plain edge, CZ Hadamard edge; non-spider gates → generic boxes).
+    Faithful rendering, not PyZX rewriting.
   - `webgpuTraj.ts`: WebGPU foundation. `getWebGPUDevice()` (cached),
     `isWebGPUAvailable()`, `webGPUAdapterInfo()` for the UI status
     chip. `tryRunWebGPUTrajectories(circuit, params, customGates,
@@ -281,10 +288,11 @@ host plus `/api/health`.
     n ≤ 3), `BlochTrajectoryPanel` (per-qubit Bloch path over `t`),
     `OtocPanel` (out-of-time-order correlator / scrambling, n ≤ 6),
     `HamSpectrumPanel` (exact Pauli-sum eigenvalues + ⟨H⟩ overlay),
-    `TannerPanel` (measurement check graph), `LightConePanel`
-    (causal-cone selector → canvas dimming via `CircuitCanvas` coneIds
-    prop). The statevector-only ones show a notice under Clifford /
-    noise mode.
+    `TannerPanel` (measurement check graph), `QSpherePanel` (basis
+    states on a sphere), `HusimiPanel` (spin Husimi-Q, non-negative),
+    `ZXPanel` (ZX-calculus diagram), `LightConePanel` (causal-cone
+    selector → canvas dimming via `CircuitCanvas` coneIds prop). The
+    statevector-only ones show a notice under Clifford / noise mode.
   - `CouplingMapView.tsx`: shared SVG render of an adjacency list as
     a node-link graph (circular layout ≤ 24 qubits, grid above).
 - `server/` — FastAPI shell: `/api/health` + static-file mount.

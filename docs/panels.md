@@ -154,6 +154,26 @@ shown (in index order) and a note reports the truncation.
 
 ---
 
+## Q-sphere
+
+The whole multi-qubit state on one sphere. Each computational basis
+state |x⟩ is a point: **latitude = Hamming weight** (|0…0⟩ at the north
+pole, |1…1⟩ at the south pole, weight-k states on the k-th ring),
+**marker size = |amplitude|**, **hue = phase**. It packs magnitudes and
+relative phases into a single picture.
+
+**When available.** Statevector path only; capped at 6 qubits (64 points).
+
+**What you see.**
+- **GHZ**: two big antipodal dots (poles), a half-turn apart in phase if
+  you add a relative phase.
+- **W state**: a ring of equal dots at weight 1.
+- **QFT output**: a phase gradient (rainbow) winding around each ring.
+- **Product state |+⟩ⁿ**: dots on every ring, sizes following the
+  binomial weights.
+
+---
+
 ## Wigner function
 
 The **discrete Wigner function** — the qubit phase-space quasi-probability
@@ -174,6 +194,29 @@ tensor-product construction is *not* Clifford-covariant, so for n ≥ 2 some
 entangled **stabilizer** states also show negativity here. Treat W as a
 phase-space *picture* of non-classicality and use the **Magic (M₂)** panel
 for the rigorous, basis-independent stabilizer measure.
+
+---
+
+## Husimi Q (spin)
+
+The spin (atomic) coherent-state Husimi Q-function Q(θ,φ) = |⟨θ,φ|ψ⟩|² as
+a (θ, φ) heatmap, where |θ,φ⟩ = (cos(θ/2)|0⟩ + e^{iφ}sin(θ/2)|1⟩)^⊗n is
+the coherent state pointing in direction (θ,φ). This is the
+qubit/spin analogue of the optical Husimi-Q — and the **everywhere
+non-negative** phase-space picture, the complement to the Wigner panel
+(which can go negative).
+
+**When available.** Statevector path only; capped at 7 qubits. Most
+physical for permutation-symmetric states (Dicke / GHZ / spin-squeezed);
+for a general state it's still the valid projection onto coherent
+directions.
+
+**What you see.**
+- **Product / coherent state**: a single bright lobe at its Bloch
+  direction (θ = 0 for |0…0⟩).
+- **GHZ "cat"**: two antipodal lobes (north and south poles).
+- **Spin-squeezed state**: an equatorial band that pinches in one
+  direction — squeezing made visible.
 
 ---
 
@@ -323,6 +366,32 @@ flagged: the matrix shown is the unitary part only.
 - **Non-Clifford gates** (T, arbitrary rotations): off-axis weight — e.g.
   a T rotates within the X–Y block, smearing those entries.
 - The (I,I) corner is always 1 (any unitary preserves the identity).
+
+---
+
+## ZX diagram
+
+The circuit as a ZX-calculus diagram: **green Z-spiders**, **red
+X-spiders**, **yellow Hadamard boxes**, plain wires, and dashed
+**Hadamard edges** (CZ), laid out on the circuit's qubit×column grid with
+phase labels beside the spiders. Z/S/T/Rz/P map to green spiders, X/√X/Rx
+to red, H to a box, CX to green–(plain edge)–red, CZ to green–(H-edge)–green;
+anything without a pure-spider form (e.g. Ry, U) renders as a labelled
+generic box so the diagram stays complete.
+
+**When available.** Any circuit (purely structural — no simulation),
+capped at 12 qubits × 60 columns. A "fusable spider pairs" hint counts
+adjacent same-colour spiders.
+
+**What it's for.**
+- Seeing the **Clifford skeleton** and where the non-Clifford phases
+  (π/4 green spiders = T gates) actually sit — the T-count at a glance.
+- Recognising graph-state structure (a wall of green spiders joined by
+  H-edges).
+
+**Scope.** This renders the diagram faithfully; it does **not** perform ZX
+rewriting / T-count reduction (PyZX-style) — that's a separate effort. The
+fusable-pairs hint is a count, not an applied simplification.
 
 ---
 

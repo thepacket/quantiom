@@ -74,6 +74,9 @@ import { BlochTrajectoryPanel } from "../panels/BlochTrajectoryPanel";
 import { OtocPanel } from "../panels/OtocPanel";
 import { HamSpectrumPanel } from "../panels/HamSpectrumPanel";
 import { TannerPanel } from "../panels/TannerPanel";
+import { QSpherePanel } from "../panels/QSpherePanel";
+import { HusimiPanel } from "../panels/HusimiPanel";
+import { ZXPanel } from "../panels/ZXPanel";
 import { LightConePanel, type ConeDir } from "../panels/LightConePanel";
 import { computeLightCone } from "./lightcone";
 import { NoisePanel } from "../panels/NoisePanel";
@@ -1115,7 +1118,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="bloch"><BlochPanel state={simState} gpuBlochVectors={gpuBloch} /></ErrorBoundary>
         <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="amp-phase"><AmplitudePhasePanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="qsphere"><QSpherePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="wigner"><WignerPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="husimi"><HusimiPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="magic"><MagicPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="expectation">
           <ExpectationPanel
@@ -1136,6 +1141,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="ptm">
           <PTMPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="zx"><ZXPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="mutual-info"><MutualInfoPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="negativity"><NegativityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="schmidt"><SchmidtPanel state={simState} /></ErrorBoundary>

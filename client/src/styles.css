@@ -847,3 +847,45 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .tanner__swatch { width: 10px; height: 10px; display: inline-block; }
 .tanner__swatch--data { border-radius: 50%; border: 1.5px solid var(--accent); }
 .tanner__swatch--check { border: 1.5px solid var(--accent-2); }
+
+/* ─── Q-sphere ─────────────────────────────────────────────────────── */
+.qsphere { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; align-items: center; }
+.qsphere__svg { display: block; }
+.qsphere__outline { fill: none; stroke: var(--border); stroke-width: 1; }
+.qsphere__equator { fill: none; stroke: var(--border); stroke-width: 1; opacity: 0.5; }
+.qsphere__axis { stroke: var(--border); stroke-width: 1; opacity: 0.5; }
+.qsphere__stem { stroke: var(--muted); stroke-width: 0.6; opacity: 0.5; }
+.qsphere__dot { stroke: rgba(0,0,0,0.4); stroke-width: 0.5; }
+.qsphere__legend { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: var(--muted); width: 100%; }
+.qsphere__legend .ampphase__hue { width: 80%; }
+
+/* ─── Husimi Q (spin) ──────────────────────────────────────────────── */
+.husimi { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.husimi__svg { display: block; }
+.husimi__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.husimi__legend { font-size: 10px; color: var(--muted); }
+
+/* ─── ZX diagram ───────────────────────────────────────────────────── */
+.zx { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.zx__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.zx__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.zx__scroll { overflow-x: auto; }
+.zx__svg { display: block; }
+.zx__wire { stroke: var(--border-strong, var(--border)); stroke-width: 1; }
+.zx__label { fill: var(--muted); font-size: 9px; }
+.zx__edge { stroke: var(--fg); stroke-width: 1.4; opacity: 0.7; }
+.zx__hedge { stroke: #ffd24f; stroke-width: 1.4; stroke-dasharray: 3 2; }
+.zx__z { fill: #7ee787; stroke: #2ea043; stroke-width: 1; }
+.zx__x { fill: #ff7a7a; stroke: #d03434; stroke-width: 1; }
+.zx__hbox { fill: #ffd24f; stroke: #b8920f; stroke-width: 1; }
+.zx__hlabel { fill: #3a2f00; font-size: 8px; font-weight: 600; }
+.zx__box { fill: var(--bg-2); stroke: var(--muted); stroke-width: 1; }
+.zx__boxlabel { fill: var(--fg); font-size: 7px; }
+.zx__phase { fill: var(--fg); font-size: 8px; font-variant-numeric: tabular-nums; }
+.zx__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+.zx__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.zx__swatch { width: 10px; height: 10px; display: inline-block; border-radius: 2px; }
+.zx__swatch--z { background: #7ee787; }
+.zx__swatch--x { background: #ff7a7a; }
+.zx__swatch--h { background: #ffd24f; }
+.zx__swatch--hedge { background: repeating-linear-gradient(90deg, #ffd24f 0 3px, transparent 3px 5px); height: 2px; align-self: center; }
