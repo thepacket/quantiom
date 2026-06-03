@@ -54,6 +54,7 @@ import { ProbabilityPanel } from "../panels/ProbabilityPanel";
 import { BlochPanel } from "../panels/BlochPanel";
 import { ExpectationPanel } from "../panels/ExpectationPanel";
 import { DensityPanel } from "../panels/DensityPanel";
+import { MutualInfoPanel } from "../panels/MutualInfoPanel";
 import { NoisePanel } from "../panels/NoisePanel";
 import { PhaseDiskPanel } from "../panels/PhaseDiskPanel";
 import { ResourcePanel } from "../panels/ResourcePanel";
@@ -1094,6 +1095,7 @@ export function CircuitEditor() {
           />
         </ErrorBoundary>
         <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="mutual-info"><MutualInfoPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
         <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} coupling={noise.coupling} /></ErrorBoundary>
         <ErrorBoundary label="compare">

@@ -620,3 +620,15 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .qasm__error { margin-top: 6px; color: var(--danger); background: rgba(255, 122, 122, 0.08); border: 1px solid rgba(255, 122, 122, 0.3); border-radius: 3px; padding: 4px 6px; font-size: 11px; }
 .qasm__warnings { margin: 6px 0 0; padding-left: 18px; color: #c4a96d; font-size: 11px; }
 .qasm__warnings li { margin: 1px 0; }
+
+/* ─── Mutual-information map ────────────────────────────────────────── */
+.mutinfo { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.mutinfo__svg { display: block; }
+.mutinfo__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.mutinfo__bg { fill: var(--bg-2); }
+.mutinfo__val { fill: var(--fg); font-size: 8px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.mutinfo__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+.mutinfo__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.mutinfo__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.mutinfo__swatch--mi { background: var(--accent-2); }
+.mutinfo__swatch--s { background: var(--accent); }

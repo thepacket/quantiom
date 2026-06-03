@@ -211,6 +211,41 @@ large circuits. The panel guards against larger subsets with a notice.
 
 ---
 
+## Mutual information
+
+The entanglement *topology* of the state, as an n×n heatmap. Each
+off-diagonal cell (i, j) is the pairwise quantum mutual information
+
+    I(i:j) = S(ρ_i) + S(ρ_j) − S(ρ_ij)      (0 … 2 bits)
+
+where S is the von Neumann entropy. The diagonal shows each qubit's own
+entropy S(ρ_i) (0 … 1 bit) — how entangled that qubit is with the rest
+of the register.
+
+**When available.** Statevector path only (it needs reduced density
+matrices). Hidden in the Clifford fast path and noise mode, and capped
+at 12 qubits.
+
+**What you see.**
+- **Bell pair**: a single bright off-diagonal cell at I = 2 — maximal
+  pairwise correlation.
+- **GHZ**: a uniform all-to-all grid at I = 1 — every pair equally
+  correlated.
+- **Cluster / graph state**: a structured, *non-uniform* pattern. Note
+  that two adjacent qubits can read I = 0 even when entangled: a cluster
+  state hides its correlation in multi-qubit stabilizers, which the
+  pairwise measure can't see — a useful reminder that mutual information
+  is a two-point quantity.
+- **Trotter / Floquet dynamics**: an entanglement front that spreads
+  outward from the initially-correlated qubits as you step the circuit.
+- **Product state**: blank.
+
+**Performance.** Builds every pairwise reduced density matrix — C(n,2)
+partial traces, each O(2ⁿ). Capped at 12 qubits and computed only while
+the panel is open (default-collapsed), so it costs nothing until asked.
+
+---
+
 ## Hamiltonian → Trotter
 
 Paste a Pauli-sum Hamiltonian (e.g. `0.5 * X1 X2 + 0.3 * Z0`) and the
