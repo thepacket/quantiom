@@ -1,6 +1,6 @@
 # Examples
 
-88 OpenQASM 3 example circuits across 10 categories. Each file has a
+93 OpenQASM 3 example circuits across 10 categories. Each file has a
 header comment explaining the concept, the technique, and what to
 observe in which panel — the same text is rendered as a hover tooltip
 when you browse the **Examples…** picker in the app.

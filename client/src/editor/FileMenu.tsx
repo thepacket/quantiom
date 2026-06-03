@@ -288,7 +288,7 @@ function ExamplesPicker({
             ref={inputRef}
             className="examples-picker__search"
             type="text"
-            placeholder="Search 62 examples…"
+            placeholder={`Search ${EXAMPLE_CATEGORIES.reduce((n, c) => n + c.items.length, 0)} examples…`}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {

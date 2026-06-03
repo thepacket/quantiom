@@ -89,6 +89,12 @@ import noCloningWitness from "../../examples/no_cloning_witness.qasm?raw";
 import ampEst2 from "../../examples/amplitude_estimation_2q.qasm?raw";
 import qWalkCycle from "../../examples/quantum_random_walk_cycle.qasm?raw";
 import qftAdd4 from "../../examples/quantum_fourier_addition_4q.qasm?raw";
+import surfaceLogical from "../../examples/surface_code_logical_ops.qasm?raw";
+import qaoa3sat from "../../examples/qaoa_3sat_3var.qasm?raw";
+import qspPrimer from "../../examples/qsp_primer_1q.qasm?raw";
+import kickedIsing from "../../examples/kicked_ising_floquet_4q.qasm?raw";
+import ghzMetrology from "../../examples/ghz_metrology_3q.qasm?raw";
+import shorPeriod from "../../examples/shor_period_finding_15.qasm?raw";
 
 export type Example = { id: string; label: string; qasm: string; description: string };
 
@@ -195,6 +201,8 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
       ex("qft-add-4", "Draper Fourier addition, 2+2 bit (4q)", qftAdd4),
       ex("swap-test", "SWAP test for state overlap (3q)", swapTest),
       ex("hadamard-test", "Hadamard test for Re⟨ψ|U|ψ⟩ (2q)", hadamardTest),
+      ex("qsp-primer", "Quantum signal processing primer (1q)", qspPrimer),
+      ex("shor-period", "Shor period-finding, N=15 a=4 (7q)", shorPeriod),
       ex("had-8", "Hadamard transform (8q)", hadamard8),
       ex("had-12", "Hadamard transform (12q)", hadamard12),
       ex("had-16", "Hadamard transform (16q)", hadamard16),
@@ -216,6 +224,7 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
       ex("five-code", "5-qubit perfect code encoder (5q)", fiveCode),
       ex("shor-9q", "Shor [[9,1,3]] encoder (9q)", shor9qEncoder),
       ex("surface-plaquette", "Surface code plaquette (6q, XXXX+ZZZZ)", surfacePlaquette),
+      ex("surface-logical", "Surface code logical ops, [[4,2,2]] (6q)", surfaceLogical),
     ],
   },
   {
@@ -226,6 +235,7 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
       ex("trotter-heisenberg-2", "Heisenberg XXX Trotter (2q)", trotterHeisenberg2),
       ex("heisenberg-xyz-4", "Heisenberg XYZ Trotter step (4q)", heisenbergXyz4),
       ex("lih-jw-4", "LiH (Jordan–Wigner, 4q Trotter step)", lihJw4),
+      ex("kicked-ising", "Kicked-Ising Floquet, 4 periods (4q)", kickedIsing),
     ],
   },
   {
@@ -240,6 +250,7 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
       ex("qaoa", "QAOA MaxCut triangle (3q)", qaoa),
       ex("qaoa-kite", "QAOA MaxCut kite (4q)", qaoaKite),
       ex("qaoa-square-p2", "QAOA MaxCut square, depth 2 (4q)", qaoaSquareP2),
+      ex("qaoa-3sat", "QAOA MAX-3-SAT, 3 clauses (3q)", qaoa3sat),
       ex("vqe", "Hardware-efficient ansatz, 2 layers (4q)", vqe),
       ex("vqe-6", "Hardware-efficient ansatz, 6 layers (4q)", vqeHwe6),
       ex("real-amps-4", "Real Amplitudes ansatz, 2 layers (4q)", realAmplitudes4),
@@ -252,6 +263,7 @@ export const EXAMPLE_CATEGORIES: ExampleCategory[] = [
     items: [
       ex("dicke-3", "Dicke state |D₃¹⟩ (3q)", dickeState3),
       ex("thermometer", "Quantum Ramsey thermometer (1q)", quantumThermometer),
+      ex("ghz-metrology", "GHZ Ramsey metrology, Heisenberg scaling (3q)", ghzMetrology),
     ],
   },
   {
