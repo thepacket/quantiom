@@ -1,21 +1,24 @@
 import { useState, type ReactNode } from "react";
 import panelsMd from "../../../docs/panels.md?raw";
 import tutorialMd from "../../../docs/tutorial.md?raw";
+import architectureMd from "../../../docs/architecture.md?raw";
 
 /**
  * Docs modal — surfaces the repo's markdown documentation inside the app
  * so users don't have to leave Quantiom to learn how Quantiom works.
  *
- * Currently bundled docs: `docs/panels.md` (per-panel reference) and
- * `docs/tutorial.md` (hands-on walkthrough). Both are imported as raw
- * text via Vite's `?raw` loader and rendered with the minimal markdown
- * formatter below — no extra runtime dependency.
+ * Currently bundled docs: `docs/tutorial.md` (hands-on walkthrough),
+ * `docs/panels.md` (per-panel reference), and `docs/architecture.md`
+ * (codebase map). All are imported as raw text via Vite's `?raw` loader
+ * and rendered with the minimal markdown formatter below — no extra
+ * runtime dependency.
  */
 type Tab = { id: string; label: string; content: string };
 
 const TABS: Tab[] = [
   { id: "tutorial", label: "Tutorial", content: tutorialMd },
   { id: "panels", label: "Panel reference", content: panelsMd },
+  { id: "architecture", label: "Architecture", content: architectureMd },
 ];
 
 export function DocsModal({ onClose, initialTab }: { onClose: () => void; initialTab?: string }) {

@@ -347,6 +347,7 @@ function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
   const items: Array<{ id: string; label: string; hint: string }> = [
     { id: "tutorial", label: "Tutorial", hint: "hands-on Bell → VQE walkthrough" },
     { id: "panels", label: "Panel reference", hint: "what every right-side panel shows" },
+    { id: "architecture", label: "Architecture", hint: "codebase map: where things live, how they connect" },
   ];
   return (
     <span style={{ position: "relative" }} ref={wrapRef}>
