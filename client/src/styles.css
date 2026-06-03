@@ -742,3 +742,43 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .tsweepfft__legend span { display: inline-flex; align-items: center; gap: 3px; }
 .tsweepfft__swatch { width: 10px; height: 8px; border-radius: 1px; display: inline-block; }
 .tsweepfft__note { color: var(--muted); opacity: 0.8; }
+
+/* ─── Discrete Wigner function ─────────────────────────────────────── */
+.wigner { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.wigner__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); align-items: center; }
+.wigner__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.wigner__svg { display: block; border: 1px solid var(--border); border-radius: 3px; }
+.wigner__bg { fill: var(--bg-2); }
+.wigner__tag { font-size: 10px; padding: 1px 6px; border: 1px solid var(--border); border-radius: 3px; color: var(--muted); }
+.wigner__tag--neg { color: #ff7a5a; border-color: #ff7a5a; }
+.wigner__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+.wigner__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.wigner__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+/* ─── Magic (stabilizer Rényi entropy M₂) ──────────────────────────── */
+.magic { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.magic__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); align-items: center; }
+.magic__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.magic__tag { font-size: 10px; padding: 1px 6px; border: 1px solid var(--border); border-radius: 3px; color: var(--muted); }
+.magic__tag--magic { color: var(--accent); border-color: var(--accent-2); }
+.magic__svg { display: block; }
+.magic__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.magic__axis-line { stroke: var(--border); stroke-width: 1; }
+.magic__bar { fill: var(--accent); }
+.magic__note { font-size: 10px; color: var(--muted); }
+
+/* ─── Loschmidt echo / DQPT ────────────────────────────────────────── */
+.loschmidt { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.loschmidt__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); align-items: center; }
+.loschmidt__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.loschmidt__tag { font-size: 10px; padding: 1px 6px; border: 1px solid #ff7a5a; border-radius: 3px; color: #ff7a5a; }
+.loschmidt__svg { display: block; }
+.loschmidt__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.loschmidt__grid { stroke: var(--border); stroke-width: 1; }
+.loschmidt__echo { stroke: var(--accent-2); stroke-width: 1.6; }
+.loschmidt__rate { stroke: #ff9a5a; stroke-width: 1; stroke-dasharray: 3 2; }
+.loschmidt__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+.loschmidt__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.loschmidt__swatch { width: 12px; height: 0; border-top-width: 2px; border-top-style: solid; display: inline-block; }
+.loschmidt__swatch--echo { border-top-color: var(--accent-2); }
+.loschmidt__swatch--rate { border-top-style: dashed; border-top-color: #ff9a5a; }

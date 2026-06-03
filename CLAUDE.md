@@ -177,6 +177,18 @@ host plus `/api/health`.
     qubits. Powers the unitary-heatmap panel.
   - `interaction.ts`: `interactionGraph` — per-pair count of
     multi-qubit gates (logical connectivity vs hardware coupling).
+  - `pauliSpectrum.ts`: `allPauliExpectations` — all 4ⁿ ⟨P⟩ (shared
+    substrate for Wigner + magic). `magic.ts`: `magic` — stabilizer
+    2-Rényi entropy M₂ (0 ⟺ stabilizer state) + Pauli-weight
+    distribution. `wigner.ts`: `discreteWigner` — qubit phase-space
+    quasi-probability on the 2ⁿ×2ⁿ grid, negativity = non-classicality
+    (n ≤ 4; note the qubit non-covariance caveat in the file header).
+  - `negativity.ts`: `negativityMatrix` — pairwise log-negativity from
+    the partial-transpose eigenvalues (PPT-exact for 2 qubits ⇒ E_N > 0
+    iff entangled). Uses `densityEigenvaluesSigned` (the un-clamped
+    variant in `entanglement.ts`).
+  - `loschmidt.ts`: `loschmidtEcho` — return probability L(t) +
+    DQPT rate function over the `t` clock.
   - `webgpuTraj.ts`: WebGPU foundation. `getWebGPUDevice()` (cached),
     `isWebGPUAvailable()`, `webGPUAdapterInfo()` for the UI status
     chip. `tryRunWebGPUTrajectories(circuit, params, customGates,
@@ -248,9 +260,13 @@ host plus `/api/health`.
     traces), `AmplitudePhasePanel` (full-state bars: height = |amp|,
     hue = phase), `UnitaryHeatmapPanel` (2ⁿ×2ⁿ operator, mag + phase,
     n ≤ 6), `InteractionGraphPanel` (logical connectivity node-link),
-    `LightConePanel` (causal-cone selector → canvas dimming via
-    `CircuitCanvas` coneIds prop). The statevector-only ones show a
-    notice under Clifford / noise mode.
+    `WignerPanel` (discrete Wigner phase-space, n ≤ 4),
+    `MagicPanel` (stabilizer-Rényi M₂ + Pauli-weight bars, n ≤ 6),
+    `NegativityPanel` (pairwise log-negativity — genuine entanglement,
+    vs MI's classical+quantum), `LoschmidtPanel` (return probability +
+    DQPT rate function over `t`), `LightConePanel` (causal-cone
+    selector → canvas dimming via `CircuitCanvas` coneIds prop). The
+    statevector-only ones show a notice under Clifford / noise mode.
   - `CouplingMapView.tsx`: shared SVG render of an adjacency list as
     a node-link graph (circular layout ≤ 24 qubits, grid above).
 - `server/` — FastAPI shell: `/api/health` + static-file mount.

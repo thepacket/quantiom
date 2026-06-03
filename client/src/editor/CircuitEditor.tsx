@@ -65,6 +65,10 @@ import { AmplitudePhasePanel } from "../panels/AmplitudePhasePanel";
 import { UnitaryHeatmapPanel } from "../panels/UnitaryHeatmapPanel";
 import { InteractionGraphPanel } from "../panels/InteractionGraphPanel";
 import { TSweepFFTPanel } from "../panels/TSweepFFTPanel";
+import { WignerPanel } from "../panels/WignerPanel";
+import { MagicPanel } from "../panels/MagicPanel";
+import { NegativityPanel } from "../panels/NegativityPanel";
+import { LoschmidtPanel } from "../panels/LoschmidtPanel";
 import { LightConePanel, type ConeDir } from "../panels/LightConePanel";
 import { computeLightCone } from "./lightcone";
 import { NoisePanel } from "../panels/NoisePanel";
@@ -1106,6 +1110,8 @@ export function CircuitEditor() {
         <ErrorBoundary label="bloch"><BlochPanel state={simState} gpuBlochVectors={gpuBloch} /></ErrorBoundary>
         <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="amp-phase"><AmplitudePhasePanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="wigner"><WignerPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="magic"><MagicPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="expectation">
           <ExpectationPanel
             state={simState}
@@ -1123,6 +1129,7 @@ export function CircuitEditor() {
           <UnitaryHeatmapPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
         <ErrorBoundary label="mutual-info"><MutualInfoPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="negativity"><NegativityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="schmidt"><SchmidtPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="entropy-profile"><EntropyProfilePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="correlations"><CorrelationPanel state={simState} /></ErrorBoundary>
@@ -1137,6 +1144,9 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="t-sweep-fft">
           <TSweepFFTPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="loschmidt">
+          <LoschmidtPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
         <ErrorBoundary label="interaction-graph"><InteractionGraphPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="light-cone">

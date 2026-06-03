@@ -34,7 +34,9 @@ visualisers** — mutual-information map, entanglement spectrum across a
 cut, an entanglement-entropy profile across every cut, ZZ correlations,
 space–time ⟨Z⟩ and entropy diagrams, t-sweep traces and their Fourier
 spectrum, a full-state amplitude·phase plot, a unitary heatmap, a
-logical interaction graph, and a causal-cone canvas overlay — sits
+logical interaction graph, a discrete-Wigner phase-space map, a magic
+(stabilizer-Rényi M₂) readout, a pairwise entanglement-negativity map,
+a Loschmidt-echo / DQPT trace, and a causal-cone canvas overlay — sits
 alongside the statevector / Bloch / probability panels. An **AI chat panel
 at the bottom of the canvas** talks to OpenRouter (any of ~340 models,
 your own key), receives the current circuit as OpenQASM 3 on every

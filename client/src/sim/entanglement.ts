@@ -62,6 +62,17 @@ function symEigenvalues(Ain: number[][]): number[] {
  * every other value after sorting to recover the d eigenvalues.
  */
 export function densityEigenvalues(rho: Complex[][]): number[] {
+  return densityEigenvaluesSigned(rho).map((x) => Math.max(0, x));
+}
+
+/**
+ * Like `densityEigenvalues` but keeps the sign of each eigenvalue. The
+ * clamped version is right for entropies of a genuine density matrix; this
+ * one is needed where the input is a *partial transpose* (Hermitian, trace
+ * 1, but with negative eigenvalues — that negativity is exactly the
+ * entanglement signal we want to keep), e.g. the negativity matrix.
+ */
+export function densityEigenvaluesSigned(rho: Complex[][]): number[] {
   const d = rho.length;
   const M: number[][] = Array.from({ length: 2 * d }, () => new Array<number>(2 * d).fill(0));
   for (let i = 0; i < d; i++) {
@@ -74,7 +85,7 @@ export function densityEigenvalues(rho: Complex[][]): number[] {
   const ev = symEigenvalues(M).sort((p, q) => q - p);
   // The 2d embedding eigenvalues pair up; take one of each (even indices).
   const out: number[] = [];
-  for (let k = 0; k < 2 * d; k += 2) out.push(Math.max(0, ev[k]));
+  for (let k = 0; k < 2 * d; k += 2) out.push(ev[k]);
   return out;
 }
 

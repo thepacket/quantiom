@@ -154,6 +154,53 @@ shown (in index order) and a note reports the truncation.
 
 ---
 
+## Wigner function
+
+The **discrete Wigner function** — the qubit phase-space quasi-probability
+W(u) = (1/2ⁿ)Tr(ρ·A_u) on the 2ⁿ×2ⁿ grid of phase-point operators. Blue
+cells are positive, warm cells **negative**; W sums to 1, and **negativity
+is the non-classicality signal**.
+
+**When available.** Statevector path only; capped at 4 qubits (16×16).
+
+**What you see.**
+- **Stabilizer states** (Pauli eigenstates, Bell at single-qubit level):
+  non-negative — "classical" in phase space.
+- **Magic states** (T|+⟩, …): negative cells appear; the panel reports
+  total negativity and the most-negative cell.
+
+**Caveat (read this).** Unlike odd-dimensional qudits, the qubit
+tensor-product construction is *not* Clifford-covariant, so for n ≥ 2 some
+entangled **stabilizer** states also show negativity here. Treat W as a
+phase-space *picture* of non-classicality and use the **Magic (M₂)** panel
+for the rigorous, basis-independent stabilizer measure.
+
+---
+
+## Magic (M₂)
+
+The **stabilizer 2-Rényi entropy** M₂ (Leone–Oliviero–Hamma 2022): a
+rigorous measure of *non-stabilizerness*. M₂ = −log₂(Σ_P Ξ_P²) − n with
+Ξ_P = ⟨P⟩²/2ⁿ. **M₂ = 0 exactly when the state is a stabilizer state** —
+what the Clifford fast path can represent — and it climbs with every
+T-like gate. Additive over tensor products, invariant under Cliffords.
+
+**When available.** Statevector path only (M₂ is a pure-state quantity);
+reads all 4ⁿ Pauli expectations, so capped at 6 qubits.
+
+**What you see.**
+- The **M₂ value** (and M₂/n), with a tag flipping between "stabilizer
+  state" and "has magic".
+- The **Pauli-weight distribution** Σ_{|P|=w} Ξ_P as a bar chart: where the
+  state's Pauli mass sits, low weight (local) → high weight (scrambled).
+- A Clifford-only circuit reads exactly 0; appending a single `t` gate
+  lifts it (e.g. T|+⟩ → M₂ ≈ 0.415 bit).
+
+**Pairs with** the Wigner panel (visual) and the stabilizer simulator
+(the M₂ = 0 boundary is exactly its domain).
+
+---
+
 ## Expectation ⟨P⟩
 
 The Pauli-string expectation calculator. Pick a Pauli on each qubit
@@ -290,6 +337,26 @@ at 12 qubits.
 **Performance.** Builds every pairwise reduced density matrix — C(n,2)
 partial traces, each O(2ⁿ). Capped at 12 qubits and computed only while
 the panel is open (default-collapsed), so it costs nothing until asked.
+
+---
+
+## Entanglement negativity
+
+The pairwise **logarithmic negativity** E_N(i,j) = log₂‖ρ_ij^{T_B}‖₁, read
+off the eigenvalues of the partial transpose of each two-qubit reduced
+state, as an n×n heatmap. Because the PPT criterion is *exact* for two
+qubits, **E_N(i,j) > 0 if and only if that pair is genuinely entangled.**
+
+**When available.** Statevector path only; capped at 12 qubits.
+
+**Reading it vs. mutual information.** This is the quantum-only complement
+to the MI map. Mutual information counts classical + quantum correlation
+together, so it can't separate shared randomness (I > 0, E_N = 0) from
+entanglement. The sharpest illustration is **GHZ**: every pair has
+non-zero mutual information but **zero negativity** — GHZ entanglement is
+genuinely global, not stored in any pair. A **Bell pair** reads E_N = 1; a
+product (or merely classically-correlated) pair reads 0. Open this beside
+the MI map to see the distinction directly.
 
 ---
 
@@ -462,6 +529,28 @@ the first 16 bins are shown).
 - A doubled-frequency drive (`rx(2*t)`): the peak moves to **bin 2**.
 - **Beats / multi-frequency cascades**: several peaks whose spacing is
   the beat structure you'd otherwise have to infer from the time trace.
+
+---
+
+## Loschmidt echo
+
+The **return probability** L(t) = |⟨ψ(0)|ψ(t)⟩|² over one period of the
+`t` clock — how close the evolving state stays to where it started — with
+the **rate function** λ(t) = −(1/n)ln L(t) overlaid (scaled). The rate
+function's **cusps**, where L(t) touches zero, are the critical times of a
+**dynamical quantum phase transition (DQPT)** — the dynamical analogue of
+the free-energy kinks of an equilibrium phase transition.
+
+**When available.** Only with a free `t` symbol; statevector path, capped
+at 14 qubits. One simulation per sample point.
+
+**What you see.**
+- A single `rx(t)` qubit: L(t) = cos²(t/2), a smooth dip to 0 at t = π and
+  back — and a clean rate-function spike (cusp) at that point.
+- A quenched many-body chain (kicked-Ising / TFIM Trotter past a critical
+  point): L(t) dips toward zero at the DQPT times, with the rate function
+  cusping there — the signature researchers actually look for.
+- A trivial / off-critical quench: L(t) stays well above zero, no cusps.
 
 ---
 
