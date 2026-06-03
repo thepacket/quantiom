@@ -314,9 +314,13 @@ host plus `/api/health`.
   reference), `tutorial.md` (six-section hands-on walkthrough),
   `architecture.md` (codebase map / data flow / fast paths),
   `qasm.md` (OpenQASM round-trip + the eight SDK emitters). All four
-  are imported into the app via `client/src/editor/DocsModal.tsx`
-  (small in-house markdown renderer, no extra runtime dependency) and
-  surfaced as tabs through the toolbar **Help** menu.
+  are imported into the app via `client/src/editor/DocsModal.tsx` and
+  surfaced as tabs through the toolbar **Help** menu. The markdown
+  renderer is a small in-house component (no runtime dependency) in
+  `client/src/editor/Markdown.tsx` — shared by DocsModal AND the AI
+  chat panel, which renders each assistant reply's prose parts through
+  it (fenced code blocks are still handled by the chat's own
+  QASM-aware code-block path; user messages stay literal).
 
 ## Conventions
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Circuit } from "../editor/types";
 import { emitQasm3 } from "../qasm/emit";
 import { parseQasm3 } from "../qasm/parse";
+import { Markdown } from "../editor/Markdown";
 import {
   listModels,
   streamChat,
@@ -284,7 +285,11 @@ function Message({
       <div className="chat__msg-body">
         {parts.map((part, i) =>
           part.kind === "text" ? (
-            <div key={i} className="chat__text">{part.text}</div>
+            message.role === "assistant" ? (
+              <div key={i} className="chat__md"><Markdown source={part.text} /></div>
+            ) : (
+              <div key={i} className="chat__text">{part.text}</div>
+            )
           ) : (
             <div key={i} className="chat__code-block">
               <div className="chat__code-bar">

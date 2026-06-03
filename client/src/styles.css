@@ -72,6 +72,17 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__msg--assistant .chat__msg-role { color: #b2d2ff; }
 .chat__msg--streaming .chat__msg-body { opacity: 0.85; }
 .chat__text { white-space: pre-wrap; word-wrap: break-word; font-size: 17px; line-height: 1.5; }
+/* Rendered-markdown body for assistant replies. */
+.chat__md { font-size: 17px; line-height: 1.5; word-wrap: break-word; overflow-wrap: anywhere; }
+.chat__md > :first-child { margin-top: 0; }
+.chat__md > :last-child { margin-bottom: 0; }
+.chat__md p { margin: 6px 0; }
+.chat__md h1, .chat__md h2, .chat__md h3 { line-height: 1.3; }
+.chat__md ul, .chat__md ol { margin: 4px 0; }
+.chat__md li { margin: 2px 0; }
+.chat__md pre { white-space: pre-wrap; }
+.chat__md table { width: 100%; }
+.chat__md a { color: var(--accent); }
 .chat__code-block { margin: 4px 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
 .chat__code-bar { display: flex; align-items: center; justify-content: space-between; padding: 2px 8px; background: var(--bg-2); font-size: 14px; color: var(--muted); }
 .chat__code-lang { font-family: ui-monospace, monospace; }
