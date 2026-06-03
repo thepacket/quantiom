@@ -666,3 +666,13 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .corr__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .corr__swatch--zero { background: var(--bg-2); border: 1px solid var(--border); }
 .corr__note { color: var(--muted); opacity: 0.8; }
+
+/* ─── t-sweep ⟨Z⟩(t) traces ────────────────────────────────────────── */
+.tsweep { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.tsweep__svg { display: block; }
+.tsweep__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.tsweep__grid { stroke: var(--border); stroke-width: 1; }
+.tsweep__grid--zero { stroke: var(--border-strong); }
+.tsweep__legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 10px; color: var(--muted); }
+.tsweep__legend span { display: inline-flex; align-items: center; gap: 3px; }
+.tsweep__swatch { width: 10px; height: 3px; border-radius: 1px; display: inline-block; }

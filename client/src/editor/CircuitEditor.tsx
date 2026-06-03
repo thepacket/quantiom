@@ -58,6 +58,7 @@ import { MutualInfoPanel } from "../panels/MutualInfoPanel";
 import { SpaceTimePanel } from "../panels/SpaceTimePanel";
 import { SchmidtPanel } from "../panels/SchmidtPanel";
 import { CorrelationPanel } from "../panels/CorrelationPanel";
+import { TSweepPanel } from "../panels/TSweepPanel";
 import { NoisePanel } from "../panels/NoisePanel";
 import { PhaseDiskPanel } from "../panels/PhaseDiskPanel";
 import { ResourcePanel } from "../panels/ResourcePanel";
@@ -1103,6 +1104,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="correlations"><CorrelationPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="space-time">
           <SpaceTimePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="t-sweep">
+          <TSweepPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
         <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
         <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} coupling={noise.coupling} /></ErrorBoundary>

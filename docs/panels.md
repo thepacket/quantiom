@@ -323,6 +323,30 @@ dominates.
 
 ---
 
+## t-sweep ⟨Z⟩(t)
+
+For circuits driven by the `t` clock, sweeps t over one period [0, 2π)
+and plots each qubit's ⟨Z_q⟩(t) as a line — the static view of the
+animation. Read oscillation frequencies, beats, and phase offsets
+directly off the curves without playing the animation or recording it.
+
+**When available.** Only when the circuit has a free `t` symbol (e.g.
+`rz(t)`, `rx(t/2)`); otherwise the panel says so. Statevector path,
+capped at 14 qubits. Other free symbols are held at their current
+Parameters-panel values; only `t` is swept.
+
+**What you see.**
+- `ry(t)` on a qubit: a full cos(t) sweep from +1 to −1 and back.
+- `rz(t)` on a |+⟩ qubit: a flat line at 0 — Rz only moves phase, not
+  ⟨Z⟩ (the X-Y rotation shows up in the Phase-disk / Bloch panels
+  instead).
+- A kicked or multi-frequency drive: superposed oscillations and beats.
+
+**How it's built.** One simulation per sample point (64), reading the
+Bloch ⟨Z⟩ each time. Opt-in (default-collapsed).
+
+---
+
 ## Hamiltonian → Trotter
 
 Paste a Pauli-sum Hamiltonian (e.g. `0.5 * X1 X2 + 0.3 * Z0`) and the
