@@ -7,6 +7,7 @@ import { GatePalette } from "./GatePalette";
 import { Inspector } from "./Inspector";
 import { FileMenu } from "./FileMenu";
 import { DocsModal } from "./DocsModal";
+import { AboutModal } from "./AboutModal";
 import { StepBar } from "./StepBar";
 import { loadCustomGates, newCustomGateId, saveCustomGates, type CustomGate } from "./customGates";
 import type { Circuit } from "./types";
@@ -501,6 +502,7 @@ export function CircuitEditor() {
   const [findQuery, setFindQuery] = useState<string>("");
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showDocs, setShowDocs] = useState<null | string>(null);
+  const [showAbout, setShowAbout] = useState(false);
 
   useEffect(() => {
     saveCustomGates(customGates);
@@ -719,6 +721,7 @@ export function CircuitEditor() {
   return (
     <div className="editor">
       {showDocs !== null && <DocsModal initialTab={showDocs} onClose={() => setShowDocs(null)} />}
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
       {showShortcuts && (
         <div
           onClick={() => setShowShortcuts(false)}
@@ -998,6 +1001,9 @@ export function CircuitEditor() {
               Measure All
             </button>
             <HelpMenu onOpen={(tabId) => setShowDocs(tabId)} />
+            <button onClick={() => setShowAbout(true)} title="About Quantiom">
+              About
+            </button>
           </div>
           <div className="editor__counts">
             <button onClick={() => dispatch({ type: "remove-qubit" })} title="Remove last qubit">−</button>
