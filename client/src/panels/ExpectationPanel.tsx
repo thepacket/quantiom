@@ -334,10 +334,11 @@ function Optimizer({
     setProgress({ step: 0, value: currentValue ?? 0 });
     const localHistory: number[] = [];
     setHistory([]);
-    // Run async so the UI updates between steps.
-    setTimeout(() => {
+    // Run async so the UI updates between steps. The optimiser awaits the
+    // GPU dispatch each step where applicable.
+    setTimeout(async () => {
       try {
-        const result = optimizeExpectation(
+        const result = await optimizeExpectation(
           ctx.circuit,
           ctx.customGates,
           {
@@ -462,9 +463,9 @@ function DiagnosticTools({
   const runZne = () => {
     if (!ctx.noise.enabled || busy) return;
     setBusy("zne");
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const result = zneFit(ctx.circuit, ctx.paramValues, ctx.customGates, observable, ctx.noise, [1, 2, 3], zneFitKind);
+        const result = await zneFit(ctx.circuit, ctx.paramValues, ctx.customGates, observable, ctx.noise, [1, 2, 3], zneFitKind);
         setZne(result);
       } finally { setBusy(null); }
     }, 0);
@@ -474,9 +475,9 @@ function DiagnosticTools({
     const syms = [...picked];
     if (syms.length < 1 || syms.length > 2 || busy) return;
     setBusy("landscape");
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const grid = computeLandscape(
+        const grid = await computeLandscape(
           ctx.circuit, ctx.paramValues, ctx.customGates, observable,
           syms, syms.length === 1 ? 64 : 32, [-Math.PI, Math.PI],
           ctx.noise.enabled ? ctx.noise : undefined,
@@ -490,9 +491,9 @@ function DiagnosticTools({
     const syms = [...picked];
     if (syms.length === 0 || busy) return;
     setBusy("plateau");
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const result = barrenPlateauDiagnostic(
+        const result = await barrenPlateauDiagnostic(
           ctx.circuit, ctx.customGates, observable, syms, 100,
           ctx.noise.enabled ? ctx.noise : undefined,
         );

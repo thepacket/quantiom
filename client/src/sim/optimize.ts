@@ -4,6 +4,7 @@ import { simulate, type ParameterValues } from "./simulate";
 import { simulateNoisy, noisyExpectationObservable } from "./simulateNoisy";
 import { evaluateObservable, type Pauli, type Observable } from "./expectation";
 import type { NoiseModel } from "./noise";
+import { tryRunWebGPUTrajectories, type GPUPauli } from "./webgpuTraj";
 
 /**
  * Gradient-based optimisation of a Pauli expectation value over the
@@ -55,19 +56,19 @@ export type OptimizerResult = {
   stopped: "converged" | "max-steps" | "cancelled";
 };
 
-export function optimizeExpectation(
+export async function optimizeExpectation(
   circuit: Circuit,
   customGates: CustomGate[],
   options: OptimizerOptions,
   noise?: NoiseModel,
-): OptimizerResult {
+): Promise<OptimizerResult> {
   const params: ParameterValues = { ...options.initial };
   const symbols = options.symbols;
   const sign = options.goal === "minimize" ? +1 : -1;
   const epsilon = options.epsilon;
   const lr = options.learningRate;
   const kind: OptimizerKind = options.optimizer ?? "adam";
-  let lastValue = evaluate(circuit, customGates, params, options.observable, noise);
+  let lastValue = await evaluate(circuit, customGates, params, options.observable, noise);
 
   // Adam state.
   const beta1 = 0.9;
@@ -83,9 +84,9 @@ export function optimizeExpectation(
       const sym = symbols[i];
       const original = params[sym] ?? 0;
       params[sym] = original + epsilon;
-      const ePlus = evaluate(circuit, customGates, params, options.observable, noise);
+      const ePlus = await evaluate(circuit, customGates, params, options.observable, noise);
       params[sym] = original - epsilon;
-      const eMinus = evaluate(circuit, customGates, params, options.observable, noise);
+      const eMinus = await evaluate(circuit, customGates, params, options.observable, noise);
       params[sym] = original;
       grad[i] = sign * (ePlus - eMinus) / (2 * epsilon);
     }
@@ -131,7 +132,7 @@ export function optimizeExpectation(
         normSq += grad[i] * grad[i];
       }
     }
-    lastValue = evaluate(circuit, customGates, params, options.observable, noise);
+    lastValue = await evaluate(circuit, customGates, params, options.observable, noise);
 
     const cont = options.onProgress?.(step + 1, lastValue, params);
     if (cont === false) {
@@ -144,20 +145,62 @@ export function optimizeExpectation(
   return { steps: options.steps, finalValue: lastValue, finalParams: params, stopped: "max-steps" };
 }
 
-function evaluate(
+async function evaluate(
   circuit: Circuit,
   customGates: CustomGate[],
   params: ParameterValues,
   observable: Pauli[] | Observable,
   noise: NoiseModel | undefined,
-): number {
+): Promise<number> {
   const obs = toObservable(observable);
   if (noise?.enabled) {
+    // Route through the GPU's K-batched Pauli-sum dispatch when the
+    // circuit fits the supported subset — one trajectory pass plus K
+    // O(dim) reductions instead of K full passes on CPU. The exact same
+    // CPU path runs when the GPU declines (multi-qubit gates, custom
+    // Kraus, T1/T2, n > 14, etc).
+    const gpu = await tryGPUExpectation(circuit, params, customGates, noise, obs);
+    if (gpu !== null) return gpu;
     return noisyExpectationObservable(circuit, params, customGates, noise, obs);
   }
   const result = simulate(circuit, params, customGates);
   if (result.isStabilizer) return 0; // optimization not meaningful in Clifford-only
   return evaluateObservable(result.state, circuit.numQubits, obs);
+}
+
+/**
+ * Build a `paulisList` for the GPU's K-batched dispatch from an
+ * Observable, run the trajectory simulator, and combine the per-term
+ * expectations into the weighted sum. Returns null when the GPU path
+ * declines (caller falls back to CPU).
+ */
+async function tryGPUExpectation(
+  circuit: Circuit,
+  params: ParameterValues,
+  customGates: CustomGate[],
+  noise: NoiseModel,
+  obs: Observable,
+): Promise<number | null> {
+  let paulisList: GPUPauli[][];
+  let weights: number[];
+  if (obs.kind === "pauli") {
+    paulisList = [obs.paulis as GPUPauli[]];
+    weights = [1];
+  } else {
+    paulisList = obs.terms.map((t) => t.paulis.split("") as GPUPauli[]);
+    weights = obs.terms.map((t) => t.coefficient);
+  }
+  if (paulisList.length === 0) return 0;
+  const T = Math.max(1, noise.trajectories | 0);
+  const result = await tryRunWebGPUTrajectories(
+    circuit, params, customGates, noise, T, paulisList,
+  );
+  if (!result || !result.pauliExpectations) return null;
+  let sum = 0;
+  for (let k = 0; k < weights.length; k++) {
+    sum += weights[k] * result.pauliExpectations[k];
+  }
+  return sum;
 }
 
 function toObservable(o: Pauli[] | Observable): Observable {
@@ -286,7 +329,7 @@ export { simulateNoisy };
  */
 export type ZneFitKind = "linear" | "quadratic" | "exponential";
 
-export function zneFit(
+export async function zneFit(
   circuit: Circuit,
   paramValues: ParameterValues,
   customGates: CustomGate[],
@@ -294,14 +337,16 @@ export function zneFit(
   baseNoise: NoiseModel,
   scales: number[] = [1, 2, 3],
   fit: ZneFitKind = "linear",
-): { samples: Array<{ scale: number; value: number }>; extrapolated: number; fit: ZneFitKind } {
+): Promise<{ samples: Array<{ scale: number; value: number }>; extrapolated: number; fit: ZneFitKind }> {
   const obs = Array.isArray(observable) ? { kind: "pauli" as const, paulis: observable } : observable;
-  const samples: Array<{ scale: number; value: number }> = [];
-  for (const s of scales) {
+  // Sample each scale concurrently — the GPU path queues one trajectory
+  // pass per scale and they overlap on the device; the CPU fallback is
+  // independent across scales too. Promise.all preserves order.
+  const samples = await Promise.all(scales.map(async (s) => {
     const scaled = scaleNoise(baseNoise, s);
-    const v = noisyExpectationObservable(circuit, paramValues, customGates, scaled, obs);
-    samples.push({ scale: s, value: v });
-  }
+    const v = await evaluate(circuit, customGates, paramValues, obs, scaled);
+    return { scale: s, value: v };
+  }));
   const n = samples.length;
   if (n === 0) return { samples, extrapolated: 0, fit };
   if (n === 1) return { samples, extrapolated: samples[0].value, fit };
@@ -339,7 +384,7 @@ export function zneFit(
       + s2 * (s1 * s3 - s2 * s2);
     if (Math.abs(det) < 1e-12) {
       // Fall back to linear if singular.
-      return zneFit(circuit, paramValues, customGates, observable, baseNoise, scales, "linear");
+      return await zneFit(circuit, paramValues, customGates, observable, baseNoise, scales, "linear");
     }
     const a =
       (t0 * (s2 * s4 - s3 * s3)
@@ -351,7 +396,7 @@ export function zneFit(
   // Exponential: y = a + b · exp(-k · x). Fit b and k by treating
   // log(y - a) ≈ log(b) - k·x for a chosen a. Use a robust 2-stage fit:
   // first fit linear to bound a, then refine on residuals.
-  const linRes = zneFit(circuit, paramValues, customGates, observable, baseNoise, scales, "linear");
+  const linRes = await zneFit(circuit, paramValues, customGates, observable, baseNoise, scales, "linear");
   // Estimate a as the linear extrapolation; tail b = avg(y - a) · e^{kx},
   // then refit k. The single-stage answer is good enough for noisy data.
   return { samples, extrapolated: linRes.extrapolated, fit: "exponential" };
@@ -383,7 +428,7 @@ function scaleNoise(noise: NoiseModel, factor: number): NoiseModel {
  * a reasonable default — 1 024 sim calls finish under a second for
  * n ≤ 10.
  */
-export function computeLandscape(
+export async function computeLandscape(
   circuit: Circuit,
   paramValues: ParameterValues,
   customGates: CustomGate[],
@@ -392,44 +437,37 @@ export function computeLandscape(
   grid: number,
   range: [number, number],
   noise?: NoiseModel,
-): number[][] {
+): Promise<number[][]> {
   if (symbols.length < 1 || symbols.length > 2) {
     throw new Error("landscape supports 1 or 2 symbols");
   }
   const [lo, hi] = range;
-  const params: ParameterValues = { ...paramValues };
   const out: number[][] = [];
+  // Each grid evaluation uses an independent params clone so the row can
+  // run in Promise.all without mutation races on a shared object.
+  const at = (x: number, y?: number) => {
+    const p: ParameterValues = { ...paramValues };
+    p[symbols[0]] = x;
+    if (y !== undefined && symbols.length === 2) p[symbols[1]] = y;
+    return evaluate(circuit, customGates, p, observable, noise);
+  };
   if (symbols.length === 1) {
-    const [sym] = symbols;
-    const row: number[] = [];
-    for (let i = 0; i < grid; i++) {
-      params[sym] = lo + (hi - lo) * (i / (grid - 1));
-      row.push(evalAt(circuit, params, customGates, observable, noise));
-    }
+    const row = await Promise.all(Array.from({ length: grid }, (_, i) => {
+      const x = lo + (hi - lo) * (i / (grid - 1));
+      return at(x);
+    }));
     out.push(row);
   } else {
-    const [sx, sy] = symbols;
     for (let j = 0; j < grid; j++) {
-      params[sy] = lo + (hi - lo) * (j / (grid - 1));
-      const row: number[] = [];
-      for (let i = 0; i < grid; i++) {
-        params[sx] = lo + (hi - lo) * (i / (grid - 1));
-        row.push(evalAt(circuit, params, customGates, observable, noise));
-      }
+      const y = lo + (hi - lo) * (j / (grid - 1));
+      const row = await Promise.all(Array.from({ length: grid }, (_, i) => {
+        const x = lo + (hi - lo) * (i / (grid - 1));
+        return at(x, y);
+      }));
       out.push(row);
     }
   }
   return out;
-}
-
-function evalAt(
-  circuit: Circuit,
-  params: ParameterValues,
-  customGates: CustomGate[],
-  observable: Pauli[] | Observable,
-  noise: NoiseModel | undefined,
-): number {
-  return evaluate(circuit, customGates, params, observable, noise);
 }
 
 /**
@@ -439,27 +477,32 @@ function evalAt(
  * exponentially small in n is the textbook signature of a barren plateau
  * — the ansatz is essentially un-trainable from a random init.
  */
-export function barrenPlateauDiagnostic(
+export async function barrenPlateauDiagnostic(
   circuit: Circuit,
   customGates: CustomGate[],
   observable: Pauli[] | Observable,
   symbols: string[],
   samples: number,
   noise?: NoiseModel,
-): { variancePerSymbol: number[]; meanGradPerSymbol: number[] } {
+): Promise<{ variancePerSymbol: number[]; meanGradPerSymbol: number[] }> {
   const eps = 1e-3;
   const grads: number[][] = symbols.map(() => []);
-  const params: ParameterValues = {};
   for (let s = 0; s < samples; s++) {
-    for (const sym of symbols) params[sym] = (Math.random() * 2 - 1) * Math.PI;
+    const base: ParameterValues = {};
+    for (const sym of symbols) base[sym] = (Math.random() * 2 - 1) * Math.PI;
+    // Central differences per symbol: 2k independent evaluations, run
+    // concurrently so the GPU queue overlaps trajectory passes.
+    const evals = await Promise.all(symbols.flatMap((sym) => {
+      const plus: ParameterValues = { ...base, [sym]: (base[sym] ?? 0) + eps };
+      const minus: ParameterValues = { ...base, [sym]: (base[sym] ?? 0) - eps };
+      return [
+        evaluate(circuit, customGates, plus, observable, noise),
+        evaluate(circuit, customGates, minus, observable, noise),
+      ];
+    }));
     for (let i = 0; i < symbols.length; i++) {
-      const sym = symbols[i];
-      const original = params[sym];
-      params[sym] = original + eps;
-      const ePlus = evalAt(circuit, params, customGates, observable, noise);
-      params[sym] = original - eps;
-      const eMinus = evalAt(circuit, params, customGates, observable, noise);
-      params[sym] = original;
+      const ePlus = evals[2 * i];
+      const eMinus = evals[2 * i + 1];
       grads[i].push((ePlus - eMinus) / (2 * eps));
     }
   }
