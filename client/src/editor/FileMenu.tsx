@@ -207,7 +207,7 @@ function FileDropdown({
         File
       </button>
       {open && (
-        <div className="examples-picker__pop" style={{ width: 260 }}>
+        <div className="examples-picker__pop">
           <div className="examples-picker__list">
             {item("Examples…", "browse the example circuit library", onOpenExamples)}
             {item("Open QASM…", "load a .qasm file from disk", onOpenQasm)}

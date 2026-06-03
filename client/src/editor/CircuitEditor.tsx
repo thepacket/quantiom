@@ -147,7 +147,7 @@ function TransformMenu({
         Transform…
       </button>
       {open && (
-        <div className="examples-picker__pop" style={{ width: 260, top: "100%", marginTop: 4 }}>
+        <div className="examples-picker__pop" style={{ top: "100%", marginTop: 4 }}>
           <div className="examples-picker__list">
             <button className="examples-picker__item" onClick={() => { setOpen(false); onCompact(); }}>
               <span>Compact</span>
@@ -248,7 +248,7 @@ function EditMenu({
         Edit
       </button>
       {open && (
-        <div className="examples-picker__pop" style={{ width: 240, top: "100%", marginTop: 4 }}>
+        <div className="examples-picker__pop" style={{ top: "100%", marginTop: 4 }}>
           <div className="examples-picker__list">
             <button
               className="examples-picker__item"
@@ -355,7 +355,7 @@ function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
         Help
       </button>
       {open && (
-        <div className="examples-picker__pop" style={{ width: 280, top: "100%", marginTop: 4, right: 0 }}>
+        <div className="examples-picker__pop" style={{ top: "100%", marginTop: 4 }}>
           <div className="examples-picker__list">
             {items.map((it) => (
               <button
@@ -741,25 +741,6 @@ export function CircuitEditor() {
           onNew={() => t.newTab()}
         />
         <div className="editor__toolbar">
-          <div className="editor__counts">
-            <button onClick={() => dispatch({ type: "remove-qubit" })} title="Remove last qubit">−</button>
-            <span>{circuit.numQubits} qubits</span>
-            <button onClick={() => dispatch({ type: "add-qubit" })} title="Add a qubit">+</button>
-            <span className="editor__sep">·</span>
-            <button onClick={() => dispatch({ type: "remove-clbit" })} title="Remove a classical bit">−</button>
-            <span>{circuit.numClbits} clbits</span>
-            <button onClick={() => dispatch({ type: "add-clbit" })} title="Add a classical bit">+</button>
-            <span className="editor__sep">·</span>
-            <input
-              type="search"
-              className="editor__find"
-              placeholder="Find: gate / qN / param"
-              value={findQuery}
-              onChange={(e) => setFindQuery(e.target.value)}
-              title="Highlight gates by id, qubit (e.g. q3 or a name), or parameter substring"
-              style={{ width: 200 }}
-            />
-          </div>
           <div className="editor__actions">
             <FileMenu circuit={circuit} dispatch={dispatch} onLoadInNewTab={(c, name) => t.newTab(c, name)} />
             <EditMenu
@@ -981,6 +962,25 @@ export function CircuitEditor() {
               Measure All
             </button>
             <HelpMenu onOpen={(tabId) => setShowDocs(tabId)} />
+          </div>
+          <div className="editor__counts">
+            <button onClick={() => dispatch({ type: "remove-qubit" })} title="Remove last qubit">−</button>
+            <span>{circuit.numQubits} qubits</span>
+            <button onClick={() => dispatch({ type: "add-qubit" })} title="Add a qubit">+</button>
+            <span className="editor__sep">·</span>
+            <button onClick={() => dispatch({ type: "remove-clbit" })} title="Remove a classical bit">−</button>
+            <span>{circuit.numClbits} clbits</span>
+            <button onClick={() => dispatch({ type: "add-clbit" })} title="Add a classical bit">+</button>
+            <span className="editor__sep">·</span>
+            <input
+              type="search"
+              className="editor__find"
+              placeholder="Find: gate / qN / param"
+              value={findQuery}
+              onChange={(e) => setFindQuery(e.target.value)}
+              title="Highlight gates by id, qubit (e.g. q3 or a name), or parameter substring"
+              style={{ width: 200 }}
+            />
           </div>
         </div>
         <StepBar maxColumn={maxColumn} step={effectiveStep} onChange={setPickedStep} />
