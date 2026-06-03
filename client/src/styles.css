@@ -641,3 +641,16 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .spacetime__legend span { display: inline-flex; align-items: center; gap: 4px; }
 .spacetime__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .spacetime__swatch--zero { background: var(--bg-2); border: 1px solid var(--border); }
+
+/* ─── Entanglement spectrum (Schmidt) ──────────────────────────────── */
+.schmidt { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.schmidt__cut { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 10px; }
+.schmidt__cut-label { color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.schmidt__qubit { display: inline-flex; align-items: center; gap: 2px; padding: 1px 4px; border: 1px solid var(--border); border-radius: 3px; color: var(--muted); cursor: pointer; }
+.schmidt__qubit--on { color: var(--accent); border-color: var(--accent-2); }
+.schmidt__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.schmidt__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.schmidt__svg { display: block; }
+.schmidt__axis-line { stroke: var(--border); stroke-width: 1; }
+.schmidt__bar { fill: var(--accent-2); }
+.schmidt__more { font-size: 10px; color: var(--muted); }

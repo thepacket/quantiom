@@ -56,13 +56,12 @@ function symEigenvalues(Ain: number[][]): number[] {
 }
 
 /**
- * Von Neumann entropy S(ρ) = −Tr(ρ log₂ ρ), in bits. ρ is a complex
- * Hermitian density matrix. Computed from its eigenvalues via the real
- * symmetric embedding [[A, −B], [B, A]] (ρ = A + iB): that 2d×2d real
- * matrix has each eigenvalue of ρ exactly twice, so summing over all of
- * them and halving recovers the entropy.
+ * Eigenvalues of a complex Hermitian density matrix, sorted descending.
+ * Computed via the real symmetric embedding [[A, −B], [B, A]] (ρ = A + iB):
+ * that 2d×2d real matrix has each eigenvalue of ρ exactly twice, so we take
+ * every other value after sorting to recover the d eigenvalues.
  */
-export function vonNeumannEntropy(rho: Complex[][]): number {
+export function densityEigenvalues(rho: Complex[][]): number[] {
   const d = rho.length;
   const M: number[][] = Array.from({ length: 2 * d }, () => new Array<number>(2 * d).fill(0));
   for (let i = 0; i < d; i++) {
@@ -72,12 +71,20 @@ export function vonNeumannEntropy(rho: Complex[][]): number {
       M[i + d][j] = b; M[i + d][j + d] = a;
     }
   }
-  const ev = symEigenvalues(M);
+  const ev = symEigenvalues(M).sort((p, q) => q - p);
+  // The 2d embedding eigenvalues pair up; take one of each (even indices).
+  const out: number[] = [];
+  for (let k = 0; k < 2 * d; k += 2) out.push(Math.max(0, ev[k]));
+  return out;
+}
+
+/** Von Neumann entropy S(ρ) = −Σ p log₂ p, in bits. */
+export function vonNeumannEntropy(rho: Complex[][]): number {
   let s = 0;
-  for (const lam of ev) {
-    if (lam > 1e-12) s += lam * Math.log2(lam);
+  for (const p of densityEigenvalues(rho)) {
+    if (p > 1e-12) s += p * Math.log2(p);
   }
-  return -0.5 * s;
+  return -s;
 }
 
 export type MutualInfoResult = {
@@ -113,4 +120,45 @@ export function mutualInformationMatrix(
     }
   }
   return { mi, single };
+}
+
+export type SchmidtResult = {
+  /** Entanglement spectrum: the squared Schmidt coefficients (eigenvalues
+   *  of ρ_A), sorted descending and summing to 1. */
+  spectrum: number[];
+  /** Bipartite von Neumann entanglement entropy S(ρ_A) in bits. */
+  entropy: number;
+  /** Schmidt rank: number of coefficients above 1e-9. */
+  rank: number;
+};
+
+/**
+ * Schmidt / entanglement spectrum across the cut A | (rest). For a pure
+ * state the squared Schmidt coefficients are the eigenvalues of the
+ * reduced density matrix ρ_A. We diagonalise the smaller side (ρ_A and
+ * ρ_B share the same non-zero spectrum), so the cost is set by
+ * min(|A|, n−|A|); capped at `maxSide` qubits on that side.
+ */
+export function entanglementSpectrum(
+  state: Float64Array,
+  n: number,
+  subsetA: number[],
+  maxSide = 6,
+): SchmidtResult | null {
+  if (subsetA.length === 0 || subsetA.length >= n) return null;
+  const inA = new Set(subsetA);
+  const complement: number[] = [];
+  for (let q = 0; q < n; q++) if (!inA.has(q)) complement.push(q);
+  // Diagonalise whichever side is smaller.
+  const side = subsetA.length <= complement.length ? subsetA : complement;
+  if (side.length > maxSide) return null;
+  const rho = reducedDensityMatrix(state, n, side);
+  const spectrum = densityEigenvalues(rho);
+  let entropy = 0;
+  let rank = 0;
+  for (const p of spectrum) {
+    if (p > 1e-12) entropy -= p * Math.log2(p);
+    if (p > 1e-9) rank += 1;
+  }
+  return { spectrum, entropy, rank };
 }

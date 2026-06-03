@@ -274,6 +274,32 @@ collapse per prefix.
 
 ---
 
+## Entanglement spectrum
+
+Picks a bipartition A | (rest) and shows the **entanglement spectrum**
+across it — the squared Schmidt coefficients (the eigenvalues of ρ_A),
+sorted descending, as a bar chart — plus the bipartite von Neumann
+entropy S(ρ_A) in bits and the Schmidt rank.
+
+**When available.** Statevector path only; the smaller side of the cut
+is capped at 6 qubits (ρ_A and its complement share the same non-zero
+spectrum, so the smaller side is diagonalised).
+
+**Controls.**
+- **Cut selector** — checkboxes choose which qubits are in subset A.
+  Defaults to the first half of the register.
+
+**What you see.**
+- **Product across the cut**: one bar at 1, rank 1, S = 0.
+- **Maximally entangled cut**: a flat spectrum of 2^|A| equal bars,
+  S = |A| bits.
+- **Bell / GHZ across any cut**: two bars at 0.5, S = 1 bit.
+- The **decay** of the spectrum is the bond dimension a matrix-product
+  state would need to represent the cut faithfully — a fast read on how
+  "hard" the state is classically.
+
+---
+
 ## Hamiltonian → Trotter
 
 Paste a Pauli-sum Hamiltonian (e.g. `0.5 * X1 X2 + 0.3 * Z0`) and the
