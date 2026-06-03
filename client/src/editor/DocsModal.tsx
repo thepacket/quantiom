@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import panelsMd from "../../../docs/panels.md?raw";
 import tutorialMd from "../../../docs/tutorial.md?raw";
 import architectureMd from "../../../docs/architecture.md?raw";
+import qasmMd from "../../../docs/qasm.md?raw";
 
 /**
  * Docs modal — surfaces the repo's markdown documentation inside the app
@@ -19,6 +20,7 @@ const TABS: Tab[] = [
   { id: "tutorial", label: "Tutorial", content: tutorialMd },
   { id: "panels", label: "Panel reference", content: panelsMd },
   { id: "architecture", label: "Architecture", content: architectureMd },
+  { id: "qasm", label: "OpenQASM & export", content: qasmMd },
 ];
 
 export function DocsModal({ onClose, initialTab }: { onClose: () => void; initialTab?: string }) {

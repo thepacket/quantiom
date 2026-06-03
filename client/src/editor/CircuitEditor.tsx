@@ -348,6 +348,7 @@ function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
     { id: "tutorial", label: "Tutorial", hint: "hands-on Bell → VQE walkthrough" },
     { id: "panels", label: "Panel reference", hint: "what every right-side panel shows" },
     { id: "architecture", label: "Architecture", hint: "codebase map: where things live, how they connect" },
+    { id: "qasm", label: "OpenQASM & export", hint: "round-trip rules + the eight code emitters" },
   ];
   return (
     <span style={{ position: "relative" }} ref={wrapRef}>
