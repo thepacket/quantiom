@@ -22,6 +22,13 @@ function asciify(s: string): string {
 }
 
 function emitGate(g: PlacedGate): string[] {
+  // Braket has the IonQ native gates directly — emit them rather than the
+  // shared decomposition.
+  if (g.gateId === "gpi") return [`circuit.gpi(${g.targets[0]}, ${asciify(g.params[0] ?? "0")})`];
+  if (g.gateId === "gpi2") return [`circuit.gpi2(${g.targets[0]}, ${asciify(g.params[0] ?? "0")})`];
+  if (g.gateId === "ms") {
+    return [`circuit.ms(${g.targets[0]}, ${g.targets[1]}, ${asciify(g.params[0] ?? "0")}, ${asciify(g.params[1] ?? "0")}, ${asciify(g.params[2] ?? "0")})`];
+  }
   const lowered = exportLower(g);
   if (lowered) return lowered.flatMap(emitGate);
   const t = g.targets[0];

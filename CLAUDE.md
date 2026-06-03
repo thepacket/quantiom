@@ -47,11 +47,13 @@ host plus `/api/health`.
   - `expr.ts`: parameter expression evaluator. Greek glyphs map to
     ASCII names; `new Function` JIT-compiles the rest. Free variables
     become sliders in the Parameters panel.
-  - `matrices.ts`: numeric gate matrices for the 61-gate catalog plus
+  - `matrices.ts`: numeric gate matrices for the 64-gate catalog plus
     `controlled()` for n-controlled forms; includes `u_arb` (2×2) and
     `u_arb_2` (4×4) arbitrary unitaries, and the hardware-native /
     completeness set `M_R(θ,φ)` (equatorial-axis rotation), `M_FSIM`
-    (Google native), `M_SY`/`M_SYdg` (√Y), `M_SQRTSWAP`/`M_SQRTSWAPdg`.
+    (Google native), `M_SY`/`M_SYdg` (√Y), `M_SQRTSWAP`/`M_SQRTSWAPdg`,
+    and the IonQ native trio `M_GPI`/`M_GPI2`/`M_MS` (Braket emits these
+    natively; the others decompose via `exportLower`).
   - `qasm/exportLower.ts`: pre-emit lowering so the six SDK emitters
     export the gates without a native method as exact decompositions —
     `r(θ,φ)→Rz(−φ)·Rx(θ)·Rz(φ)`, `√Y→Ry(π/2)` (global phase dropped).

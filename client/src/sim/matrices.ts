@@ -100,6 +100,24 @@ export const M_RZ = (theta: number): Matrix => [
   [ZERO, expi(theta / 2)],
 ];
 
+// IonQ native single-qubit gates.
+// GPi(φ) = [[0, e^{−iφ}], [e^{iφ}, 0]] — a phased bit-flip (Hermitian ⇒
+// self-inverse). GPi(0) = X.
+export const M_GPI = (phi: number): Matrix => [
+  [ZERO, c(Math.cos(phi), -Math.sin(phi))],
+  [c(Math.cos(phi), Math.sin(phi)), ZERO],
+];
+
+// GPi2(φ) = (1/√2)[[1, −i e^{−iφ}], [−i e^{iφ}, 1]] = R(π/2, φ).
+export const M_GPI2 = (phi: number): Matrix => {
+  const r = SQRT1_2;
+  const sp = Math.sin(phi), cp = Math.cos(phi);
+  return [
+    [c(r, 0), c(-r * sp, -r * cp)],
+    [c(r * sp, -r * cp), c(r, 0)],
+  ];
+};
+
 // R(θ,φ) — rotation by θ about the equatorial axis at angle φ:
 // exp(−iθ/2 (cosφ·X + sinφ·Y)). R(θ,0)=RX(θ), R(θ,π/2)=RY(θ).
 export const M_R = (theta: number, phi: number): Matrix => {
@@ -245,6 +263,22 @@ export const M_FSIM = (theta: number, phi: number): Matrix => {
   ];
 };
 
+// Mølmer–Sørensen MS(φ₀,φ₁,θ) = exp(−iθ/2 · GPi(φ₀)⊗GPi(φ₁)) — IonQ's
+// native two-qubit entangler. MS(0,0,π/2) = RXX(π/2). Generalises RXX with
+// per-qubit drive phases.
+export const M_MS = (p0: number, p1: number, theta: number): Matrix => {
+  const cc = Math.cos(theta / 2);
+  const ss = Math.sin(theta / 2);
+  const sum = p0 + p1, dif = p0 - p1;
+  const cc0 = c(cc, 0);
+  return [
+    [cc0, ZERO, ZERO, c(-ss * Math.sin(sum), -ss * Math.cos(sum))],
+    [ZERO, cc0, c(-ss * Math.sin(dif), -ss * Math.cos(dif)), ZERO],
+    [ZERO, c(ss * Math.sin(dif), -ss * Math.cos(dif)), cc0, ZERO],
+    [c(ss * Math.sin(sum), -ss * Math.cos(sum)), ZERO, ZERO, cc0],
+  ];
+};
+
 export const M_XX_PLUS_YY = (theta: number, beta: number): Matrix => {
   const co = c(Math.cos(theta / 2));
   const si = Math.sin(theta / 2);
@@ -327,6 +361,8 @@ export function buildMatrix(
     case "ry": return M_RY(params[0]);
     case "rz": return M_RZ(params[0]);
     case "r": return M_R(params[0], params[1]);
+    case "gpi": return M_GPI(params[0]);
+    case "gpi2": return M_GPI2(params[0]);
     case "u": return M_U(params[0], params[1], params[2]);
     case "u1": return M_U1(params[0]);
     case "u2": return M_U2(params[0], params[1]);
@@ -357,6 +393,7 @@ export function buildMatrix(
     case "sqrtswapdg": return M_SQRTSWAPdg;
     // Two-qubit parameterized
     case "fsim": return M_FSIM(params[0], params[1]);
+    case "ms": return M_MS(params[0], params[1], params[2]);
     case "rxx": return M_RXX(params[0]);
     case "ryy": return M_RYY(params[0]);
     case "rzz": return M_RZZ(params[0]);

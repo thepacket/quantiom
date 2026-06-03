@@ -11,6 +11,8 @@ const def = (g: Partial<GateDef> & Pick<GateDef, "id" | "symbol" | "name" | "cat
 
 const theta = { name: "θ", default: "π/2" };
 const phi = { name: "φ", default: "0" };
+const phi0 = { name: "φ₀", default: "0" };
+const phi1 = { name: "φ₁", default: "0" };
 const lambda = { name: "λ", default: "π/2" };
 const gamma = { name: "γ", default: "0" };
 const beta = { name: "β", default: "π/4" };
@@ -57,6 +59,8 @@ export const GATES: GateDef[] = [
   def({ id: "ry", symbol: "RY", name: "Rotation Y", category: "phase-rotation", params: [theta], description: "Rotation by θ about Y." }),
   def({ id: "rz", symbol: "RZ", name: "Rotation Z", category: "phase-rotation", params: [theta], description: "Rotation by θ about Z." }),
   def({ id: "r", symbol: "R", name: "Rotation R(θ,φ)", category: "phase-rotation", params: [theta, phi], description: "Rotation by θ about the equatorial axis at angle φ: exp(−iθ/2 (cosφ·X + sinφ·Y)). R(θ,0)=RX, R(θ,π/2)=RY. The trapped-ion single-qubit primitive." }),
+  def({ id: "gpi", symbol: "GPi", name: "IonQ GPi(φ)", category: "phase-rotation", params: [phi], description: "IonQ native: phased bit-flip [[0,e^{−iφ}],[e^{iφ},0]]. GPi(0)=X. Hermitian (self-inverse). Equals R(π,φ) up to global phase." }),
+  def({ id: "gpi2", symbol: "GPi2", name: "IonQ GPi2(φ)", category: "phase-rotation", params: [phi], description: "IonQ native: π/2 phased rotation = R(π/2,φ). GPi2(0)=√X (= RX(π/2)). Inverse is GPi2(φ+π)." }),
 
   // ─── General U gates ───────────────────────────────────────────────────
   def({ id: "u", symbol: "U", name: "U(θ,φ,λ)", category: "general-u", params: [theta, phi, lambda], description: "Most general single-qubit unitary." }),
@@ -112,6 +116,7 @@ export const GATES: GateDef[] = [
   def({ id: "fsim", symbol: "fSim", name: "fSim(θ,φ)", category: "ising-native", numTargets: 2, params: [theta, phi], description: "Google native: XY rotation by θ + controlled-phase φ on |11⟩. Generalises iSWAP (θ=−π/2,φ=0) and CZ (θ=0,φ=π)." }),
   def({ id: "sqrtswap", symbol: "√SWAP", name: "√SWAP", category: "ising-native", numTargets: 2, description: "Square root of SWAP; squares to SWAP. A maximally-entangling-at-half partial swap (not Clifford)." }),
   def({ id: "sqrtswapdg", symbol: "√SWAP†", name: "√SWAP-dagger", category: "ising-native", numTargets: 2, description: "Inverse of √SWAP." }),
+  def({ id: "ms", symbol: "MS", name: "Mølmer–Sørensen MS(φ₀,φ₁,θ)", category: "ising-native", numTargets: 2, params: [phi0, phi1, theta], description: "IonQ native two-qubit entangler: exp(−iθ/2 · GPi(φ₀)⊗GPi(φ₁)). MS(0,0,π/2) = RXX(π/2). Decomposes to Rz·RXX·Rz." }),
 
   // ─── Three-qubit ───────────────────────────────────────────────────────
   def({ id: "ccx", symbol: "X", name: "Toffoli (CCX)", category: "three-qubit", numControls: 2, targetGlyph: "x-target", description: "Doubly-controlled X." }),

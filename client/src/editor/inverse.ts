@@ -30,6 +30,7 @@ const SELF_INVERSE = new Set([
   "ccx", "ccz", "cswap",
   "c3x", "c4x", "mcx",
   "rccx", "rcccx",
+  "gpi", // IonQ GPi is Hermitian ⇒ self-inverse
   "barrier",
 ]);
 
@@ -110,6 +111,17 @@ export function invertGate(g: PlacedGate): PlacedGate | null {
   if (g.gateId === "fsim") {
     // fSim(θ,φ)† = fSim(−θ, −φ).
     out.params = [negateExpr(g.params[0] ?? "0"), negateExpr(g.params[1] ?? "0")];
+    return out;
+  }
+  if (g.gateId === "ms") {
+    // MS(φ₀,φ₁,θ)† = MS(φ₀,φ₁,−θ).
+    out.params = [g.params[0] ?? "0", g.params[1] ?? "0", negateExpr(g.params[2] ?? "0")];
+    return out;
+  }
+  if (g.gateId === "gpi2") {
+    // GPi2(φ)† = GPi2(φ+π).
+    const p = (g.params[0] ?? "0").trim();
+    out.params = [p === "0" || p === "" ? "π" : `(${p}) + π`];
     return out;
   }
   // u_arb / u_arb_2 — would need conjugate transpose at sim time; not

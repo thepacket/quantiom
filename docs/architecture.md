@@ -133,7 +133,7 @@ sim/complex.ts          Complex-number helpers ([re, im] tuples for matrices)
 sim/expr.ts             Parameter expression evaluator (Greek glyphs ↔ ASCII,
                         JIT via new Function); free vars become Parameters
                         panel sliders
-sim/matrices.ts         Numeric gate matrices for the 61-gate catalog,
+sim/matrices.ts         Numeric gate matrices for the 64-gate catalog,
                         controlled() for n-controlled forms, u_arb / u_arb_2
                         for arbitrary 2×2 / 4×4 unitaries
 sim/apply.ts            Generic k-qubit gate application, O(d · 2ⁿ) per gate

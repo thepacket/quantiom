@@ -69,6 +69,33 @@ check("√SWAP² = SWAP", matEq(matmul(M("sqrtswap"), M("sqrtswap")), M("swap"))
 check("√SWAP† = dagger(√SWAP)", matEq(M("sqrtswapdg"), dagger(M("sqrtswap"))));
 check("√SWAP · √SWAP† = I₄", matEq(matmul(M("sqrtswap"), M("sqrtswapdg")), M("swap").map((_, i) => M("swap")[i].map((__, j) => (i === j ? [1, 0] : [0, 0]) as [number, number]))));
 
+// ── IonQ trio: GPi, GPi2, MS ────────────────────────────────────────
+check("GPi(0) = X", matEq(M("gpi", [0]), M("x")));
+check("GPi self-inverse (GPi² = I)", matEq(matmul(M("gpi", [0.9]), M("gpi", [0.9])), M("i")));
+check("GPi2(φ) = R(π/2, φ)", matEq(M("gpi2", [1.1]), M("r", [Math.PI / 2, 1.1])));
+check("GPi2(0) = RX(π/2)", matEq(M("gpi2", [0]), M("rx", [Math.PI / 2])));
+check("GPi2(φ)† = GPi2(φ+π)", matEq(dagger(M("gpi2", [0.7])), M("gpi2", [0.7 + Math.PI])));
+check("MS(0,0,π/2) = RXX(π/2)", matEq(M("ms", [0, 0, Math.PI / 2]), M("rxx", [Math.PI / 2])));
+check("MS unitary (MS·MS† = I₄)", matEq(matmul(M("ms", [0.4, 0.9, 1.3]), dagger(M("ms", [0.4, 0.9, 1.3]))), M("ms", [0, 0, 0])));
+check("MS(φ₀,φ₁,θ)† = MS(φ₀,φ₁,−θ)", matEq(dagger(M("ms", [0.4, 0.9, 1.3])), M("ms", [0.4, 0.9, -1.3])));
+// MS decomposition (Rz·RXX·Rz) matches the matrix.
+{
+  const p0 = 0.4, p1 = 0.9, th = 1.3;
+  const RzA = M("rz", [p0]), RzAi = M("rz", [-p0]);
+  // (Rz(φ₀)⊗Rz(φ₁)) RXX(θ) (Rz(−φ₀)⊗Rz(−φ₁)) — build the 4×4 tensors.
+  const kron = (A: Matrix, B: Matrix): Matrix => {
+    const out: [number, number][][] = [];
+    for (let i = 0; i < 4; i++) { const row: [number, number][] = []; for (let j = 0; j < 4; j++) {
+      const a = A[i >> 1][j >> 1], b = B[i & 1][j & 1];
+      row.push([a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]]);
+    } out.push(row); }
+    return out;
+  };
+  const L = kron(RzA, M("rz", [p1])), Li = kron(RzAi, M("rz", [-p1]));
+  const recon = matmul(matmul(L, M("rxx", [th])), Li);
+  check("MS decomposition Rz·RXX·Rz matches matrix", matEq(recon, M("ms", [p0, p1, th]), 1e-9));
+}
+
 // ── OpenQASM 3 round-trip ───────────────────────────────────────────
 let idc = 0;
 function gate(gateId: string, targets: number[], params: string[] = [], column = 0): PlacedGate {
@@ -84,6 +111,9 @@ function gate(gateId: string, targets: number[], params: string[] = [], column =
       gate("fsim", [0, 1], ["π/3", "π/5"], 2),
       gate("sqrtswap", [0, 1], [], 3),
       gate("sqrtswapdg", [0, 1], [], 4),
+      gate("gpi", [0], ["π/3"], 5),
+      gate("gpi2", [1], ["π/6"], 5),
+      gate("ms", [0, 1], ["0", "π/4", "π/2"], 6),
     ],
   };
   const qasm = emitQasm3(circuit);
@@ -93,8 +123,10 @@ function gate(gateId: string, targets: number[], params: string[] = [], column =
   } else {
     const ids = res.circuit.gates.map((g) => g.gateId);
     check("QASM round-trip: all gate ids preserved",
-      ["sy", "sydg", "r", "fsim", "sqrtswap", "sqrtswapdg"].every((id) => ids.includes(id)),
+      ["sy", "sydg", "r", "fsim", "sqrtswap", "sqrtswapdg", "gpi", "gpi2", "ms"].every((id) => ids.includes(id)),
       ids.join(","));
+    const ms = res.circuit.gates.find((g) => g.gateId === "ms")!;
+    check("QASM round-trip: ms 3 params preserved", ms.params.length === 3, JSON.stringify(ms.params));
     const r = res.circuit.gates.find((g) => g.gateId === "r")!;
     check("QASM round-trip: r params preserved", r.params.length === 2 && r.params[1] === "π/4", JSON.stringify(r.params));
     const f = res.circuit.gates.find((g) => g.gateId === "fsim")!;
@@ -116,6 +148,11 @@ function gate(gateId: string, targets: number[], params: string[] = [], column =
   check("√Y† inverse → √Y", inv(gate("sydg", [0])).gateId === "sy");
   check("√Y inverse → √Y†", inv(gate("sy", [0])).gateId === "sydg");
   check("√SWAP inverse → √SWAP†", inv(gate("sqrtswap", [0, 1])).gateId === "sqrtswapdg");
+  check("GPi self-inverse (same gate)", inv(gate("gpi", [0], ["0.7"])).gateId === "gpi" && inv(gate("gpi", [0], ["0.7"])).params[0] === "0.7");
+  const g2 = inv(gate("gpi2", [0], ["0.7"]));
+  check("GPi2(φ)† = GPi2(φ+π)", g2.gateId === "gpi2" && g2.params[0] === "(0.7) + π", JSON.stringify(g2.params));
+  const ms = inv(gate("ms", [0, 1], ["0.4", "0.9", "1.3"]));
+  check("MS(φ₀,φ₁,θ)† = MS(φ₀,φ₁,−θ)", ms.gateId === "ms" && ms.params[0] === "0.4" && ms.params[2] === "-(1.3)", JSON.stringify(ms.params));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

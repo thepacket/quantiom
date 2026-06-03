@@ -7,6 +7,9 @@
  *   r(θ,φ)  = Rz(−φ)·Rx(θ)·Rz(φ)         (exact)
  *   √Y      = Ry(π/2)                     (exact up to a global phase e^{iπ/4})
  *   √Y†     = Ry(−π/2)                    (exact up to a global phase)
+ *   gpi(φ)  = R(π, φ)                     (exact up to a global phase)
+ *   gpi2(φ) = R(π/2, φ)                   (exact)
+ *   ms(φ₀,φ₁,θ) = Rz(φ₀)⊗Rz(φ₁) · RXX(θ) · Rz(−φ₀)⊗Rz(−φ₁)   (exact)
  *
  * The √Y global phase is unobservable for an uncontrolled gate, so dropping
  * it is standard practice for export. Gates with no good decomposition
@@ -24,17 +27,21 @@ function neg(expr: string): string {
   return `-(${t})`;
 }
 
-function single(g: PlacedGate, gateId: string, params: string[]): PlacedGate {
+function make(g: PlacedGate, gateId: string, targets: number[], params: string[]): PlacedGate {
   return {
     id: newGateId(),
     gateId: gateId as PlacedGate["gateId"],
     column: g.column,
     controls: [],
-    targets: [...g.targets],
+    targets,
     clbits: [],
     params,
     condition: g.condition ? { ...g.condition } : undefined,
   };
+}
+
+function single(g: PlacedGate, gateId: string, params: string[]): PlacedGate {
+  return make(g, gateId, [...g.targets], params);
 }
 
 export function exportLower(g: PlacedGate): PlacedGate[] | null {
@@ -55,6 +62,25 @@ export function exportLower(g: PlacedGate): PlacedGate[] | null {
       return [single(g, "ry", ["π/2"])];
     case "sydg":
       return [single(g, "ry", ["-π/2"])];
+    case "gpi":
+      // GPi(φ) = R(π, φ) up to global phase.
+      return [single(g, "r", ["π", g.params[0] ?? "0"])];
+    case "gpi2":
+      // GPi2(φ) = R(π/2, φ) exactly.
+      return [single(g, "r", ["π/2", g.params[0] ?? "0"])];
+    case "ms": {
+      // MS(φ₀,φ₁,θ) = (Rz(φ₀)⊗Rz(φ₁)) RXX(θ) (Rz(−φ₀)⊗Rz(−φ₁)).
+      const [p0, p1, th] = [g.params[0] ?? "0", g.params[1] ?? "0", g.params[2] ?? "0"];
+      const a = g.targets[0], b = g.targets[1];
+      if (a === undefined || b === undefined) return null;
+      return [
+        make(g, "rz", [a], [neg(p0)]),
+        make(g, "rz", [b], [neg(p1)]),
+        make(g, "rxx", [a, b], [th]),
+        make(g, "rz", [a], [p0]),
+        make(g, "rz", [b], [p1]),
+      ];
+    }
     default:
       return null;
   }
