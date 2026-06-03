@@ -69,6 +69,11 @@ import { WignerPanel } from "../panels/WignerPanel";
 import { MagicPanel } from "../panels/MagicPanel";
 import { NegativityPanel } from "../panels/NegativityPanel";
 import { LoschmidtPanel } from "../panels/LoschmidtPanel";
+import { PTMPanel } from "../panels/PTMPanel";
+import { BlochTrajectoryPanel } from "../panels/BlochTrajectoryPanel";
+import { OtocPanel } from "../panels/OtocPanel";
+import { HamSpectrumPanel } from "../panels/HamSpectrumPanel";
+import { TannerPanel } from "../panels/TannerPanel";
 import { LightConePanel, type ConeDir } from "../panels/LightConePanel";
 import { computeLightCone } from "./lightcone";
 import { NoisePanel } from "../panels/NoisePanel";
@@ -1128,6 +1133,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="unitary-heatmap">
           <UnitaryHeatmapPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="ptm">
+          <PTMPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="mutual-info"><MutualInfoPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="negativity"><NegativityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="schmidt"><SchmidtPanel state={simState} /></ErrorBoundary>
@@ -1148,7 +1156,14 @@ export function CircuitEditor() {
         <ErrorBoundary label="loschmidt">
           <LoschmidtPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="bloch-trajectory">
+          <BlochTrajectoryPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="otoc">
+          <OtocPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="interaction-graph"><InteractionGraphPanel circuit={circuit} /></ErrorBoundary>
+        <ErrorBoundary label="tanner"><TannerPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="light-cone">
           <LightConePanel numQubits={circuit.numQubits} target={coneTarget} dir={coneDir} onTarget={setConeTarget} onDir={setConeDir} />
         </ErrorBoundary>
@@ -1187,6 +1202,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="hamiltonian">
           <HamiltonianPanel onLoadInNewTab={(c, n) => t.newTab(c, n)} />
         </ErrorBoundary>
+        <ErrorBoundary label="ham-spectrum"><HamSpectrumPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>

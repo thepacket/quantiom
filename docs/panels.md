@@ -305,6 +305,66 @@ per-basis output columns but flags that they aren't a true unitary.
 
 ---
 
+## Pauli transfer matrix
+
+The circuit unitary's action in the (normalised) Pauli basis:
+R_{ij} = (1/2ⁿ)Tr(P_i·U P_j U†), a 4ⁿ×4ⁿ real heatmap with rows/columns
+labelled by Pauli strings (II, IX, …) and entries in [−1, 1] (blue +1,
+warm −1). This is the "what does the gate do to each Pauli" view — the
+Pauli-basis sibling of the unitary heatmap and the χ-matrix.
+
+**When available.** Capped at 3 qubits (64×64). Measurement / reset are
+flagged: the matrix shown is the unitary part only.
+
+**What you see.**
+- **Clifford gates** (H, S, CNOT, …): a *signed permutation* — exactly
+  one ±1 per row and column, since a Clifford maps every Pauli to ±another
+  Pauli. H shows X↔Z and Y→−Y; S shows X→Y, Y→−X.
+- **Non-Clifford gates** (T, arbitrary rotations): off-axis weight — e.g.
+  a T rotates within the X–Y block, smearing those entries.
+- The (I,I) corner is always 1 (any unitary preserves the identity).
+
+---
+
+## Bloch trajectory
+
+The full 3-D path each qubit's Bloch vector traces as the `t` clock
+sweeps one period, drawn on the same axonometric sphere as the Bloch
+panel (green dot = start, warm dot = end). Where the t-sweep panel shows
+only ⟨Z⟩(t), this shows the whole curve.
+
+**When available.** Only with a free `t` symbol; statevector path,
+capped at 12 qubits.
+
+**What you see.**
+- A single-axis drive (`rx(t)`): a flat great circle.
+- An off-axis or two-frequency drive: a tilted loop or a Lissajous-like
+  figure that doesn't close on itself.
+- A qubit getting entangled as `t` advances: the vector spirals *inward*
+  (its Bloch length shrinks as it mixes with the rest).
+
+---
+
+## OTOC (scrambling)
+
+The out-of-time-order correlator C(t) = 1 − Re⟨W(t)·V·W(t)·V⟩ over the
+`t` clock, with W = Z on a "butterfly" qubit and V = Z on a "measure"
+qubit (both selectable), evaluated on |0…0⟩. C(t) ≈ 0 while W(t) and V
+still commute and **rises toward 1 as the operator front reaches the
+measure qubit** — the standard diagnostic of information scrambling. The
+rise time over the qubit separation is the butterfly velocity.
+
+**When available.** Only with a free `t` symbol; statevector path. Builds
+the dense unitary at each sample, so capped at 6 qubits.
+
+**What you see.**
+- A circuit with no path between W and V: C(t) stays flat at 0.
+- A coupled chain (`rzz(t)` ladder, kicked-Ising): C(t) stays ~0 until
+  the front arrives, then climbs — pick W and V far apart to see the
+  delay, adjacent to see it rise immediately.
+
+---
+
 ## Mutual information
 
 The entanglement *topology* of the state, as an n×n heatmap. Each
@@ -579,6 +639,28 @@ is cleared on tab switch.
 
 ---
 
+## Tanner / check graph
+
+The bipartite graph a decoder consumes, derived from the circuit's
+measurement structure: round (data) qubits along the top, measurement
+**checks** along the bottom, an edge wherever a qubit lies in that
+measurement's causal support (the backward light cone of the measured
+qubit). Each check's support = the effective stabilizer it reads out.
+
+**When available.** Any circuit with measurements (purely structural —
+reuses the causal-cone computation, no simulation). A circuit without
+measurements says so.
+
+**What you see.**
+- **Repetition code**: weight-2 checks (each parity check touches two
+  neighbouring data qubits).
+- **Surface-code plaquette**: weight-4 checks.
+- Hover a check to see its support set; the max weight is reported above
+  the graph. Read it next to the Syndrome panel (which *samples* these
+  checks) to connect structure to outcomes.
+
+---
+
 ## Interaction graph
 
 A node-link graph of the circuit's **logical** connectivity: qubits are
@@ -630,6 +712,30 @@ Parameters panel of the new tab to watch the dynamics.
 **Tip.** Use Plateau diagnostic on the resulting circuit to see how
 Trotter depth affects trainability — it's a quick way to feel the
 trade-off between time horizon and expressibility.
+
+---
+
+## Hamiltonian spectrum
+
+The exact eigenvalue spectrum of a Pauli-sum Hamiltonian H = Σ h_k P_k —
+the *target* a VQE run is reaching for. Enter H with the same grammar as
+the Hamiltonian → Trotter panel (presets for TFIM, Heisenberg, H₂, a
+single spin in a field); the panel diagonalises the dense 2ⁿ×2ⁿ matrix
+and draws every energy level, the ground energy **E₀**, and the spectral
+**gap** (which sets how hard the optimisation landscape is). If the live
+circuit has the same qubit count, its **⟨H⟩** is overlaid as a dashed
+line so you can see where the prepared state sits in the spectrum — drag
+a VQE ansatz's parameters and watch ⟨H⟩ descend toward E₀.
+
+**When available.** On demand; diagonalisation capped at 6 qubits.
+
+**What you see.**
+- A TFIM at its critical field: a small gap above a near-degenerate
+  ground manifold.
+- The Heisenberg dimer: a singlet ground state at −3 with a threefold
+  triplet at +1.
+- A VQE ansatz's ⟨H⟩ line sitting just above E₀ once optimised — the
+  variational gap made visual.
 
 ---
 

@@ -189,6 +189,19 @@ host plus `/api/health`.
     variant in `entanglement.ts`).
   - `loschmidt.ts`: `loschmidtEcho` — return probability L(t) +
     DQPT rate function over the `t` clock.
+  - `pauliMatrix.ts`: `pauliSparse(n, str)` — Pauli string as a
+    signed/phased permutation (one entry per column). Shared by PTM +
+    Hamiltonian spectrum. `ptm.ts`: `pauliTransferMatrix` — the 4ⁿ×4ⁿ
+    real PTM R_{ij}=(1/2ⁿ)Tr(P_i U P_j U†) from the dense unitary
+    (n ≤ 3). `hamSpectrum.ts`: `hamiltonianSpectrum(terms, n)` — exact
+    eigenvalues of a Pauli-sum H via the real-symmetric embedding
+    (n ≤ 6); reuses the trotter `parsePauliSum`.
+  - `blochPath.ts`: `blochTrajectories` — per-qubit 3-D Bloch path over
+    one `t` period. `otoc.ts`: `otoc` — out-of-time-order correlator
+    C(t)=1−Re⟨W(t)V W(t)V⟩ on |0…0⟩, dense-unitary per sample (n ≤ 6).
+  - `tanner.ts`: `tannerGraph` — bipartite check graph; each measurement
+    is a check whose support is the backward causal cone of the measured
+    qubit (reuses `editor/lightcone.computeLightCone`).
   - `webgpuTraj.ts`: WebGPU foundation. `getWebGPUDevice()` (cached),
     `isWebGPUAvailable()`, `webGPUAdapterInfo()` for the UI status
     chip. `tryRunWebGPUTrajectories(circuit, params, customGates,
@@ -264,9 +277,14 @@ host plus `/api/health`.
     `MagicPanel` (stabilizer-Rényi M₂ + Pauli-weight bars, n ≤ 6),
     `NegativityPanel` (pairwise log-negativity — genuine entanglement,
     vs MI's classical+quantum), `LoschmidtPanel` (return probability +
-    DQPT rate function over `t`), `LightConePanel` (causal-cone
-    selector → canvas dimming via `CircuitCanvas` coneIds prop). The
-    statevector-only ones show a notice under Clifford / noise mode.
+    DQPT rate function over `t`), `PTMPanel` (Pauli transfer matrix,
+    n ≤ 3), `BlochTrajectoryPanel` (per-qubit Bloch path over `t`),
+    `OtocPanel` (out-of-time-order correlator / scrambling, n ≤ 6),
+    `HamSpectrumPanel` (exact Pauli-sum eigenvalues + ⟨H⟩ overlay),
+    `TannerPanel` (measurement check graph), `LightConePanel`
+    (causal-cone selector → canvas dimming via `CircuitCanvas` coneIds
+    prop). The statevector-only ones show a notice under Clifford /
+    noise mode.
   - `CouplingMapView.tsx`: shared SVG render of an adjacency list as
     a node-link graph (circular layout ≤ 24 qubits, grid above).
 - `server/` — FastAPI shell: `/api/health` + static-file mount.

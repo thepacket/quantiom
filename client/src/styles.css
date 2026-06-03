@@ -782,3 +782,68 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .loschmidt__swatch { width: 12px; height: 0; border-top-width: 2px; border-top-style: solid; display: inline-block; }
 .loschmidt__swatch--echo { border-top-color: var(--accent-2); }
 .loschmidt__swatch--rate { border-top-style: dashed; border-top-color: #ff9a5a; }
+
+/* ─── Pauli transfer matrix ────────────────────────────────────────── */
+.ptm { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.ptm__note { font-size: 10px; color: var(--muted); }
+.ptm__svg { display: block; }
+.ptm__bg { fill: var(--bg-2); }
+.ptm__axis { fill: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
+.ptm__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+.ptm__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.ptm__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.ptm__swatch--zero { background: var(--bg-2); border: 1px solid var(--border); }
+
+/* ─── Bloch trajectory ─────────────────────────────────────────────── */
+.blochtraj__path { stroke: var(--accent-2); stroke-width: 1.4; opacity: 0.9; }
+.blochtraj__start { fill: #7ee787; }
+.blochtraj__end { fill: #ff7a5a; }
+
+/* ─── OTOC ─────────────────────────────────────────────────────────── */
+.otoc { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.otoc__controls { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); align-items: center; }
+.otoc__controls label { display: inline-flex; align-items: center; gap: 4px; }
+.otoc__controls select { font-size: 10px; }
+.otoc__stats { font-size: 11px; color: var(--muted); }
+.otoc__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.otoc__svg { display: block; }
+.otoc__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.otoc__grid { stroke: var(--border); stroke-width: 1; }
+.otoc__line { stroke: var(--accent-2); stroke-width: 1.6; }
+.otoc__note { font-size: 10px; color: var(--muted); opacity: 0.85; }
+
+/* ─── Hamiltonian spectrum ─────────────────────────────────────────── */
+.hamspec { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.hamspec__presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.hamspec__preset { font-size: 9px; padding: 1px 5px; color: var(--muted); }
+.hamspec__input { width: 100%; box-sizing: border-box; font-family: var(--mono, monospace); font-size: 11px; resize: vertical; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 4px; }
+.hamspec__out { display: flex; flex-direction: column; gap: 4px; }
+.hamspec__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.hamspec__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.hamspec__svg { display: block; }
+.hamspec__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.hamspec__axis-line { stroke: var(--border); stroke-width: 1; }
+.hamspec__level { stroke: var(--accent-2); stroke-width: 1.2; }
+.hamspec__level--ground { stroke: #7ee787; stroke-width: 2; }
+.hamspec__exp { stroke: #ffd24f; stroke-width: 1; stroke-dasharray: 4 2; }
+.hamspec__exp-label { fill: #ffd24f; font-size: 9px; }
+.hamspec__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+.hamspec__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.hamspec__swatch { width: 12px; height: 0; border-top-width: 2px; border-top-style: solid; display: inline-block; }
+.hamspec__swatch--ground { border-top-color: #7ee787; }
+.hamspec__swatch--exp { border-top-style: dashed; border-top-color: #ffd24f; }
+
+/* ─── Tanner / check graph ─────────────────────────────────────────── */
+.tanner { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.tanner__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.tanner__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.tanner__svg { display: block; margin: 0 auto; }
+.tanner__edge { stroke: var(--accent-2); stroke-width: 1; opacity: 0.5; }
+.tanner__data { fill: var(--bg-2); stroke: var(--accent); stroke-width: 1.2; }
+.tanner__check { fill: var(--bg-2); stroke: var(--accent-2); stroke-width: 1.2; }
+.tanner__label { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.tanner__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+.tanner__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.tanner__swatch { width: 10px; height: 10px; display: inline-block; }
+.tanner__swatch--data { border-radius: 50%; border: 1.5px solid var(--accent); }
+.tanner__swatch--check { border: 1.5px solid var(--accent-2); }
