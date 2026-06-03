@@ -59,6 +59,12 @@ import { SpaceTimePanel } from "../panels/SpaceTimePanel";
 import { SchmidtPanel } from "../panels/SchmidtPanel";
 import { CorrelationPanel } from "../panels/CorrelationPanel";
 import { TSweepPanel } from "../panels/TSweepPanel";
+import { EntropyProfilePanel } from "../panels/EntropyProfilePanel";
+import { SpaceTimeEntropyPanel } from "../panels/SpaceTimeEntropyPanel";
+import { AmplitudePhasePanel } from "../panels/AmplitudePhasePanel";
+import { UnitaryHeatmapPanel } from "../panels/UnitaryHeatmapPanel";
+import { InteractionGraphPanel } from "../panels/InteractionGraphPanel";
+import { TSweepFFTPanel } from "../panels/TSweepFFTPanel";
 import { LightConePanel, type ConeDir } from "../panels/LightConePanel";
 import { computeLightCone } from "./lightcone";
 import { NoisePanel } from "../panels/NoisePanel";
@@ -1099,6 +1105,7 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} gpuBlochVectors={gpuBloch} /></ErrorBoundary>
         <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="amp-phase"><AmplitudePhasePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="expectation">
           <ExpectationPanel
             state={simState}
@@ -1112,15 +1119,26 @@ export function CircuitEditor() {
           />
         </ErrorBoundary>
         <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="unitary-heatmap">
+          <UnitaryHeatmapPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="mutual-info"><MutualInfoPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="schmidt"><SchmidtPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="entropy-profile"><EntropyProfilePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="correlations"><CorrelationPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="space-time">
           <SpaceTimePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="space-time-entropy">
+          <SpaceTimeEntropyPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="t-sweep">
           <TSweepPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="t-sweep-fft">
+          <TSweepFFTPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="interaction-graph"><InteractionGraphPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="light-cone">
           <LightConePanel numQubits={circuit.numQubits} target={coneTarget} dir={coneDir} onTarget={setConeTarget} onDir={setConeDir} />
         </ErrorBoundary>

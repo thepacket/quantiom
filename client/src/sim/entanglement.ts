@@ -122,6 +122,54 @@ export function mutualInformationMatrix(
   return { mi, single };
 }
 
+export type EntropyProfileResult = {
+  /** entropy[k] = S(ρ_{[0..k]}) for the contiguous cut after qubit k, in
+   *  bits; length n−1 (k = 0 … n−2). cut k separates {0..k} | {k+1..n−1}. */
+  entropy: number[];
+  /** Page-curve bound at each cut: min(|A|, |B|) bits. Same length. */
+  maxEntropy: number[];
+};
+
+/**
+ * Entanglement-entropy profile across every contiguous bipartition. For a
+ * pure state this is S(ρ_{[0..k]}) as a function of the cut position k —
+ * the standard area-law vs volume-law diagnostic. A product state is flat
+ * at zero; a ground state of a gapped local Hamiltonian saturates (area
+ * law); a thermalised / volume-law state traces the symmetric Page arch
+ * peaking at the middle cut.
+ *
+ * Cost: one reduced-DM diagonalisation per cut, each capped by the smaller
+ * side. We diagonalise whichever side of the cut is smaller and skip any
+ * cut whose smaller side exceeds `maxSide`, leaving its entry NaN so the
+ * panel can render a gap. Statevector path only.
+ */
+export function entropyProfile(
+  state: Float64Array,
+  n: number,
+  maxSide = 8,
+): EntropyProfileResult | null {
+  if (n < 2) return null;
+  const entropy = new Array<number>(n - 1).fill(NaN);
+  const maxEntropy = new Array<number>(n - 1).fill(0);
+  for (let k = 0; k < n - 1; k++) {
+    const sizeA = k + 1;
+    const sizeB = n - sizeA;
+    maxEntropy[k] = Math.min(sizeA, sizeB);
+    // Diagonalise the smaller side; ρ_A and ρ_B share the non-zero spectrum.
+    const side =
+      sizeA <= sizeB
+        ? Array.from({ length: sizeA }, (_, q) => q)
+        : Array.from({ length: sizeB }, (_, q) => sizeA + q);
+    if (side.length > maxSide) continue;
+    let s = 0;
+    for (const p of densityEigenvalues(reducedDensityMatrix(state, n, side))) {
+      if (p > 1e-12) s -= p * Math.log2(p);
+    }
+    entropy[k] = s;
+  }
+  return { entropy, maxEntropy };
+}
+
 export type SchmidtResult = {
   /** Entanglement spectrum: the squared Schmidt coefficients (eigenvalues
    *  of ρ_A), sorted descending and summing to 1. */

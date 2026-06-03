@@ -131,6 +131,29 @@ that's tedious to read from numbers.
 
 ---
 
+## Amplitude · phase
+
+One bar per computational basis state: **height** is the amplitude
+magnitude |⟨x|ψ⟩|, **hue** is its phase arg⟨x|ψ⟩ (mapped around the
+colour wheel, −π … +π shown in the legend). This is the only view that
+exposes the *full-state* phase — the Bloch and Phase-disk panels only
+show per-qubit phase, and the Statevector table shows raw numbers.
+
+**When available.** Statevector path only (not in Clifford or noise
+mode). When 2ⁿ exceeds 64 bars, the largest-magnitude basis states are
+shown (in index order) and a note reports the truncation.
+
+**What you see.**
+- **Equal superposition** (Hadamards): all bars the same height, all
+  the same hue (phase 0).
+- **Grover after the oracle**: the marked state's bar flips to the
+  opposite hue (the π sign flip) while magnitudes stay equal — the
+  interference the diffuser then amplifies.
+- **QFT / phase kickback**: a staircase of hues across the basis states
+  as the Fourier phases wind, with magnitudes flat.
+
+---
+
 ## Expectation ⟨P⟩
 
 The Pauli-string expectation calculator. Pick a Pauli on each qubit
@@ -211,6 +234,30 @@ large circuits. The panel guards against larger subsets with a notice.
 
 ---
 
+## Unitary heatmap
+
+The circuit's full 2ⁿ × 2ⁿ operator in the computational basis, drawn
+as a grid where each cell's **brightness** is |U[i,j]| and its **hue**
+is arg(U[i,j]). Built column by column (input |j⟩ → output column j),
+the same construction the Equivalence checker uses. This is the
+operator itself, in the standard basis — distinct from the Tomography
+panel's χ-matrix (the process matrix in the Pauli basis).
+
+**When available.** Capped at 6 qubits (64×64). A circuit with
+measurement / reset is no longer a unitary; the panel still renders the
+per-basis output columns but flags that they aren't a true unitary.
+
+**What you see.**
+- **Permutations** (X, SWAP, Toffoli): exactly one lit cell per row and
+  column, all the same hue — the operator just relabels basis states.
+- **Controlled gates**: a block-diagonal structure, the identity block
+  on the control-0 subspace and the gate on the control-1 subspace.
+- **QFT**: uniform brightness everywhere (every |U[i,j]| = 2^(−n/2))
+  with a phase staircase in the hue — the cleanest possible picture of
+  what the Fourier transform *is*.
+
+---
+
 ## Mutual information
 
 The entanglement *topology* of the state, as an n×n heatmap. Each
@@ -274,6 +321,31 @@ collapse per prefix.
 
 ---
 
+## Space–time entropy
+
+The companion to Space–time ⟨Z⟩: same qubits × columns grid, but the
+cell intensity is the single-qubit entanglement entropy S(ρ_q) after
+that column — dark for a pure (disentangled) qubit, bright for a
+maximally-mixed one (S = 1 bit, maximally entangled with the rest). It
+shows *where and when* entanglement grows, which the magnetisation map
+can't.
+
+**When available.** Statevector path; capped at 12 qubits × 80 columns.
+One full simulation plus one 2×2 reduced density matrix per (qubit,
+column), so it's opt-in (default-collapsed).
+
+**What you see.**
+- **Bell / GHZ prep**: the cells light up at the column where the
+  entangling CX acts — instantly, not gradually.
+- **Trotterised chain**: an entanglement front of rising entropy
+  spreading along a light cone from the initial excitations.
+- **Uncomputation tail**: entropy that rose then fades back to dark as
+  a sub-circuit disentangles its ancillas.
+- **Single-qubit-only circuit**: stays dark everywhere — no
+  entanglement is ever created.
+
+---
+
 ## Entanglement spectrum
 
 Picks a bipartition A | (rest) and shows the **entanglement spectrum**
@@ -297,6 +369,29 @@ spectrum, so the smaller side is diagonalised).
 - The **decay** of the spectrum is the bond dimension a matrix-product
   state would need to represent the cut faithfully — a fast read on how
   "hard" the state is classically.
+
+---
+
+## Entropy profile
+
+Plots the bipartite entanglement entropy S(ρ_{[0..k]}) for **every
+contiguous cut** k against the cut position — the area-law vs
+volume-law diagnostic. Where the Entanglement-spectrum panel inspects
+one cut in detail, this scans all of them at once. The dashed line is
+the per-cut maximum min(|A|, |B|) bits.
+
+**When available.** Statevector path only; the smaller side of each cut
+is diagonalised, capped at 8 qubits there (cuts past the cap are left
+as gaps).
+
+**What you see.**
+- **Product state**: flat at zero — no entanglement across any cut.
+- **GHZ**: flat at exactly 1 bit for every cut (one shared bit
+  regardless of where you cut).
+- **Gapped ground state** (area law): rises a little near the edges
+  then saturates — entropy set by the boundary, not the volume.
+- **Thermalised / volume-law state**: the symmetric **Page arch**,
+  peaking at the central cut where |A| = |B|.
 
 ---
 
@@ -347,6 +442,29 @@ Bloch ⟨Z⟩ each time. Opt-in (default-collapsed).
 
 ---
 
+## t-sweep spectrum
+
+The Fourier transform of the t-sweep traces. Runs a real DFT of each
+qubit's ⟨Z_q⟩(t) over one *periodic* period of the `t` clock and plots
+the amplitude at each integer frequency bin (oscillations per period),
+so the dominant Rabi / Larmor / Floquet frequencies show up as peaks
+instead of being read off a wiggling line by eye. Bins are normalised
+so a unit-amplitude cosine reads 1 at its bin; the DC bin
+(time-average) is omitted from the plot.
+
+**When available.** Only with a free `t` symbol; statevector path,
+capped at 14 qubits. Samples 128 points (so up to bin 64 is resolved;
+the first 16 bins are shown).
+
+**What you see.**
+- `rx(t)` / `ry(t)` on a qubit: a single peak at **bin 1** (one
+  oscillation per period).
+- A doubled-frequency drive (`rx(2*t)`): the peak moves to **bin 2**.
+- **Beats / multi-frequency cascades**: several peaks whose spacing is
+  the beat structure you'd otherwise have to infer from the time trace.
+
+---
+
 ## Causal cone
 
 A structural (no-simulation) view drawn on the **circuit canvas**, not a
@@ -369,6 +487,30 @@ that matters.
 
 Computed by one pass over the gate list (markers excluded); the cone
 is cleared on tab switch.
+
+---
+
+## Interaction graph
+
+A node-link graph of the circuit's **logical** connectivity: qubits are
+nodes, and an edge between i and j is drawn whenever a multi-qubit gate
+acts on both, with thickness scaled by how many times. This is what the
+circuit *wants* in terms of connectivity, independent of any hardware
+coupling map — compare it against the coupling-map view in the Noise
+panel to gauge how much routing (SWAP insertion) a device will need.
+
+**When available.** Any circuit; pure topology (no simulation), capped
+at 24 qubits for a readable circular layout. A circuit with no
+multi-qubit gates reports that every qubit is isolated.
+
+**What you see.**
+- **Bell circuit**: a single edge.
+- **1-D Trotter chain**: only nearest-neighbour edges — already matches
+  a linear coupling map, so little routing is needed.
+- **Fully-connected ansatz / QFT**: the complete graph — expensive to
+  route onto heavy-hex or linear hardware.
+- Edge **thickness** flags the hot pairs that dominate the two-qubit
+  gate budget.
 
 ---
 

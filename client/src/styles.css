@@ -688,3 +688,57 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .lightcone__q { padding: 1px 6px; color: var(--muted); }
 .lightcone__q--on { color: var(--accent); border-color: var(--accent-2); }
 .lightcone__clear { padding: 1px 6px; color: var(--muted); }
+
+/* ─── Entanglement-entropy profile ─────────────────────────────────── */
+.entprof { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.entprof__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.entprof__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.entprof__svg { display: block; }
+.entprof__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.entprof__grid { stroke: var(--border); stroke-width: 1; }
+.entprof__line { stroke: var(--accent-2); stroke-width: 1.6; }
+.entprof__dot { fill: var(--accent-2); }
+.entprof__bound { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 3 3; }
+.entprof__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+.entprof__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.entprof__swatch { width: 12px; height: 0; border-top-width: 2px; border-top-style: solid; display: inline-block; }
+.entprof__swatch--line { border-top-color: var(--accent-2); }
+.entprof__swatch--bound { border-top-style: dashed; border-top-color: var(--border-strong); }
+
+/* ─── Amplitude · phase plot ───────────────────────────────────────── */
+.ampphase { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; overflow-x: auto; }
+.ampphase__svg { display: block; }
+.ampphase__axis { fill: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
+.ampphase__axis-line { stroke: var(--border); stroke-width: 1; }
+.ampphase__legend { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--muted); }
+.ampphase__hue { flex: 1; height: 8px; border-radius: 2px; min-width: 80px;
+  background: linear-gradient(to right,
+    hsl(0,70%,58%), hsl(60,70%,58%), hsl(120,70%,58%),
+    hsl(180,70%,58%), hsl(240,70%,58%), hsl(300,70%,58%), hsl(360,70%,58%)); }
+.ampphase__more { font-size: 10px; color: var(--muted); }
+
+/* ─── Unitary heatmap ──────────────────────────────────────────────── */
+.unimap { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.unimap__svg { display: block; border: 1px solid var(--border); border-radius: 3px; }
+.unimap__bg { fill: var(--bg-2); }
+.unimap__note { font-size: 10px; color: var(--muted); }
+.unimap__legend { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--muted); }
+
+/* ─── Logical interaction graph ────────────────────────────────────── */
+.intgraph { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.intgraph__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.intgraph__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.intgraph__svg { display: block; margin: 0 auto; border: 1px solid var(--border); border-radius: 3px; }
+.intgraph__edge { stroke: var(--accent-2); }
+.intgraph__node { fill: var(--bg-2); stroke: var(--accent); stroke-width: 1.2; }
+.intgraph__label { fill: var(--fg); font-size: 9px; font-variant-numeric: tabular-nums; pointer-events: none; }
+
+/* ─── t-sweep Fourier spectrum ─────────────────────────────────────── */
+.tsweepfft { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.tsweepfft__svg { display: block; }
+.tsweepfft__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.tsweepfft__grid { stroke: var(--border); stroke-width: 1; }
+.tsweepfft__legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 10px; color: var(--muted); align-items: center; }
+.tsweepfft__legend span { display: inline-flex; align-items: center; gap: 3px; }
+.tsweepfft__swatch { width: 10px; height: 8px; border-radius: 1px; display: inline-block; }
+.tsweepfft__note { color: var(--muted); opacity: 0.8; }

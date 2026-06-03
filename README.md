@@ -31,9 +31,11 @@ depolarising support set, and the Optimise / Landscape / Plateau / ZNE
 loops route each noisy evaluation through it too (CPU fallback when the
 circuit doesn't fit). A column of **entanglement & dynamics
 visualisers** — mutual-information map, entanglement spectrum across a
-cut, ZZ correlations, a space–time ⟨Z⟩ diagram, t-sweep traces, and a
-causal-cone canvas overlay — sits alongside the statevector / Bloch /
-probability panels. An **AI chat panel
+cut, an entanglement-entropy profile across every cut, ZZ correlations,
+space–time ⟨Z⟩ and entropy diagrams, t-sweep traces and their Fourier
+spectrum, a full-state amplitude·phase plot, a unitary heatmap, a
+logical interaction graph, and a causal-cone canvas overlay — sits
+alongside the statevector / Bloch / probability panels. An **AI chat panel
 at the bottom of the canvas** talks to OpenRouter (any of ~340 models,
 your own key), receives the current circuit as OpenQASM 3 on every
 turn, and **auto-opens any OpenQASM block in the reply as a new tab**.
@@ -181,8 +183,8 @@ them is the maintainer's.
     (`X·Y → Z` etc., global phase dropped), **power merge**
     (`T·T → S`, `S·S → Z`, `√X·√X → X`), `H·X·H → Z` /
     `H·Z·H → X` / `H·Y·H → Y` **Hadamard-Pauli sandwiches**,
-    `H·CX·H → CZ` fusion, **3-CX → SWAP synthesis** recognition,
-    and `iSWAP·iSWAP → Z·Z` rewrite. **Deep mode** additionally hops
+    `H·CX·H → CZ` and `H·CZ·H → CX` fusion, **3-CX → SWAP synthesis**
+    recognition, and `iSWAP·iSWAP → Z·Z` rewrite. **Deep mode** additionally hops
     rotations / T / S past CZ / CX-on-control / RZZ /
     diagonal blockers to find merge partners
     (**T-conjugation through CX**: `T(c)·CX·T(c) → CX·S(c)`). Reports

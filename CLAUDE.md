@@ -109,7 +109,8 @@ host plus `/api/health`.
     loop chaining the main walker + every post-pass: self-inverse
     cancellation, dagger-pair, same-axis rotation merge, Pauli
     collapse, **power-merge** (T·T → S, S·S → Z, √X·√X → X), H·CX·H
-    → CZ, **H·X·H → Z / H·Z·H → X / H·Y·H → Y** Hadamard-Pauli
+    → CZ, **H·CZ·H → CX** (graph-state basis change, either wire),
+    **H·X·H → Z / H·Z·H → X / H·Y·H → Y** Hadamard-Pauli
     sandwiches, **CX-conjugation cancellation** (X(t)·CX·X(t) → CX,
     Z(c)·CX·Z(c) → CX), **3-CX → SWAP synthesis**, iSWAP·iSWAP → Z·Z,
     DCX·DCX·DCX → I. Deep
@@ -161,12 +162,21 @@ host plus `/api/health`.
   - `entanglement.ts`: `vonNeumannEntropy` / `densityEigenvalues`
     (eigenvalues of a complex-Hermitian ρ via the real-symmetric
     embedding), `mutualInformationMatrix` (pairwise I(i:j)),
-    `entanglementSpectrum` (Schmidt coefficients across a cut). Powers
-    the entanglement panels.
+    `entanglementSpectrum` (Schmidt coefficients across a cut),
+    `entropyProfile` (S(ρ_{[0..k]}) for every contiguous cut — area-law
+    vs volume-law). Powers the entanglement panels.
   - `correlations.ts`: `zzCorrelations` — connected ⟨Z_iZ_j⟩−⟨Z_i⟩⟨Z_j⟩.
   - `spacetime.ts`: `spaceTimeZ` — per-qubit ⟨Z⟩ after each column
-    (re-simulates each prefix). `tsweep.ts`: `tSweepZ` — ⟨Z_q⟩(t) over
-    one period of the `t` clock.
+    (re-simulates each prefix); `spaceTimeEntropy` — per-qubit S(ρ_q)
+    after each column (entanglement-growth front). `tsweep.ts`:
+    `tSweepZ` — ⟨Z_q⟩(t) over one period of the `t` clock;
+    `tSweepSpectrum` — real DFT of those traces (Rabi/Larmor/Floquet
+    peaks).
+  - `unitary.ts`: `buildUnitary` — the full 2ⁿ×2ⁿ operator column by
+    column (|j⟩ → output column j), magnitude + phase, capped at 6
+    qubits. Powers the unitary-heatmap panel.
+  - `interaction.ts`: `interactionGraph` — per-pair count of
+    multi-qubit gates (logical connectivity vs hardware coupling).
   - `webgpuTraj.ts`: WebGPU foundation. `getWebGPUDevice()` (cached),
     `isWebGPUAvailable()`, `webGPUAdapterInfo()` for the UI status
     chip. `tryRunWebGPUTrajectories(circuit, params, customGates,
@@ -228,13 +238,19 @@ host plus `/api/health`.
     `SyndromePanel`, `MeasurementCountsPanel`, `TomographyPanel`
     (heatmap + Hinton + noise toggle), `HamiltonianPanel`,
     `QasmPanel`, `ParameterPanel`.
-  - Entanglement / dynamics visualisers (all statevector-only,
-    default-collapsed, capped, verified against known states):
-    `MutualInfoPanel` (I(i:j) heatmap), `SchmidtPanel` (entanglement
-    spectrum across a cut), `CorrelationPanel` (connected ⟨Z_iZ_j⟩
-    heatmap), `SpaceTimePanel` (⟨Z_q⟩ vs column), `TSweepPanel`
-    (⟨Z_q⟩(t) traces), `LightConePanel` (causal-cone selector → canvas
-    dimming via `CircuitCanvas` coneIds prop).
+  - Entanglement / dynamics visualisers (all default-collapsed, capped,
+    verified against known states): `MutualInfoPanel` (I(i:j) heatmap),
+    `SchmidtPanel` (entanglement spectrum across a cut),
+    `EntropyProfilePanel` (S(ρ_A) across every contiguous cut),
+    `CorrelationPanel` (connected ⟨Z_iZ_j⟩ heatmap), `SpaceTimePanel`
+    (⟨Z_q⟩ vs column), `SpaceTimeEntropyPanel` (S(ρ_q) vs column),
+    `TSweepPanel` (⟨Z_q⟩(t) traces), `TSweepFFTPanel` (DFT of those
+    traces), `AmplitudePhasePanel` (full-state bars: height = |amp|,
+    hue = phase), `UnitaryHeatmapPanel` (2ⁿ×2ⁿ operator, mag + phase,
+    n ≤ 6), `InteractionGraphPanel` (logical connectivity node-link),
+    `LightConePanel` (causal-cone selector → canvas dimming via
+    `CircuitCanvas` coneIds prop). The statevector-only ones show a
+    notice under Clifford / noise mode.
   - `CouplingMapView.tsx`: shared SVG render of an adjacency list as
     a node-link graph (circular layout ≤ 24 qubits, grid above).
 - `server/` — FastAPI shell: `/api/health` + static-file mount.

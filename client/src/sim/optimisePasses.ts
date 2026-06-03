@@ -219,6 +219,15 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
       outerChanged = true;
     }
 
+    // Post-pass: H(t)·CZ(t)·H(t) → CX. Mirror of the H·CX·H → CZ pass for
+    // graph-state / cluster-state circuits written in the CZ basis.
+    for (let i = 0; i < 50; i++) {
+      const result = fuseHCZH(gates, rulesFired);
+      if (!result.changed) break;
+      gates = result.gates;
+      outerChanged = true;
+    }
+
     // Post-pass: CX-conjugation cancellation. X(t)·CX·X(t) → CX and
     // Z(c)·CX·Z(c) → CX. Drops the conjugating Pauli pair; the freed slots
     // can expose further merges, so sweep to a fixed point.
@@ -465,6 +474,92 @@ function fuseHCXH(
     if (remove.has(g.id)) continue;
     if (rewriteCXtoCZ.has(g.id)) {
       next.push({ ...g, id: newGateId(), gateId: "cz" });
+      continue;
+    }
+    next.push(g);
+  }
+  return { gates: next, changed };
+}
+
+/**
+ * H·CZ·H → CX. The mirror of fuseHCXH: a Hadamard sandwich on *either* wire
+ * of a (symmetric) CZ turns it into a CX whose target is the sandwiched
+ * wire and whose control is the other wire —
+ *
+ *   H(t)·CZ(c,t)·H(t)  →  CX(c,t)
+ *
+ * Recognising it lets graph-state / cluster-state circuits (written with CZ
+ * and surrounding Hadamards) collapse toward the CX form, where the SWAP /
+ * conjugation / power-merge passes can act further. Only the first
+ * sandwiched wire per CZ is matched, so an H-on-both-wires window (which is
+ * CZ again, not CX) is never mis-rewritten. Sweeps to a fixed point.
+ */
+function fuseHCZH(
+  gates: PlacedGate[],
+  rules: Record<string, number>,
+): { gates: PlacedGate[]; changed: boolean } {
+  const sorted = [...gates].sort(
+    (a, b) => a.column - b.column || a.id.localeCompare(b.id),
+  );
+  const numQ = sorted.reduce(
+    (m, g) => Math.max(m, ...g.controls, ...g.targets),
+    -1,
+  ) + 1;
+  const perQ: number[][] = Array.from({ length: numQ }, () => []);
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    for (const q of [...g.controls, ...g.targets]) {
+      if (q < numQ) perQ[q].push(i);
+    }
+  }
+
+  const isPlainH = (g: PlacedGate, t: number) =>
+    g.gateId === "h" && g.controls.length === 0 && g.targets.length === 1 && g.targets[0] === t
+    && !g.condition && !g.controlStates?.some((s) => !s);
+
+  const remove = new Set<string>();
+  // czId → { control, target } for the rewritten CX.
+  const rewrite = new Map<string, { control: number; target: number }>();
+  let changed = false;
+
+  // For a sandwich on `wire`, the H before and after the CZ (adjacent on that
+  // wire's timeline) must both be plain and unused.
+  const trySandwich = (czIndex: number, wire: number, other: number): boolean => {
+    const list = perQ[wire];
+    if (!list) return false;
+    const pos = list.indexOf(czIndex);
+    if (pos <= 0 || pos >= list.length - 1) return false;
+    const prev = sorted[list[pos - 1]];
+    const next = sorted[list[pos + 1]];
+    if (remove.has(prev.id) || remove.has(next.id)) return false;
+    if (!isPlainH(prev, wire) || !isPlainH(next, wire)) return false;
+    remove.add(prev.id);
+    remove.add(next.id);
+    rewrite.set(sorted[czIndex].id, { control: other, target: wire });
+    rules["H·CZ·H → CX"] = (rules["H·CZ·H → CX"] ?? 0) + 1;
+    changed = true;
+    return true;
+  };
+
+  for (let i = 0; i < sorted.length; i++) {
+    const g = sorted[i];
+    if (g.gateId !== "cz") continue;
+    if (g.condition || g.controlStates?.some((s) => !s)) continue;
+    if (g.controls.length !== 1 || g.targets.length !== 1) continue;
+    if (remove.has(g.id) || rewrite.has(g.id)) continue;
+    const a = g.controls[0];
+    const b = g.targets[0];
+    // Try a sandwich on one wire, then the other (only one fires per CZ).
+    if (!trySandwich(i, a, b)) trySandwich(i, b, a);
+  }
+
+  if (!changed) return { gates, changed };
+  const next: PlacedGate[] = [];
+  for (const g of gates) {
+    if (remove.has(g.id)) continue;
+    const rw = rewrite.get(g.id);
+    if (rw) {
+      next.push({ ...g, id: newGateId(), gateId: "cx", controls: [rw.control], targets: [rw.target] });
       continue;
     }
     next.push(g);
