@@ -1,9 +1,13 @@
 # Examples
 
-OpenQASM 3 example circuits. Each file uses `stdgates.inc` and is written to
-load cleanly in Quantiom's editor once the QASM → IR parser lands. For now,
-you can copy any of these into a QASM-aware tool (qiskit, IBM Quantum
-Composer) or read them as a worked-example reference.
+88 OpenQASM 3 example circuits across 10 categories. Each file has a
+header comment explaining the concept, the technique, and what to
+observe in which panel — the same text is rendered as a hover tooltip
+when you browse the **Examples…** picker in the app.
+
+For the introductory tour, see
+[`docs/tutorial.md`](../docs/tutorial.md), which walks through Bell →
+parameters → noise → ZNE → PEC → VQE using six of these examples.
 
 | File | Qubits | What it shows |
 |---|---|---|

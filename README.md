@@ -37,6 +37,19 @@ the t-animation can be recorded as a WebM video.
 
 Live: **<https://quantiom.fly.dev>**
 
+## Documentation
+
+- **[Tutorial walkthrough](docs/tutorial.md)** — six-section hands-on
+  tour: Bell pair → parameters & animation → noise → ZNE → PEC → VQE.
+  Every section ends with "what to look at" so you know whether
+  you're on track.
+- **[Panel reference](docs/panels.md)** — every user-facing panel:
+  what it shows, when it's available, key controls, default-fast
+  behaviour, and a "Tip" callout for the non-obvious things.
+
+Both are also rendered inside the app — click **`? Docs`** in the
+header. They're imported at build time, no network fetch.
+
 Quantiom is moving fast and the surface to verify is wide — 55 gates,
 three simulator backends, an AI chat assistant, ~18 panels, OpenQASM 3
 round-trip, and nine code/format emitters. Expect rough edges; bug
@@ -66,8 +79,13 @@ them is the maintainer's.
   Trotter / Hamiltonian builder, tomography, equivalence checker.
 - **server/** — minimal FastAPI app whose only job is `/api/health`
   for Fly's checks and serving the built client as static files.
-- **examples/** — 67 hand-written OpenQASM 3 example circuits,
-  searchable.
+- **docs/** — in-app documentation (Tutorial walkthrough + Panel
+  reference) rendered in a modal via the `? Docs` header button.
+- **examples/** — 88 hand-written OpenQASM 3 example circuits across
+  10 categories, searchable from the file menu. Every entry has a
+  pedagogical header explaining the concept, the technique, and what
+  to observe in which panel — the same text is the hover tooltip in
+  the picker.
 
 ## Editor
 
@@ -136,10 +154,19 @@ them is the maintainer's.
     swaps & negates the angles. Measurements / state-prep / arbitrary
     matrices can't be inverted automatically and are confirmed before
     being omitted.
-  - **Optimise** — peephole pass: cancel adjacent inverses, merge same-
-    axis rotations (`Rz(a)·Rz(b) → Rz(a+b)`), collapse same-qubit Pauli
-    pairs (`X·Y → Z`, etc.; global phase dropped), fuse `H·CX·H → CZ`
-    over a 3-gate window, iterate to a fixed point; reports rules fired.
+  - **Optimise** — peephole pass with an outer fixed-point loop
+    chaining the main per-qubit walker and every post-pass:
+    self-inverse cancellation, dagger pair cancellation, same-axis
+    rotation merge (`Rz(a)·Rz(b) → Rz(a+b)`), Pauli collapse
+    (`X·Y → Z` etc., global phase dropped), **power merge**
+    (`T·T → S`, `S·S → Z`, `√X·√X → X`), `H·X·H → Z` /
+    `H·Z·H → X` / `H·Y·H → Y` **Hadamard-Pauli sandwiches**,
+    `H·CX·H → CZ` fusion, **3-CX → SWAP synthesis** recognition,
+    and `iSWAP·iSWAP → Z·Z` rewrite. **Deep mode** additionally hops
+    rotations / T / S past CZ / CX-on-control / RZZ /
+    diagonal blockers to find merge partners
+    (**T-conjugation through CX**: `T(c)·CX·T(c) → CX·S(c)`). Reports
+    rules fired per pass.
   - **Compile…** — one-click pipeline that runs Transpile →
     Optimise → Route → Optimise for a chosen target. Skips the
     routing step when no coupling map is imported. Reports per-stage
@@ -167,7 +194,8 @@ them is the maintainer's.
   500 ms.
 - **Auto-save** to `localStorage`; tabs restore on refresh.
 - **File menu** — Open `.qasm`, Download `.qasm`, **Examples…**
-  (typeahead search across 70 circuits), **Export…** popover
+  (typeahead search across 88 circuits, with QASM-header tooltips
+  on hover), **Export…** popover
   (OpenQASM 2 · Qiskit · Cirq · Braket · Q# · PyQuil · pytket ·
   **LaTeX (quantikz)** for papers · **JSON** raw IR · SVG), Share
   link. Opening a file or example creates a new tab so your current
@@ -216,6 +244,13 @@ stay on the statevector path.
 - **O(n²) per gate** — H, S, CNOT update generators in linear time.
 - **Bloch from the tableau** — per-qubit GF(2) elimination on the
   stabilizer rows extracts the exact reduced single-qubit state.
+- **Multi-qubit Pauli ⟨P⟩ from the tableau** — `Stabilizer.pauliExpectation`
+  reads ⟨ψ|P|ψ⟩ ∈ {−1, 0, +1} exactly from the tableau in O(n²): an
+  anti-commutation test against each stabilizer generator (0 on any
+  anti-commute), then decompose P over the generators via the
+  destabilizer dot products and aggregate the sign via the AG
+  g-function. Lets the Expectation panel (single Pauli AND Pauli-sum
+  Hamiltonian) work on Clifford circuits up to the 1024-qubit cap.
 - **Aaronson–Gottesman measurement** — §4.1–4.2 random/deterministic
   branching with the rowsum phase-tracking trick.
 - **Stabilizer-with-noise via Pauli frame tracking** — Clifford
@@ -256,15 +291,23 @@ statevector path with zero overhead. When on:
   any other 2q channel you can write down.
 - **Trajectory averaging** — runs T independent simulations (default
   256, presets up to 4 096), averages probabilities and Bloch vectors.
-- **WebGPU fast path for Probabilities** — when noise is enabled and
-  the circuit fits the GPU support set (1-qubit gates only,
-  depolarising noise, no T1/T2, no custom Kraus, no
-  measurements/conditions/reset), the Probabilities panel routes
+- **WebGPU fast path for Probabilities, Bloch, and Expectation** —
+  when noise is enabled and the circuit fits the GPU support set
+  (1-qubit gates only, depolarising noise, no T1/T2, no custom Kraus,
+  no measurements/conditions/reset), the Probabilities panel routes
   through a WGSL compute shader running one thread per trajectory.
+  The same shader pass emits **per-qubit Bloch ⟨X⟩/⟨Y⟩/⟨Z⟩** (wired
+  into the Bloch panel) and **arbitrary multi-qubit Pauli
+  expectations** — including the K Pauli strings of a weighted
+  Pauli-sum Hamiltonian, **all K terms batched into one trajectory
+  pass** (cost: one trajectory simulation + K · O(dim) reductions
+  instead of K full passes). The Expectation panel picks this up
+  automatically in both single-Pauli and Hamiltonian-sum modes.
   FP32; runs off the main thread; falls back to CPU silently the
-  moment any constraint fails. Extending the shader to feed
-  Optimise / Landscape / Plateau / ZNE is the next-up engineering
-  task.
+  moment any constraint fails. Wiring this same path into
+  Optimise / Landscape / Plateau / ZNE parameter sweeps remains the
+  next-up engineering task (those loops are synchronous and would
+  need an async refactor).
 - **Per-qubit rate overrides** — a `perQubit` array with optional
   1-qubit depolarising / γ_AD / γ_PD / readout values shadows the
   globals per qubit.
@@ -347,14 +390,16 @@ nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
     crosstalk and per-qubit overrides), linearly fits ⟨P⟩(γ), reports
     γ=0 extrapolated value.
   - **PEC** (visible when noise is on) — probabilistic error
-    cancellation. Inverts the 1q-depolarising, phase-damping, and
-    2q-depolarising channels via quasiprobability sampling; tracks
-    sign-weighted estimator and reports the per-channel location count
-    plus the multiplicative **variance overhead** so the user can see
-    when they're in a high-cost regime. Channels the noise model has
-    enabled but PEC doesn't yet invert (amplitude damping, readout,
-    crosstalk, custom Kraus) are listed so the estimate is honestly
-    labelled as partial.
+    cancellation. Inverts the 1q-depolarising, phase-damping,
+    2q-depolarising, and **amplitude-damping** channels via
+    quasiprobability sampling. The AD inverse is non-Pauli (Endo-
+    Benjamin-Li): Pauli terms plus the two reset channels Reset_0
+    and Reset_1, implemented per-trajectory as measure-then-flip.
+    Tracks sign-weighted estimator and reports per-channel location
+    count plus the multiplicative **variance overhead** so the user
+    can see when they're in a high-cost regime. Channels still not
+    inverted (readout, crosstalk, custom Kraus) are listed so the
+    estimate is honestly labelled as partial.
 - **Reduced density matrix** — pick a qubit subset (≤ 4), see the
   2^|S| × 2^|S| matrix and `Tr(ρ²)` purity. Default-collapsed.
 - **Resources** — total gates, 1-qubit / 2-qubit / multi-qubit

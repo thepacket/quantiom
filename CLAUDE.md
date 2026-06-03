@@ -105,10 +105,16 @@ host plus `/api/health`.
     scales and linearly fits ⟨P⟩(γ→0); `computeLandscape` sweeps
     1–2 symbols on a grid; `barrenPlateauDiagnostic` reports gradient
     variance over random parameter samples.
-  - `optimisePasses.ts`: peephole rewriter — adjacent self-inverse
-    cancellation, dagger-pair cancellation, same-axis rotation merge.
-    Iterates to a fixed point (capped at 50 passes); reports rule
-    counts.
+  - `optimisePasses.ts`: peephole rewriter with an outer fixed-point
+    loop chaining the main walker + every post-pass: self-inverse
+    cancellation, dagger-pair, same-axis rotation merge, Pauli
+    collapse, **power-merge** (T·T → S, S·S → Z, √X·√X → X), H·CX·H
+    → CZ, **H·X·H → Z / H·Z·H → X / H·Y·H → Y** Hadamard-Pauli
+    sandwiches, **3-CX → SWAP synthesis**, iSWAP·iSWAP → Z·Z. Deep
+    mode adds commute-through-diagonals (rotations + T/S hop past
+    Z-stabilized control of CX/CY/CCX/etc. to find merge partners
+    — **T-conjugation through CX**). Reports rule counts; capped
+    at 50 outer × 200 inner iterations.
   - `equivalence.ts`: full-unitary (n ≤ 8) or sampled-column (n > 8)
     comparison between two circuits, factoring out global phase. Also
     computes process fidelity F = |Tr(U_A† U_B)/2ⁿ|² and the trace-
@@ -197,8 +203,16 @@ host plus `/api/health`.
   - `CouplingMapView.tsx`: shared SVG render of an adjacency list as
     a node-link graph (circular layout ≤ 24 qubits, grid above).
 - `server/` — FastAPI shell: `/api/health` + static-file mount.
-- `examples/` — 67 hand-written OpenQASM 3 example circuits imported
-  into the client via Vite `?raw`.
+- `examples/` — 88 hand-written OpenQASM 3 example circuits across
+  10 categories, imported into the client via Vite `?raw`. Each file
+  has a header comment block; `extractDescription` in
+  `client/src/examples.ts` pulls it out as a tooltip for the file
+  picker.
+- `docs/` — markdown documentation. `panels.md` is a per-panel
+  reference; `tutorial.md` is a six-section hands-on walkthrough.
+  Imported into the app via `client/src/editor/DocsModal.tsx` (with
+  a small in-house markdown renderer — no extra runtime dependency)
+  and surfaced through the `? Docs` header button.
 
 ## Conventions
 
