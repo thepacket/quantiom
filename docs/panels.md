@@ -300,6 +300,29 @@ spectrum, so the smaller side is diagonalised).
 
 ---
 
+## ZZ correlations
+
+The two-point connected correlator C(i,j) = ⟨Z_iZ_j⟩ − ⟨Z_i⟩⟨Z_j⟩ as an
+n×n diverging heatmap — blue for positive (aligned), warm for negative
+(anti-aligned), faint near 0. The diagonal is the local Z variance
+1 − ⟨Z_i⟩².
+
+**When available.** Statevector path only; capped at 14 qubits.
+
+**Reading it vs. mutual information.** The MI map shows *total* (incl.
+quantum) correlation and is always ≥ 0; this shows the *signed*,
+Z-basis correlation a physicist reads for ordering. A GHZ state has
+C(i,j) = 1 everywhere (perfectly aligned); a singlet pair reads −1
+(anti-aligned); a product state is blank off the diagonal. In a
+Trotterised chain the correlations grow outward from the initial
+excitations as you step the circuit.
+
+**Note.** Off-diagonal cells are scaled to the largest |C| so the
+correlation structure stays visible even when the diagonal variance
+dominates.
+
+---
+
 ## Hamiltonian → Trotter
 
 Paste a Pauli-sum Hamiltonian (e.g. `0.5 * X1 X2 + 0.3 * Z0`) and the

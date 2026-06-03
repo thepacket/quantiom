@@ -57,6 +57,7 @@ import { DensityPanel } from "../panels/DensityPanel";
 import { MutualInfoPanel } from "../panels/MutualInfoPanel";
 import { SpaceTimePanel } from "../panels/SpaceTimePanel";
 import { SchmidtPanel } from "../panels/SchmidtPanel";
+import { CorrelationPanel } from "../panels/CorrelationPanel";
 import { NoisePanel } from "../panels/NoisePanel";
 import { PhaseDiskPanel } from "../panels/PhaseDiskPanel";
 import { ResourcePanel } from "../panels/ResourcePanel";
@@ -1099,6 +1100,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="mutual-info"><MutualInfoPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="schmidt"><SchmidtPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="correlations"><CorrelationPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="space-time">
           <SpaceTimePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>

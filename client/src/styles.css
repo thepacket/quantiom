@@ -654,3 +654,15 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .schmidt__axis-line { stroke: var(--border); stroke-width: 1; }
 .schmidt__bar { fill: var(--accent-2); }
 .schmidt__more { font-size: 10px; color: var(--muted); }
+
+/* ─── ZZ correlation map ───────────────────────────────────────────── */
+.corr { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.corr__svg { display: block; }
+.corr__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.corr__bg { fill: var(--bg-2); }
+.corr__val { fill: var(--fg); font-size: 8px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.corr__legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 10px; color: var(--muted); align-items: center; }
+.corr__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.corr__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.corr__swatch--zero { background: var(--bg-2); border: 1px solid var(--border); }
+.corr__note { color: var(--muted); opacity: 0.8; }
