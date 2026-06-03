@@ -2,49 +2,39 @@ import type { Complex } from "./complex";
 import { cmul, neg } from "./complex";
 
 /**
- * ⚠️ WORK IN PROGRESS — NOT WIRED INTO THE UI.
- *
- * Status: passes identity, SWAP, pure single-axis interactions (exp(iα XX)).
- * Still fails on CNOT and most Haar-random unitaries. Root cause: the
- * simultaneous-diagonalisation path can't pin down eigenvectors inside
- * degenerate eigenvalue blocks of Σ = u_m^T u_m (e.g. CNOT's Weyl coords
- * (π/4, 0, 0) produce two doubled phases ⇒ both Re(Σ) and Im(Σ) share a
- * 2-dim eigenspace), and the brute-force perm × sign-mask doesn't search
- * the extra SO(k) freedom inside those blocks. The sign-mask now correctly
- * encodes the √(e^{2iθ}) = ±e^{iθ} ambiguity, and the Jacobi inner loop
- * handles the degenerate-diagonal case (app == aqq → θ = π/4) that was
- * silently leaving off-diagonals unrotated.
- *
- * Next-session move: handle degenerate Σ-blocks by parametrising R's
- * intra-block rotation and solving |Im(u_m · R · F^{-1})| = 0 within
- * each block (closed-form for 2-dim blocks). Or pivot to a Tucci-style
- * algorithm that doesn't need Autonne-Takagi (e.g. clone Cirq's
- * `kak_decomposition`).
- * Tests live in `client/scripts/test-kak.ts` (run with
- * `npx tsx scripts/test-kak.ts`).
- *
- * Until correctness is verified end-to-end, this file is dead code: the
- * existing ResourcePanel KAK stub still surfaces the implementation-cost
- * estimate, and `u_arb_2` still simulates as a single 4×4 block.
- *
- * Cartan KAK decomposition of an arbitrary 4×4 unitary into:
+ * Cartan KAK decomposition of an arbitrary 4×4 unitary into
  *
  *   U ≈ e^{iφ} · (A1 ⊗ A2) · RXX(2α) · RYY(2β) · RZZ(2γ) · (B1 ⊗ B2)
  *
  * The four single-qubit factors are emitted as `u3` gates and the
  * interaction core uses the IR's native `rxx`, `ryy`, `rzz` primitives.
- * Each Rxx/Ryy/Rzz lowers to 2 CNOT + 1q rotations under any downstream
- * CX-based transpile target, so the total CX count after transpile is ≈ 6 —
- * a small overhead over the optimal 3-CX form, in exchange for much
- * simpler and more robustly verified code.
+ * Each Rxx/Ryy/Rzz lowers to 2 CNOT + 1q rotations under a CX-based
+ * transpile target, so the total CX count after transpile is ≈ 6.
  *
- * If the algorithm cannot find a self-consistent decomposition (residual
- * > tolerance after exhaustive sign + permutation search), returns null —
- * the caller should fall back to applying U as a single 4×4 block.
+ * Algorithm — a faithful port of Cirq's magic-basis KAK
+ * (`cirq.linalg.decompositions.kak_decomposition` plus the diagonalize
+ * helpers it relies on). The earlier home-grown Autonne-Takagi path
+ * couldn't resolve eigenvectors inside degenerate eigenvalue blocks of
+ * Σ = UₘᵀUₘ (CNOT, most Haar unitaries); Cirq sidesteps that by
+ * bidiagonalising Re(Uₘ) and Im(Uₘ) directly — when one of them is
+ * fully degenerate, its diagonalisation freedom is exactly what's used
+ * to fully diagonalise the other.
  *
- * Big-endian qubit order matches the rest of the codebase (qubit 0 is the
- * MSB of the 4-dim basis index). Output qubit indices 0 and 1 refer to
- * the two qubits of the input gate.
+ * Pipeline:
+ *   1. Uₘ = M† U M           (M = magic basis).
+ *   2. (L, d, R) = bidiagonalise Uₘ with special-orthogonal L, R so that
+ *      L Uₘ R = diag(d), d unit-modulus complex.
+ *   3. (a1, a0) = SU(2) factors of Lᵀ in the magic basis; likewise
+ *      (b1, b0) from Rᵀ.
+ *   4. (w, x, y, z) = KAK_GAMMA · angle(d). The interaction is
+ *      e^{iw}·exp(i(x·XX + y·YY + z·ZZ)); KAK_GAMMA is the inverse of the
+ *      magic-basis ±-sign pattern of XX/YY/ZZ, so the reconstruction
+ *      U = (a1⊗a0)·[M diag(d) M†]·(b1⊗b0) is exact.
+ *
+ * Big-endian qubit order (qubit 0 = MSB of the 4-dim index). Output qubit
+ * indices 0/1 refer to the two qubits of the input gate. Returns null when
+ * the achieved residual exceeds tolerance (caller falls back to applying U
+ * as a single 4×4 block).
  */
 
 export type Gate1Q = { kind: "u3"; theta: number; phi: number; lambda: number; qubit: 0 | 1 };
@@ -54,15 +44,13 @@ export type KakGate = Gate1Q | GateIsing;
 export type KakResult = {
   gates: KakGate[];
   interaction: { alpha: number; beta: number; gamma: number };
-  /** Max element-wise |U - U_recovered| after factoring out global phase.
-   *  < 1e-6 on well-conditioned input; if the algorithm returned, this is
-   *  the achieved precision. */
+  /** Max element-wise |U - U_recovered| after factoring out global phase. */
   residual: number;
 };
 
 const TOL = 1e-6;
 
-// ─── Magic basis ───────────────────────────────────────────────────────
+// ─── Magic basis (identical to Cirq's MAGIC) ────────────────────────────
 
 const SQRT2_INV = 1 / Math.SQRT2;
 function magicBasis(): Complex[][] {
@@ -83,12 +71,21 @@ function magicBasis(): Complex[][] {
   return raw.map((row) => row.map((e) => [e[0] * SQRT2_INV, e[1] * SQRT2_INV] as Complex));
 }
 
-// ─── Linear algebra primitives ─────────────────────────────────────────
+// KAK_GAMMA = 0.25 · [[1,1,1,1],[1,1,-1,-1],[-1,1,-1,1],[1,-1,-1,1]].
+// Maps the four magic-basis eigenphases to (w, x, y, z); it is the inverse
+// of the XX/YY/ZZ magic-basis sign pattern, valid because magicBasis()
+// equals Cirq's MAGIC entry-for-entry.
+const KAK_GAMMA: number[][] = [
+  [1, 1, 1, 1],
+  [1, 1, -1, -1],
+  [-1, 1, -1, 1],
+  [1, -1, -1, 1],
+].map((row) => row.map((v) => v * 0.25));
+
+// ─── Complex / real matrix primitives ───────────────────────────────────
 
 function matMul(A: Complex[][], B: Complex[][]): Complex[][] {
-  const n = A.length;
-  const m = B[0].length;
-  const k = B.length;
+  const n = A.length, m = B[0].length, k = B.length;
   const out: Complex[][] = Array.from({ length: n }, () =>
     Array.from({ length: m }, () => [0, 0] as Complex),
   );
@@ -96,7 +93,7 @@ function matMul(A: Complex[][], B: Complex[][]): Complex[][] {
     for (let j = 0; j < m; j++) {
       let re = 0, im = 0;
       for (let l = 0; l < k; l++) {
-        const a = A[i][l]; const b = B[l][j];
+        const a = A[i][l], b = B[l][j];
         re += a[0] * b[0] - a[1] * b[1];
         im += a[0] * b[1] + a[1] * b[0];
       }
@@ -107,25 +104,17 @@ function matMul(A: Complex[][], B: Complex[][]): Complex[][] {
 }
 
 function dagger(A: Complex[][]): Complex[][] {
-  const n = A.length;
-  const m = A[0].length;
+  const n = A.length, m = A[0].length;
   const out: Complex[][] = Array.from({ length: m }, () =>
     Array.from({ length: n }, () => [0, 0] as Complex),
   );
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < m; j++) {
-      out[j][i] = [A[i][j][0], -A[i][j][1]];
-    }
-  }
+  for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) out[j][i] = [A[i][j][0], -A[i][j][1]];
   return out;
 }
 
-function transpose(A: Complex[][]): Complex[][] {
-  const n = A.length;
-  const m = A[0].length;
-  const out: Complex[][] = Array.from({ length: m }, () =>
-    Array.from({ length: n }, () => [0, 0] as Complex),
-  );
+function transposeReal(A: number[][]): number[][] {
+  const n = A.length, m = A[0].length;
+  const out: number[][] = Array.from({ length: m }, () => new Array<number>(n).fill(0));
   for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) out[j][i] = A[i][j];
   return out;
 }
@@ -142,25 +131,23 @@ function realMul(A: number[][], B: number[][]): number[][] {
   return out;
 }
 
-function realTranspose(A: number[][]): number[][] {
-  const n = A.length, m = A[0].length;
-  const out: number[][] = Array.from({ length: m }, () => new Array<number>(n).fill(0));
-  for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) out[j][i] = A[i][j];
-  return out;
-}
-
 function identityReal(n: number): number[][] {
   const out: number[][] = Array.from({ length: n }, () => new Array<number>(n).fill(0));
   for (let i = 0; i < n; i++) out[i][i] = 1;
   return out;
 }
 
+function toComplexMat(A: number[][]): Complex[][] {
+  return A.map((row) => row.map((v) => [v, 0] as Complex));
+}
+
 /**
  * Jacobi eigenvalue algorithm for a real symmetric matrix. Returns (D, V)
- * with A = V D V^T. Reliable for small n; we use it on 4×4 and 2×2.
+ * with A = V diag(D) Vᵀ (so Vᵀ A V = diag(D)). Reliable at small n.
  */
-function jacobiEigen(Ain: number[][], tol = 1e-12): { D: number[]; V: number[][] } {
+function jacobiEigen(Ain: number[][], tol = 1e-13): { D: number[]; V: number[][] } {
   const n = Ain.length;
+  if (n === 1) return { D: [Ain[0][0]], V: [[1]] };
   const A = Ain.map((row) => [...row]);
   const V = identityReal(n);
   for (let iter = 0; iter < 200; iter++) {
@@ -173,9 +160,6 @@ function jacobiEigen(Ain: number[][], tol = 1e-12): { D: number[]; V: number[][]
     }
     if (maxOff < tol) break;
     const app = A[p][p], aqq = A[q][q], apq = A[p][q];
-    // Degenerate-diagonal fix: when app == aqq the τ formula gives t = 0
-    // because Math.sign(0) = 0, leaving the off-diagonal unrotated and
-    // stalling convergence. The correct angle there is π/4 (cs = sn = 1/√2).
     let cs: number, sn: number;
     if (Math.abs(aqq - app) < 1e-30) {
       cs = Math.SQRT1_2;
@@ -208,46 +192,284 @@ function jacobiEigen(Ain: number[][], tol = 1e-12): { D: number[]; V: number[][]
   return { D, V };
 }
 
+// ─── Real SVD (built from the symmetric eigensolver) ────────────────────
+
 /**
- * Simultaneously diagonalise two commuting real symmetric matrices.
+ * SVD of a real square matrix: A = U · diag(s) · Vᵀ with U, V orthogonal
+ * and s in DESCENDING order (matching numpy's convention, which Cirq's
+ * bidiagonalisation relies on). Zero-singular-value columns of U are
+ * completed to a full orthonormal basis.
  */
-function simultaneousDiagonalise(
-  A: number[][],
-  B: number[][],
-  degenTol = 1e-9,
-): { R: number[][]; Da: number[]; Db: number[] } {
+function svdReal(A: number[][]): { U: number[][]; s: number[]; Vt: number[][] } {
   const n = A.length;
-  const { D: DaRaw, V: VA } = jacobiEigen(A);
-  const order = DaRaw.map((_, i) => i).sort((a, b) => DaRaw[a] - DaRaw[b]);
-  const Da = order.map((i) => DaRaw[i]);
-  const V: number[][] = Array.from({ length: n }, () => new Array<number>(n).fill(0));
-  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) V[i][j] = VA[i][order[j]];
-  const Bp = realMul(realTranspose(V), realMul(B, V));
-  const R: number[][] = identityReal(n);
-  let i = 0;
-  while (i < n) {
-    let j = i + 1;
-    while (j < n && Math.abs(Da[j] - Da[i]) < degenTol) j++;
-    if (j - i > 1) {
-      const sub = Array.from({ length: j - i }, (_, r) =>
-        Array.from({ length: j - i }, (_, s) => Bp[i + r][i + s]),
-      );
-      const { V: Vsub } = jacobiEigen(sub);
-      for (let r = 0; r < j - i; r++)
-        for (let s = 0; s < j - i; s++) R[i + r][i + s] = Vsub[r][s];
+  const AtA = realMul(transposeReal(A), A);
+  const { D, V } = jacobiEigen(AtA); // AtA = V diag(D) Vᵀ
+  const order = D.map((_, i) => i).sort((a, b) => D[b] - D[a]);
+  const s = order.map((i) => Math.sqrt(Math.max(D[i], 0)));
+  const Vord: number[][] = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) Vord[i][j] = V[i][order[j]];
+
+  const U: number[][] = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  const filled: boolean[] = new Array(n).fill(false);
+  for (let j = 0; j < n; j++) {
+    if (s[j] > 1e-12) {
+      for (let i = 0; i < n; i++) {
+        let acc = 0;
+        for (let k = 0; k < n; k++) acc += A[i][k] * Vord[k][j];
+        U[i][j] = acc / s[j];
+      }
+      filled[j] = true;
     }
-    i = j;
   }
-  const Rfinal = realMul(V, R);
-  const At = realMul(realTranspose(Rfinal), realMul(A, Rfinal));
-  const Bt = realMul(realTranspose(Rfinal), realMul(B, Rfinal));
-  const DaOut = new Array<number>(n);
-  const DbOut = new Array<number>(n);
-  for (let k = 0; k < n; k++) { DaOut[k] = At[k][k]; DbOut[k] = Bt[k][k]; }
-  return { R: Rfinal, Da: DaOut, Db: DbOut };
+  completeOrthonormalColumns(U, filled);
+  return { U, s, Vt: transposeReal(Vord) };
 }
 
-// ─── u3 angle extraction from a 2×2 unitary ─────────────────────────────
+/**
+ * Fill the unfilled columns of U (marked false in `filled`) with vectors
+ * that extend the filled columns to a full orthonormal basis. Gram-Schmidt
+ * standard basis vectors against the existing columns, picking the one with
+ * the largest residual at each step.
+ */
+function completeOrthonormalColumns(U: number[][], filled: boolean[]): void {
+  const n = U.length;
+  const basis: number[][] = [];
+  for (let j = 0; j < n; j++) if (filled[j]) basis.push(U.map((row) => row[j]));
+  for (let j = 0; j < n; j++) {
+    if (filled[j]) continue;
+    let best: number[] | null = null;
+    let bestNorm = -1;
+    for (let e = 0; e < n; e++) {
+      const v = new Array<number>(n).fill(0);
+      v[e] = 1;
+      for (const b of basis) {
+        let dot = 0;
+        for (let i = 0; i < n; i++) dot += b[i] * v[i];
+        for (let i = 0; i < n; i++) v[i] -= dot * b[i];
+      }
+      let nrm = 0;
+      for (let i = 0; i < n; i++) nrm += v[i] * v[i];
+      nrm = Math.sqrt(nrm);
+      if (nrm > bestNorm) { bestNorm = nrm; best = v; }
+    }
+    const v = best!;
+    for (let i = 0; i < n; i++) v[i] /= bestNorm;
+    basis.push(v);
+    for (let i = 0; i < n; i++) U[i][j] = v[i];
+  }
+}
+
+// ─── Cirq diagonalize helpers ───────────────────────────────────────────
+
+/**
+ * Orthogonal P with Pᵀ·symmetric·P diagonal AND Pᵀ·diag·P = diag (the
+ * descending diagonal is preserved). Port of Cirq's
+ * `diagonalize_real_symmetric_and_sorted_diagonal_matrices`: split into
+ * contiguous blocks where the sorted diagonal is ~constant, diagonalise the
+ * symmetric matrix within each block.
+ */
+function diagonalizeRealSymmetricAndSortedDiagonal(
+  symmetric: number[][],
+  diagDesc: number[],
+): number[][] {
+  const n = symmetric.length;
+  const P = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  const near = (a: number, b: number) => Math.abs(a - b) <= 1e-8 + 1e-5 * Math.abs(b);
+  let start = 0;
+  while (start < n) {
+    let end = start + 1;
+    while (end < n && near(diagDesc[start], diagDesc[end])) end++;
+    const m = end - start;
+    const block = Array.from({ length: m }, (_, r) =>
+      Array.from({ length: m }, (_, c) => symmetric[start + r][start + c]),
+    );
+    const { V } = jacobiEigen(block);
+    for (let r = 0; r < m; r++) for (let c = 0; c < m; c++) P[start + r][start + c] = V[r][c];
+    start = end;
+  }
+  return P;
+}
+
+function blockDiagReal(A: number[][], B: number[][]): number[][] {
+  const na = A.length, nb = B.length;
+  const out = Array.from({ length: na + nb }, () => new Array<number>(na + nb).fill(0));
+  for (let i = 0; i < na; i++) for (let j = 0; j < na; j++) out[i][j] = A[i][j];
+  for (let i = 0; i < nb; i++) for (let j = 0; j < nb; j++) out[na + i][na + j] = B[i][j];
+  return out;
+}
+
+/** Submatrix rows/cols [lo, hi). */
+function subMatrix(A: number[][], lo: number, hi: number): number[][] {
+  const m = hi - lo;
+  return Array.from({ length: m }, (_, r) =>
+    Array.from({ length: m }, (_, c) => A[lo + r][lo + c]),
+  );
+}
+
+/**
+ * Port of Cirq's `bidiagonalize_real_matrix_pair_with_symmetric_products`.
+ * Finds orthogonal L, R with both L·mat1·R and L·mat2·R diagonal.
+ * Precondition (guaranteed for mat1/mat2 = Re/Im of a unitary): mat1·mat2ᵀ
+ * and mat1ᵀ·mat2 are symmetric.
+ */
+function bidiagonalizeRealPair(
+  mat1: number[][],
+  mat2: number[][],
+): { L: number[][]; R: number[][] } {
+  const n = mat1.length;
+  const { U: baseLeft, s: baseDiag, Vt: baseRight } = svdReal(mat1);
+
+  // Rank = number of non-negligible singular values (descending, so the
+  // small ones are at the tail).
+  let rank = n;
+  while (rank > 0 && Math.abs(baseDiag[rank - 1]) <= 1e-8) rank -= 1;
+
+  // semi_corrected = baseLeftᵀ · mat2 · baseRightᵀ
+  const semi = realMul(transposeReal(baseLeft), realMul(mat2, transposeReal(baseRight)));
+
+  // Matched block: simultaneously diagonalise with the (constant-within-
+  // degenerate-block) singular values.
+  const overlap = subMatrix(semi, 0, rank);
+  // Symmetrise defensively against round-off before eigh.
+  for (let i = 0; i < rank; i++)
+    for (let j = i + 1; j < rank; j++) {
+      const avg = (overlap[i][j] + overlap[j][i]) / 2;
+      overlap[i][j] = avg; overlap[j][i] = avg;
+    }
+  const overlapAdjust = diagonalizeRealSymmetricAndSortedDiagonal(
+    overlap, baseDiag.slice(0, rank),
+  );
+
+  // Unmatched (zero-singular) block: plain SVD.
+  let extraLeft: number[][], extraRight: number[][];
+  if (rank < n) {
+    const extra = subMatrix(semi, rank, n);
+    const e = svdReal(extra);
+    extraLeft = e.U;
+    extraRight = e.Vt;
+  } else {
+    extraLeft = []; extraRight = [];
+  }
+
+  const leftAdjust = rank < n ? blockDiagReal(overlapAdjust, extraLeft) : overlapAdjust;
+  const rightAdjust = rank < n
+    ? blockDiagReal(transposeReal(overlapAdjust), extraRight)
+    : transposeReal(overlapAdjust);
+
+  const L = realMul(transposeReal(leftAdjust), transposeReal(baseLeft));
+  const R = realMul(transposeReal(baseRight), transposeReal(rightAdjust));
+  return { L, R };
+}
+
+/**
+ * Port of Cirq's `bidiagonalize_unitary_with_special_orthogonals`.
+ * Returns special-orthogonal L, R (det = +1) and the complex diagonal d
+ * with L · Um · R = diag(d).
+ */
+function bidiagonalizeUnitarySpecialOrthogonal(
+  Um: Complex[][],
+): { L: number[][]; d: Complex[]; R: number[][] } {
+  const n = Um.length;
+  const re = Um.map((row) => row.map((e) => e[0]));
+  const im = Um.map((row) => row.map((e) => e[1]));
+  const { L, R } = bidiagonalizeRealPair(re, im);
+
+  // Force special-orthogonal without breaking the diagonalisation.
+  if (det4(L) < 0) for (let j = 0; j < n; j++) L[0][j] = -L[0][j];
+  if (det4(R) < 0) for (let i = 0; i < n; i++) R[i][0] = -R[i][0];
+
+  const diagM = matMul(toComplexMat(L), matMul(Um, toComplexMat(R)));
+  const d: Complex[] = [];
+  for (let k = 0; k < n; k++) d.push(diagM[k][k]);
+  return { L, d, R };
+}
+
+// ─── SO(4) → SU(2) ⊗ SU(2) ──────────────────────────────────────────────
+
+function det2c(m: Complex[][]): Complex {
+  const ad = cmul(m[0][0], m[1][1]);
+  const bc = cmul(m[0][1], m[1][0]);
+  return [ad[0] - bc[0], ad[1] - bc[1]];
+}
+
+function csqrt(z: Complex): Complex {
+  const r = Math.hypot(z[0], z[1]);
+  if (r < 1e-300) return [0, 0];
+  const theta = Math.atan2(z[1], z[0]);
+  const sr = Math.sqrt(r);
+  return [sr * Math.cos(theta / 2), sr * Math.sin(theta / 2)];
+}
+
+function cinv(z: Complex): Complex {
+  const m = z[0] * z[0] + z[1] * z[1];
+  if (m < 1e-300) return [0, 0];
+  return [z[0] / m, -z[1] / m];
+}
+
+/**
+ * Port of Cirq's `kron_factor_4x4_to_2x2s`: split a 4×4 matrix that is the
+ * kronecker product of two 2×2 unitaries into (g, f1, f2) with
+ * matrix = g · kron(f1, f2), f1/f2 unit-determinant. Returns null if the
+ * matrix is not (close to) a tensor product.
+ */
+function kronFactor4x4(
+  matrix: Complex[][],
+): { g: Complex; f1: Complex[][]; f2: Complex[][] } | null {
+  // Reference cell: entry with the largest magnitude.
+  let a = 0, b = 0, bestMag = -1;
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+    const m = matrix[i][j][0] ** 2 + matrix[i][j][1] ** 2;
+    if (m > bestMag) { bestMag = m; a = i; b = j; }
+  }
+  if (bestMag < 1e-24) return null;
+
+  const f1: Complex[][] = [[[0, 0], [0, 0]], [[0, 0], [0, 0]]];
+  const f2: Complex[][] = [[[0, 0], [0, 0]], [[0, 0], [0, 0]]];
+  for (let i = 0; i < 2; i++) {
+    for (let j = 0; j < 2; j++) {
+      f1[((a >> 1) ^ i)][((b >> 1) ^ j)] = matrix[a ^ (i << 1)][b ^ (j << 1)];
+      f2[((a & 1) ^ i)][((b & 1) ^ j)] = matrix[a ^ i][b ^ j];
+    }
+  }
+
+  // Rescale to unit determinant.
+  const sd1 = csqrt(det2c(f1));
+  if (sd1[0] * sd1[0] + sd1[1] * sd1[1] > 1e-24) {
+    const inv = cinv(sd1);
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) f1[i][j] = cmul(f1[i][j], inv);
+  }
+  const sd2 = csqrt(det2c(f2));
+  if (sd2[0] * sd2[0] + sd2[1] * sd2[1] > 1e-24) {
+    const inv = cinv(sd2);
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) f2[i][j] = cmul(f2[i][j], inv);
+  }
+
+  // Global phase from the reference cell.
+  const denom = cmul(f1[a >> 1][b >> 1], f2[a & 1][b & 1]);
+  let g = cmul(matrix[a][b], cinv(denom));
+  if (g[0] < 0) {
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) f1[i][j] = neg(f1[i][j]);
+    g = neg(g);
+  }
+  return { g, f1, f2 };
+}
+
+/**
+ * Cirq's `so4_to_magic_su2s`: given a real SO(4) matrix, find SU(2) A, B
+ * with M† (A⊗B) M = mat.
+ */
+function so4ToMagicSu2s(
+  mat: number[][],
+  M: Complex[][],
+  Mdag: Complex[][],
+): { A: Complex[][]; B: Complex[][] } | null {
+  const ab = matMul(M, matMul(toComplexMat(mat), Mdag));
+  const factored = kronFactor4x4(ab);
+  if (!factored) return null;
+  return { A: factored.f1, B: factored.f2 };
+}
+
+// ─── u3 angle extraction ────────────────────────────────────────────────
 
 function su2ToU3(U: Complex[][]): { theta: number; phi: number; lambda: number } {
   const arg00 = Math.atan2(U[0][0][1], U[0][0][0]);
@@ -272,209 +494,56 @@ function su2ToU3(U: Complex[][]): { theta: number; phi: number; lambda: number }
 export function decomposeKAK4x4(U: Complex[][]): KakResult | null {
   if (U.length !== 4 || U[0].length !== 4) return null;
 
-  // Normalise to SU(4): the magic-basis argument requires det(U) = 1.
-  // Factor out det(U)^{1/4} as a global phase (unobservable, so dropped).
-  const detU = det4Complex(U);
-  const detMag = Math.sqrt(detU[0] * detU[0] + detU[1] * detU[1]);
-  if (detMag < 1e-12) return null;
-  const detArg = Math.atan2(detU[1], detU[0]);
-  const phi = detArg / 4;
-  const phaseInv: Complex = [Math.cos(-phi), Math.sin(-phi)];
-  const Usu: Complex[][] = U.map((row) => row.map((e) => cmul(phaseInv, e)));
-
   const M = magicBasis();
   const Mdag = dagger(M);
-  const Um = matMul(Mdag, matMul(Usu, M));
-  const UmT = transpose(Um);
-  const Sigma = matMul(UmT, Um);
+  const Um = matMul(Mdag, matMul(U, M));
 
-  // Symmetrise to remove tiny numerical asymmetry.
-  const Are: number[][] = Array.from({ length: 4 }, () => new Array<number>(4).fill(0));
-  const Bim: number[][] = Array.from({ length: 4 }, () => new Array<number>(4).fill(0));
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < 4; j++) {
-      Are[i][j] = (Sigma[i][j][0] + Sigma[j][i][0]) / 2;
-      Bim[i][j] = (Sigma[i][j][1] + Sigma[j][i][1]) / 2;
+  const { L, d, R } = bidiagonalizeUnitarySpecialOrthogonal(Um);
+
+  // (a1, a0) from Lᵀ, (b1, b0) from Rᵀ.
+  const aFactors = so4ToMagicSu2s(transposeReal(L), M, Mdag);
+  const bFactors = so4ToMagicSu2s(transposeReal(R), M, Mdag);
+  if (!aFactors || !bFactors) return null;
+  const a1 = aFactors.A, a0 = aFactors.B;
+  const b1 = bFactors.A, b0 = bFactors.B;
+
+  // (w, x, y, z) = KAK_GAMMA · angle(d).
+  const phi = d.map((e) => Math.atan2(e[1], e[0]));
+  const w = KAK_GAMMA[0][0] * phi[0] + KAK_GAMMA[0][1] * phi[1] + KAK_GAMMA[0][2] * phi[2] + KAK_GAMMA[0][3] * phi[3];
+  const x = KAK_GAMMA[1][0] * phi[0] + KAK_GAMMA[1][1] * phi[1] + KAK_GAMMA[1][2] * phi[2] + KAK_GAMMA[1][3] * phi[3];
+  const y = KAK_GAMMA[2][0] * phi[0] + KAK_GAMMA[2][1] * phi[1] + KAK_GAMMA[2][2] * phi[2] + KAK_GAMMA[2][3] * phi[3];
+  const z = KAK_GAMMA[3][0] * phi[0] + KAK_GAMMA[3][1] * phi[1] + KAK_GAMMA[3][2] * phi[2] + KAK_GAMMA[3][3] * phi[3];
+  void w; // absorbed as global phase by the residual check
+
+  const B1 = su2ToU3(b1);
+  const B2 = su2ToU3(b0);
+  const A1 = su2ToU3(a1);
+  const A2 = su2ToU3(a0);
+
+  // U = (a1⊗a0) · exp(i(x·XX + y·YY + z·ZZ)) · (b1⊗b0) (up to global phase).
+  // exp(iθ·PP) = RPP(-2θ) in our RPP(θ) = exp(-iθ/2·PP) convention.
+  const gates: KakGate[] = [
+    { kind: "u3", ...B1, qubit: 0 },
+    { kind: "u3", ...B2, qubit: 1 },
+    { kind: "rxx", theta: -2 * x },
+    { kind: "ryy", theta: -2 * y },
+    { kind: "rzz", theta: -2 * z },
+    { kind: "u3", ...A1, qubit: 0 },
+    { kind: "u3", ...A2, qubit: 1 },
+  ];
+
+  const residual = verifyResidual(U, gates);
+  if (residual > TOL) {
+    if (typeof (globalThis as { __KAK_DEBUG__?: boolean }).__KAK_DEBUG__ !== "undefined") {
+      // eslint-disable-next-line no-console
+      console.log(`KAK: residual = ${residual.toExponential(2)}`);
     }
+    return null;
   }
-  const sim = simultaneousDiagonalise(Are, Bim);
-  const Rraw = sim.R;
-  const dRe = sim.Da;
-  const dIm = sim.Db;
-  const phasesRaw = dRe.map((re, k) => Math.atan2(dIm[k], re));
-  // Try every column-sign pattern (16 variants) so we cover both det
-  // chiralities and the per-column ± freedom inside any degenerate
-  // eigenvalue blocks. The brute-force perm × sign-mask loop runs on
-  // each variant; first one to hit residual < TOL wins.
-  const Rvariants: { R: number[][]; phases: number[] }[] = [];
-  for (let colMask = 0; colMask < 16; colMask++) {
-    const Rv: number[][] = Rraw.map((row) => [...row]);
-    for (let c = 0; c < 4; c++) {
-      if (colMask & (1 << c)) {
-        for (let i = 0; i < 4; i++) Rv[i][c] = -Rv[i][c];
-      }
-    }
-    if (det4(Rv) < 0) continue; // restrict to SO(4)
-    Rvariants.push({ R: Rv, phases: phasesRaw });
-  }
-  // Run the main loop body across every R variant, picking the best hit.
-  let bestAcrossVariants: { result: KakResult } | null = null;
-  for (const variant of Rvariants) {
-    const sub = decomposeWithR(variant.R, variant.phases, Usu, M, Um);
-    if (sub && sub.residual < TOL) return sub;
-    if (sub && (!bestAcrossVariants || sub.residual < bestAcrossVariants.result.residual)) {
-      bestAcrossVariants = { result: sub };
-    }
-  }
-  if (bestAcrossVariants && bestAcrossVariants.result.residual < 0.1) return bestAcrossVariants.result;
-  if (bestAcrossVariants && typeof (globalThis as { __KAK_DEBUG__?: boolean }).__KAK_DEBUG__ !== "undefined") {
-    // eslint-disable-next-line no-console
-    console.log(`KAK: best residual = ${bestAcrossVariants.result.residual.toExponential(2)}`);
-  }
-  return null;
+  return { gates, interaction: { alpha: x, beta: y, gamma: z }, residual };
 }
 
-function decomposeWithR(
-  R: number[][],
-  phasesRaw: number[],
-  U: Complex[][],
-  _M: Complex[][],
-  Um: Complex[][],
-): KakResult | null {
-  const phases = phasesRaw;
-
-  // The eigenvalues of K(α, β, γ) = exp(i(α XX + β YY + γ ZZ)) in the
-  // magic basis form a specific multiset:
-  //   {α + β + γ, α − β − γ, −α + β − γ, −α − β + γ}
-  // We don't know which phase[k] corresponds to which entry of that
-  // multiset, so we brute-force over all 24 permutations and 16 sign
-  // choices (each √-phase has a ±1 ambiguity), picking the lowest
-  // verified residual.
-  let best: { result: KakResult } | null = null;
-  const phaseHalf = phases.map((p) => p / 2);
-
-  const Rc: Complex[][] = R.map((row) => row.map((v) => [v, 0] as Complex));
-  const ORreal = realTranspose(R);
-
-  for (const perm of PERMS_4) {
-    for (let mask = 0; mask < 16; mask++) {
-      // Sign ambiguity: D² has eigenvalues e^{2iθ_k}; D has ±e^{iθ_k}.
-      // sign = -1 means we use -e^{iθ_k} = e^{i(θ_k + π)} instead.
-      const signFlips: number[] = [
-        (mask & 1) ? 1 : 0,
-        (mask & 2) ? 1 : 0,
-        (mask & 4) ? 1 : 0,
-        (mask & 8) ? 1 : 0,
-      ];
-      // Effective θ_k per eigenvector slot k = phaseHalf[k] + π·flip[k].
-      // After permutation we have the *assigned* phases per Weyl-chamber
-      // slot s: thAssigned[s] = thEff[perm[s]].
-      const thEff = phaseHalf.map((p, k) => p + Math.PI * signFlips[k]);
-      const ph = perm.map((idx) => thEff[idx]);
-      // Inversion of {α-β+γ, -α+β+γ, α+β-γ, -α-β-γ} = {ph[0..3]}:
-      //   α = (ph[0] + ph[2]) / 2
-      //   β = (ph[1] + ph[2]) / 2
-      //   γ = (ph[0] + ph[1]) / 2
-      const alpha = (ph[0] + ph[2]) / 2;
-      const beta = (ph[1] + ph[2]) / 2;
-      const gamma = (ph[0] + ph[1]) / 2;
-      // F^{-1} in the original eigenvector basis: entry k uses θ_eff[k] = θ_k + π·flip[k].
-      const FinvDiag: Complex[] = thEff.map((eff) => [Math.cos(-eff), Math.sin(-eff)]);
-      const Finv: Complex[][] = Array.from({ length: 4 }, () =>
-        Array.from({ length: 4 }, () => [0, 0] as Complex),
-      );
-      for (let k = 0; k < 4; k++) Finv[k][k] = FinvDiag[k];
-      const OLc = matMul(Um, matMul(Rc, Finv));
-      // OL must be in SO(4). With degenerate eigenvalues the diagonalisation
-      // is only defined up to a unitary inside each degenerate block, so OLc
-      // may have non-trivial imaginary parts. Polar-project the real part
-      // onto O(4) and let the residual check decide if this candidate works.
-      const OLrealRaw: number[][] = OLc.map((row) => row.map((e) => e[0]));
-      const OLreal = polarOrthogonalise(OLrealRaw);
-      if (!OLreal) continue;
-      if (det4(OLreal) < 0) {
-        // det -1 → flip first column to land in SO(4).
-        for (let i = 0; i < 4; i++) OLreal[i][0] = -OLreal[i][0];
-      }
-      const lTensor = magicToTensor(OLreal);
-      const rTensor = magicToTensor(ORreal);
-      if (!lTensor || !rTensor) continue;
-      const B1 = su2ToU3(rTensor.V1);
-      const B2 = su2ToU3(rTensor.V2);
-      const A1 = su2ToU3(lTensor.V1);
-      const A2 = su2ToU3(lTensor.V2);
-      // Build gate list. exp(iα XX) = RXX(-2α) in our convention
-      // (RXX(θ) = exp(-iθ/2 · XX)), so the Ising-rotation angle is -2·{α,β,γ}.
-      const gates: KakGate[] = [
-        { kind: "u3", ...B1, qubit: 0 },
-        { kind: "u3", ...B2, qubit: 1 },
-        { kind: "rxx", theta: -2 * alpha },
-        { kind: "ryy", theta: -2 * beta },
-        { kind: "rzz", theta: -2 * gamma },
-        { kind: "u3", ...A1, qubit: 0 },
-        { kind: "u3", ...A2, qubit: 1 },
-      ];
-      const residual = verifyResidual(U, gates);
-      if (residual < TOL) {
-        return { gates, interaction: { alpha, beta, gamma }, residual };
-      }
-      if (!best || residual < best.result.residual) {
-        best = { result: { gates, interaction: { alpha, beta, gamma }, residual } };
-      }
-    }
-  }
-  return best ? best.result : null;
-}
-
-// All 24 permutations of [0, 1, 2, 3].
-const PERMS_4: number[][] = (() => {
-  const out: number[][] = [];
-  const arr = [0, 1, 2, 3];
-  const perm = (a: number[], k: number) => {
-    if (k === a.length - 1) { out.push([...a]); return; }
-    for (let i = k; i < a.length; i++) {
-      [a[k], a[i]] = [a[i], a[k]];
-      perm(a, k + 1);
-      [a[k], a[i]] = [a[i], a[k]];
-    }
-  };
-  perm(arr, 0);
-  return out;
-})();
-
-// ─── Helpers: det, magic→tensor, gate-matrix builder, verification ─────
-
-function det4Complex(A: Complex[][]): Complex {
-  // Direct cofactor expansion. Sufficient at n=4.
-  function det3c(m: Complex[][]): Complex {
-    const t1 = cmul(m[1][1], m[2][2]);
-    const t2 = cmul(m[1][2], m[2][1]);
-    const a = [t1[0] - t2[0], t1[1] - t2[1]] as Complex;
-    const t3 = cmul(m[1][0], m[2][2]);
-    const t4 = cmul(m[1][2], m[2][0]);
-    const b = [t3[0] - t4[0], t3[1] - t4[1]] as Complex;
-    const t5 = cmul(m[1][0], m[2][1]);
-    const t6 = cmul(m[1][1], m[2][0]);
-    const cc = [t5[0] - t6[0], t5[1] - t6[1]] as Complex;
-    const r1 = cmul(m[0][0], a);
-    const r2 = cmul(m[0][1], b);
-    const r3 = cmul(m[0][2], cc);
-    return [r1[0] - r2[0] + r3[0], r1[1] - r2[1] + r3[1]];
-  }
-  let det: Complex = [0, 0];
-  for (let j = 0; j < 4; j++) {
-    const minor: Complex[][] = [];
-    for (let i = 1; i < 4; i++) {
-      const row: Complex[] = [];
-      for (let k = 0; k < 4; k++) if (k !== j) row.push(A[i][k]);
-      minor.push(row);
-    }
-    const sign = (j % 2 === 0) ? 1 : -1;
-    const term = cmul(A[0][j], det3c(minor));
-    det = [det[0] + sign * term[0], det[1] + sign * term[1]];
-  }
-  return det;
-}
+// ─── Determinant, verification, gate matrices ───────────────────────────
 
 function det4(A: number[][]): number {
   function det3(m: number[][]): number {
@@ -495,68 +564,8 @@ function det4(A: number[][]): number {
   return det;
 }
 
-function magicToTensor(O: number[][]): { V1: Complex[][]; V2: Complex[][] } | null {
-  const M = magicBasis();
-  const Mdag = dagger(M);
-  const Oc: Complex[][] = O.map((row) => row.map((v) => [v, 0] as Complex));
-  const T = matMul(M, matMul(Oc, Mdag));
-  let bestI = 0, bestJ = 0, bestM = -1;
-  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
-    const m = T[i][j][0] * T[i][j][0] + T[i][j][1] * T[i][j][1];
-    if (m > bestM) { bestM = m; bestI = i; bestJ = j; }
-  }
-  if (bestM < 1e-12) return null;
-  const a0 = bestI >> 1, b0 = bestI & 1;
-  const c10 = bestJ >> 1, c20 = bestJ & 1;
-  const pivot = T[bestI][bestJ];
-  const pivotAbs = Math.sqrt(pivot[0] * pivot[0] + pivot[1] * pivot[1]);
-  const V1pivot: Complex = [Math.sqrt(pivotAbs), 0];
-  const V2pivot: Complex = [pivot[0] / V1pivot[0], pivot[1] / V1pivot[0]];
-
-  const V1: Complex[][] = [[[0, 0], [0, 0]], [[0, 0], [0, 0]]];
-  const V2: Complex[][] = [[[0, 0], [0, 0]], [[0, 0], [0, 0]]];
-  V1[a0][c10] = V1pivot;
-  V2[b0][c20] = V2pivot;
-  const v2Inv = cinv(V2pivot);
-  for (let a = 0; a < 2; a++) for (let c1 = 0; c1 < 2; c1++) {
-    if (a === a0 && c1 === c10) continue;
-    V1[a][c1] = cmul(T[2 * a + b0][2 * c1 + c20], v2Inv);
-  }
-  const v1Inv = cinv(V1pivot);
-  for (let b = 0; b < 2; b++) for (let c2 = 0; c2 < 2; c2++) {
-    if (b === b0 && c2 === c20) continue;
-    V2[b][c2] = cmul(T[2 * a0 + b][2 * c10 + c2], v1Inv);
-  }
-  return { V1, V2 };
-}
-
-/**
- * Polar projection: given a real 4×4 matrix M, return the nearest orthogonal
- * matrix Q via Q = U V^T where M = U Σ V^T is the SVD. Implemented by
- * eigendecomposing M^T M (symmetric PSD) → Σ², V; then U = M V Σ^{-1}.
- * Returns null if M is singular.
- */
-function polarOrthogonalise(M: number[][]): number[][] | null {
-  const MtM = realMul(realTranspose(M), M);
-  const { D, V } = jacobiEigen(MtM);
-  const sigma = D.map((d) => Math.sqrt(Math.max(d, 0)));
-  for (const s of sigma) if (s < 1e-9) return null;
-  const sigmaInv = sigma.map((s) => 1 / s);
-  // U = M · V · diag(sigmaInv)
-  const MV = realMul(M, V);
-  const U: number[][] = MV.map((row) => row.map((v, j) => v * sigmaInv[j]));
-  // Q = U · V^T
-  return realMul(U, realTranspose(V));
-}
-
-function cinv(z: Complex): Complex {
-  const m = z[0] * z[0] + z[1] * z[1];
-  if (m < 1e-30) return [0, 0];
-  return [z[0] / m, -z[1] / m];
-}
-
 function verifyResidual(U: Complex[][], gates: KakGate[]): number {
-  let M: Complex[][] = [
+  let Mp: Complex[][] = [
     [[1, 0], [0, 0], [0, 0], [0, 0]],
     [[0, 0], [1, 0], [0, 0], [0, 0]],
     [[0, 0], [0, 0], [1, 0], [0, 0]],
@@ -564,7 +573,7 @@ function verifyResidual(U: Complex[][], gates: KakGate[]): number {
   ];
   for (const g of gates) {
     const G = gateMatrix4x4(g);
-    M = matMul(G, M);
+    Mp = matMul(G, Mp);
   }
   let pivotI = 0, pivotJ = 0, pivotMag = 0;
   for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
@@ -572,18 +581,18 @@ function verifyResidual(U: Complex[][], gates: KakGate[]): number {
     if (m > pivotMag) { pivotMag = m; pivotI = i; pivotJ = j; }
   }
   const u = U[pivotI][pivotJ];
-  const m = M[pivotI][pivotJ];
+  const m = Mp[pivotI][pivotJ];
   const phaseRatio = cmul(u, cinv(m));
-  const phaseMag = Math.sqrt(phaseRatio[0] * phaseRatio[0] + phaseRatio[1] * phaseRatio[1]);
+  const phaseMag = Math.hypot(phaseRatio[0], phaseRatio[1]);
   const phase: Complex = phaseMag > 1e-12
     ? [phaseRatio[0] / phaseMag, phaseRatio[1] / phaseMag]
     : [1, 0];
   let maxErr = 0;
   for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
-    const aligned = cmul(phase, M[i][j]);
+    const aligned = cmul(phase, Mp[i][j]);
     const dr = aligned[0] - U[i][j][0];
     const di = aligned[1] - U[i][j][1];
-    const e = Math.sqrt(dr * dr + di * di);
+    const e = Math.hypot(dr, di);
     if (e > maxErr) maxErr = e;
   }
   return maxErr;

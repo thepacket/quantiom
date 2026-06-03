@@ -1,5 +1,9 @@
 import type { Circuit, PlacedGate } from "../editor/types";
 import { newGateId } from "../editor/state";
+import { buildMatrix } from "./matrices";
+import type { Complex } from "./complex";
+import { evalExpr } from "./expr";
+import { decomposeKAK4x4 } from "./kak";
 
 /**
  * Rewrite a circuit into a chosen target gate set.
@@ -43,7 +47,9 @@ export function transpile(circuit: Circuit, target: TranspileTarget): TranspileR
       skipped.push({ gateId: g.gateId, reason: `no ${target} decomposition for ${g.gateId}` });
       out.push(cloneGate(g));
     } else {
-      out.push(...decomp);
+      // Fully reduce to the native set — a single decompose pass can leave
+      // non-native intermediates (e.g. IBM's U3 → … SXdg …).
+      out.push(...lowerEach(decomp, target));
     }
   }
 
@@ -119,6 +125,114 @@ function twoQ(g: PlacedGate, gateId: string, control: number, target: number, pa
     controls: [control],
     targets: [target],
   };
+}
+
+// ─── General 2-qubit decomposition (KAK + Ising lowering) ──────────────
+//
+// KAK is wired into the continuous-angle targets (IBM heavy-hex and
+// Rigetti). Clifford+T can't represent arbitrary single-qubit angles
+// exactly (no Solovay-Kitaev), so it leaves generic 2-qubit unitaries
+// skipped.
+
+const CONTINUOUS_TARGETS = new Set<TranspileTarget>(["ibm-heavy-hex", "rigetti"]);
+
+function targetDecompose(g: PlacedGate, target: TranspileTarget): Decomp {
+  if (target === "ibm-heavy-hex") return decomposeIBM(g);
+  if (target === "rigetti") return decomposeRigetti(g);
+  return decomposeCliffordT(g);
+}
+
+/** Recursively lower a gate list to the target's native set. A target
+ *  decomposer can emit non-native intermediates (e.g. IBM's U3 → … SXdg …);
+ *  re-lowering each result until it bottoms out at passthrough/skip yields a
+ *  truly native list. Idempotent on native gates; depth-guarded. */
+function lowerEach(gates: PlacedGate[], target: TranspileTarget, depth = 0): PlacedGate[] {
+  const out: PlacedGate[] = [];
+  for (const g of gates) {
+    const d = targetDecompose(g, target);
+    if (d === "passthrough" || d === "skip") { out.push(cloneGate(g)); continue; }
+    if (depth >= 8) { for (const gg of d) out.push(cloneGate(gg)); continue; }
+    out.push(...lowerEach(d, target, depth + 1));
+  }
+  return out;
+}
+
+/** RXX/RYY/RZZ → CX + RZ + basis-change, preserving the (possibly symbolic)
+ *  angle. Verified against the native gates at machine precision. */
+function isingDecomp(g: PlacedGate): PlacedGate[] {
+  const [a, b] = [...g.controls, ...g.targets];
+  const th = g.params[0];
+  const oneQ = (id: string, q: number, params: string[] = []) =>
+    ({ ...cloneGate(g), gateId: id, params, controls: [], targets: [q] });
+  const cxg = () => ({ ...cloneGate(g), gateId: "cx", params: [] as string[], controls: [a], targets: [b] });
+  const core = [cxg(), oneQ("rz", b, [th]), cxg()];
+  if (g.gateId === "rzz") return core;
+  if (g.gateId === "rxx") return [oneQ("h", a), oneQ("h", b), ...core, oneQ("h", a), oneQ("h", b)];
+  // ryy
+  return [oneQ("rx", a, ["π/2"]), oneQ("rx", b, ["π/2"]), ...core, oneQ("rx", a, ["-π/2"]), oneQ("rx", b, ["-π/2"])];
+}
+
+/** Evaluate a parameter expression to a finite number, or null if symbolic
+ *  / non-numeric (free variables make `evalExpr` throw or return NaN). */
+function numericParam(src: string): number | null {
+  try {
+    const v = evalExpr(src, {});
+    return Number.isFinite(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Decompose an arbitrary 2-qubit gate via KAK into u3 + RXX/RYY/RZZ, then
+ * lower those to the target's native set. Returns null when the gate isn't a
+ * clean numeric 2-qubit unitary (symbolic params, anti-controls, condition,
+ * wrong arity, KAK failure) so the caller can fall back to "skip".
+ */
+function kakDecompose(g: PlacedGate, target: TranspileTarget): PlacedGate[] | null {
+  if (!CONTINUOUS_TARGETS.has(target)) return null;
+  if (g.condition) return null;
+  if (g.controlStates && g.controlStates.some((s) => s === false)) return null;
+  const qubits = [...g.controls, ...g.targets];
+  if (qubits.length !== 2 || qubits[0] === qubits[1]) return null;
+
+  const nums: number[] = [];
+  for (const p of g.params) {
+    const v = numericParam(p);
+    if (v === null) return null;
+    nums.push(v);
+  }
+  const matRO = buildMatrix(g.gateId, nums);
+  if (!matRO || matRO.length !== 4) return null;
+  const mat = matRO.map((row) => row.map((e) => [e[0], e[1]] as Complex));
+  const kak = decomposeKAK4x4(mat);
+  if (!kak) return null;
+
+  const [a, b] = qubits; // a = KAK qubit 0 (MSB), b = KAK qubit 1 (LSB)
+  const out: PlacedGate[] = [];
+  for (const kg of kak.gates) {
+    if (kg.kind === "u3") {
+      const q = kg.qubit === 0 ? a : b;
+      const u3: PlacedGate = {
+        ...cloneGate(g),
+        gateId: "u3",
+        params: [String(kg.theta), String(kg.phi), String(kg.lambda)],
+        controls: [],
+        targets: [q],
+      };
+      out.push(...lowerEach([u3], target));
+    } else {
+      const ising: PlacedGate = {
+        ...cloneGate(g),
+        gateId: kg.kind,
+        params: [String(kg.theta)],
+        controls: [],
+        targets: [a, b],
+      };
+      out.push(...lowerEach(isingDecomp(ising), target));
+    }
+  }
+  return out;
 }
 
 // ─── Clifford + T target ───────────────────────────────────────────────
@@ -204,7 +318,7 @@ function decomposeIBM(g: PlacedGate): Decomp {
     case "t": return [sing("rz", ["π/4"])];
     case "tdg": return [sing("rz", ["-π/4"])];
     case "sxdg": return [sing("rz", ["π"]), sing("sx"), sing("rz", ["π"])];
-    case "rx": return [sing("rz", ["π/2"]), sing("sx"), sing("rz", [`${g.params[0]} + π`]), sing("sx"), sing("rz", ["5π/2"])];
+    case "rx": return [sing("rz", ["π/2"]), sing("sx"), sing("rz", [`${g.params[0]} + π`]), sing("sx"), sing("rz", ["5*π/2"])];
     case "ry": return [sing("sx"), sing("rz", [`${g.params[0]}`]), sing("sxdg")];
     case "p":
     case "u1": return [sing("rz", [g.params[0]])];
@@ -237,7 +351,15 @@ function decomposeIBM(g: PlacedGate): Decomp {
       const [a, b] = g.targets;
       return [twoQ(g, "cx", a, b), twoQ(g, "cx", b, a), twoQ(g, "cx", a, b)];
     }
+    case "rxx":
+    case "ryy":
+    case "rzz":
+      return lowerEach(isingDecomp(g), "ibm-heavy-hex");
   }
+  // Arbitrary 2-qubit unitaries (u_arb_2, iSWAP, DCX, ECR, RZX, XX±YY, …)
+  // route through KAK; symbolic-angle gates fall through to skip.
+  const kak = kakDecompose(g, "ibm-heavy-hex");
+  if (kak) return kak;
   return "skip";
 }
 
@@ -265,30 +387,48 @@ function decomposeRigetti(g: PlacedGate): Decomp {
       // H = RZ(π/2) RX(π/2) RZ(π/2)
       return [sing("rz", ["π/2"]), sing("rx", ["π/2"]), sing("rz", ["π/2"])];
     case "ry":
-      // RY(θ) = RZ(-π/2) RX(θ) RZ(π/2); RX(θ) via two RX(π/2) with RZ between.
+      // RY(θ) = RX(-π/2) RZ(θ) RX(π/2)  (matrix order; Y = RX(-π/2) Z RX(π/2)).
+      // Array order is reverse of matrix order: first element applied first.
       return [
-        sing("rz", ["-π/2"]),
         sing("rx", ["π/2"]),
         sing("rz", [g.params[0]]),
-        sing("rx", ["π/2"]),
-        sing("rz", ["π/2"]),
+        sing("rx", ["-π/2"]),
       ];
     case "rx":
-      // Decompose arbitrary RX(θ) using the X = RX(π/2) RX(π/2) identity
-      // plus RZ envelope: RX(θ) = RZ(π/2) RX(π/2) RZ(θ) RX(π/2) RZ(-π/2).
+      // RX(θ) = H·RZ(θ)·H with H = RZ(π/2) RX(π/2) RZ(π/2), which expands to
+      // RX(θ) = RZ(π/2) RX(π/2) RZ(θ+π) RX(π/2) RZ(π/2)  (palindromic, so the
+      // array order matches the matrix order).
       return [
         sing("rz", ["π/2"]),
         sing("rx", ["π/2"]),
-        sing("rz", [g.params[0]]),
+        sing("rz", [`${g.params[0]} + π`]),
         sing("rx", ["π/2"]),
-        sing("rz", ["-π/2"]),
+        sing("rz", ["π/2"]),
       ];
+    case "u":
+    case "u3": {
+      // U(θ, φ, λ) = Rz(φ) Ry(θ) Rz(λ); Ry lowers via the rigetti rule above.
+      const [theta, phi, lambda] = g.params;
+      return [
+        sing("rz", [lambda]),
+        sing("ry", [theta]),
+        sing("rz", [phi]),
+      ];
+    }
     case "cx": {
       const c = g.controls[0];
       const hOnT = decomposeRigetti(single({ ...g, targets: [t] }, "h")) as PlacedGate[];
       return [...hOnT, twoQ(g, "cz", c, t), ...hOnT];
     }
+    case "rxx":
+    case "ryy":
+    case "rzz":
+      return lowerEach(isingDecomp(g), "rigetti");
   }
+  // Arbitrary 2-qubit unitaries (u_arb_2, iSWAP, DCX, ECR, RZX, XX±YY, …)
+  // route through KAK; symbolic-angle gates fall through to skip.
+  const kak = kakDecompose(g, "rigetti");
+  if (kak) return kak;
   return "skip";
 }
 
