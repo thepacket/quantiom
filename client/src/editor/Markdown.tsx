@@ -1,14 +1,33 @@
 import { type ReactNode, type CSSProperties } from "react";
+import { Tex } from "../panels/Tex";
 
 /**
- * Tiny in-house markdown renderer (no runtime dependency). Handles
+ * Tiny in-house markdown renderer (no markdown dependency). Handles
  * headings (#/##/###), paragraphs, fenced ``` ``` blocks, bulleted `-`
- * and numbered `1.` lists, horizontal rules (---), pipe tables, and the
- * inline transforms `code`, **bold**, *italic*. No links, images, or HTML.
+ * and numbered `1.` lists, horizontal rules (---), pipe tables, LaTeX
+ * (block `$$…$$` / `\[…\]`, inline `$…$` / `\(…\)`, rendered with KaTeX),
+ * and the inline transforms `code`, **bold**, *italic*. No links/images/HTML.
  *
  * Shared by the Docs modal and the AI chat panel. Self-styled via inline
  * styles + CSS vars so it drops into any container.
  */
+
+/** Consume a delimited block starting at lines[i] (which begins with `open`),
+ *  up to and including the line containing `close`. Returns the inner text. */
+function takeDelimited(lines: string[], i: number, open: string, close: string): { content: string; next: number } {
+  let s = lines[i].trim().slice(open.length);
+  const idx = s.indexOf(close);
+  if (idx >= 0) return { content: s.slice(0, idx).trim(), next: i + 1 };
+  const buf = [s];
+  i++;
+  while (i < lines.length) {
+    const ci = lines[i].indexOf(close);
+    if (ci >= 0) { buf.push(lines[i].slice(0, ci)); return { content: buf.join("\n").trim(), next: i + 1 }; }
+    buf.push(lines[i]);
+    i++;
+  }
+  return { content: buf.join("\n").trim(), next: i };
+}
 export function Markdown({ source }: { source: string }): ReactNode {
   const out: ReactNode[] = [];
   const lines = source.split("\n");
@@ -27,6 +46,19 @@ export function Markdown({ source }: { source: string }): ReactNode {
           <code>{buf.join("\n")}</code>
         </pre>,
       );
+      continue;
+    }
+    // Block math: $$ … $$  or  \[ … \]
+    const trimmed = line.trim();
+    if (trimmed.startsWith("$$") || trimmed.startsWith("\\[")) {
+      const isDollar = trimmed.startsWith("$$");
+      const { content, next } = takeDelimited(lines, i, isDollar ? "$$" : "\\[", isDollar ? "$$" : "\\]");
+      out.push(
+        <div key={key++} style={{ margin: "8px 0", overflowX: "auto" }}>
+          <Tex latex={content} display />
+        </div>,
+      );
+      i = next;
       continue;
     }
     // Horizontal rule
@@ -71,7 +103,7 @@ export function Markdown({ source }: { source: string }): ReactNode {
     // Paragraph — consume non-blank lines until blank
     if (line.trim() === "") { i++; continue; }
     const para: string[] = [];
-    while (i < lines.length && lines[i].trim() !== "" && !lines[i].startsWith("#") && !lines[i].startsWith("```") && !lines[i].startsWith("|") && !/^\s*-\s+/.test(lines[i]) && !/^\s*\d+\.\s+/.test(lines[i]) && !/^-{3,}\s*$/.test(lines[i])) {
+    while (i < lines.length && lines[i].trim() !== "" && !lines[i].startsWith("#") && !lines[i].startsWith("```") && !lines[i].startsWith("|") && !/^\s*-\s+/.test(lines[i]) && !/^\s*\d+\.\s+/.test(lines[i]) && !/^-{3,}\s*$/.test(lines[i]) && !lines[i].trim().startsWith("$$") && !lines[i].trim().startsWith("\\[")) {
       para.push(lines[i]); i++;
     }
     if (para.length > 0) {
@@ -112,12 +144,17 @@ function renderTable(rows: string[], key: number): ReactNode {
 function inline(text: string, baseKey: number): ReactNode {
   const nodes: ReactNode[] = [];
   let cursor = 0; let k = baseKey * 17;
-  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)/g;
+  // Order matters: code first (so $/* inside code are ignored), then math
+  // ($$…$$ display, $…$ inline, \(…\) inline), then bold, then italic.
+  const re = /(`[^`]+`)|(\$\$[^$]+\$\$)|(\\\([\s\S]*?\\\))|(\$[^$\n]+\$)|(\*\*[^*]+\*\*)|(\*[^*]+\*)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     if (m.index > cursor) nodes.push(text.slice(cursor, m.index));
     const tok = m[0];
     if (tok.startsWith("`")) nodes.push(<code key={k++} style={{ background: "var(--bg-alt, var(--bg-2))", padding: "1px 4px", borderRadius: 3, fontSize: 12 }}>{tok.slice(1, -1)}</code>);
+    else if (tok.startsWith("$$")) nodes.push(<Tex key={k++} latex={tok.slice(2, -2).trim()} display />);
+    else if (tok.startsWith("\\(")) nodes.push(<Tex key={k++} latex={tok.slice(2, -2).trim()} />);
+    else if (tok.startsWith("$")) nodes.push(<Tex key={k++} latex={tok.slice(1, -1).trim()} />);
     else if (tok.startsWith("**")) nodes.push(<strong key={k++}>{tok.slice(2, -2)}</strong>);
     else nodes.push(<em key={k++}>{tok.slice(1, -1)}</em>);
     cursor = m.index + tok.length;

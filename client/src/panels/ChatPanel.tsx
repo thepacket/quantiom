@@ -55,7 +55,9 @@ const SYSTEM_PROMPT =
   "computing. The user may attach the current circuit as OpenQASM 3 text. " +
   "When proposing a new circuit or modification, always emit it inside a " +
   "fenced code block starting with ```qasm or ```openqasm — Quantiom " +
-  "auto-detects those blocks and offers to open them as a new tab. Be " +
+  "auto-detects those blocks and offers to open them as a new tab. " +
+  "Write mathematics in LaTeX: inline as $…$ and display as $$…$$ " +
+  "(KaTeX renders it, including \\ket{}, \\bra{}, \\braket{}{}). Be " +
   "concise; do not over-explain quantum-computing basics.";
 
 export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) {

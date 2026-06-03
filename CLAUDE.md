@@ -316,11 +316,15 @@ host plus `/api/health`.
   `qasm.md` (OpenQASM round-trip + the eight SDK emitters). All four
   are imported into the app via `client/src/editor/DocsModal.tsx` and
   surfaced as tabs through the toolbar **Help** menu. The markdown
-  renderer is a small in-house component (no runtime dependency) in
+  renderer is a small in-house component in
   `client/src/editor/Markdown.tsx` — shared by DocsModal AND the AI
   chat panel, which renders each assistant reply's prose parts through
   it (fenced code blocks are still handled by the chat's own
-  QASM-aware code-block path; user messages stay literal).
+  QASM-aware code-block path; user messages stay literal). It renders
+  **LaTeX via KaTeX** — block `$$…$$` / `\[…\]`, inline `$…$` / `\(…\)`
+  — through the shared `panels/Tex.tsx` (which defines quantum braket
+  macros `\ket`/`\bra`/`\braket`/`\expval`/`\tr`). The chat system
+  prompt tells the model to write math in `$…$` / `$$…$$`.
 
 ## Conventions
 
