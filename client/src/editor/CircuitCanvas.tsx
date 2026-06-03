@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { HistoryAction } from "./state";
 import { buildPlacedGate, qubitSpan } from "./state";
 import type { Circuit, GateDef, PlacedGate } from "./types";
@@ -83,6 +83,10 @@ type Props = {
   customGates?: CustomGate[];
   /** Optional set of gate ids to outline as search matches. */
   highlightedIds?: Set<string>;
+  /** Gate ids selected via the drag-rectangle. Drawn with a highlight ring;
+   *  the Edit menu's Copy / Cut Selection items act on this set. */
+  selectedIds?: Set<string>;
+  onSelectionChange?: (ids: Set<string>) => void;
 };
 
 type HoverState =
@@ -90,10 +94,14 @@ type HoverState =
   | { kind: "move"; col: number; row: number; gateId: string; placedId: string }
   | null;
 
-export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep, customGates = [], highlightedIds }: Props) {
+export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep, customGates = [], highlightedIds, selectedIds, onSelectionChange }: Props) {
   const [hover, setHover] = useState<HoverState>(null);
   // Tracks the in-flight move-gate drag so dragOver (which can't read payload) knows the gate.
   const dragMove = useRef<{ placedId: string; gateId: string } | null>(null);
+  // Rubber-band rectangle drag for multi-gate selection. Coords are in
+  // SVG user space so they line up with rendered gates.
+  const [dragRect, setDragRect] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   const usedCols = circuit.gates.reduce((m, g) => Math.max(m, g.column + 1), 0);
   const numCols = Math.max(MIN_COLS, usedCols + 4);
@@ -234,9 +242,90 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
     setTimeout(() => ghost.remove(), 0);
   };
 
+  // Per-gate axis-aligned bounding box in SVG user space. Column extent is
+  // half-padded inside the column so adjacent columns don't visually merge.
+  // Row extent spans every qubit between min(controls∪targets) and max.
+  const gateBBox = (g: PlacedGate): { left: number; right: number; top: number; bottom: number } | null => {
+    if (g.column < 0 || g.column >= numCols) return null;
+    const span = qubitSpan(g);
+    if (span.length === 0) return null;
+    const left = colOffsets[g.column] + 2;
+    const right = colOffsets[g.column + 1] - 2;
+    const top = rowY(span[0]) - ROW_H / 2 + 4;
+    const bottom = rowY(span[span.length - 1]) + ROW_H / 2 - 4;
+    return { left, right, top, bottom };
+  };
+
+  const startRectDrag = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    // The SVG sits behind a .canvas__cells overlay (for HTML5 drag/drop)
+    // plus per-gate move/reassign handles. We must not start a rect-drag
+    // when the user is grabbing a gate to move/reassign or clicking a gate
+    // to select it for the Inspector. Anything that isn't a known gate
+    // affordance falls through as "empty space".
+    const t = e.target as Element;
+    if (t.closest(".canvas__move-handle, .canvas__reassign")) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    // Convert client coords to user-space coords. width/height attrs equal
+    // the viewBox here so the scale factor is svg.clientWidth / width.
+    const sx = width / rect.width;
+    const sy = height / rect.height;
+    const x = (e.clientX - rect.left) * sx;
+    const y = (e.clientY - rect.top) * sy;
+    setDragRect({ x0: x, y0: y, x1: x, y1: y });
+    onSelect(null);
+    e.preventDefault();
+  };
+
+  // Track the rubber band on window so the user can release outside the SVG.
+  useEffect(() => {
+    if (!dragRect) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    const move = (ev: MouseEvent) => {
+      const rect = svg.getBoundingClientRect();
+      const sx = width / rect.width;
+      const sy = height / rect.height;
+      const x = (ev.clientX - rect.left) * sx;
+      const y = (ev.clientY - rect.top) * sy;
+      setDragRect((prev) => (prev ? { ...prev, x1: x, y1: y } : prev));
+    };
+    const up = () => {
+      setDragRect((prev) => {
+        if (!prev) return null;
+        const left = Math.min(prev.x0, prev.x1);
+        const right = Math.max(prev.x0, prev.x1);
+        const top = Math.min(prev.y0, prev.y1);
+        const bottom = Math.max(prev.y0, prev.y1);
+        const ids = new Set<string>();
+        // Treat tiny drags as a click — clear selection, no new selection.
+        if (right - left > 3 || bottom - top > 3) {
+          for (const g of circuit.gates) {
+            const b = gateBBox(g);
+            if (!b) continue;
+            const overlaps = b.left < right && b.right > left && b.top < bottom && b.bottom > top;
+            if (overlaps) ids.add(g.id);
+          }
+        }
+        onSelectionChange?.(ids);
+        return null;
+      });
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+    return () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragRect !== null]);
+
   return (
-    <div className="canvas">
+    <div className="canvas" onMouseDown={startRectDrag}>
       <svg
+        ref={svgRef}
         className="canvas__svg"
         width={width}
         height={height}
@@ -329,6 +418,40 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
             x={colX(g.column, colOffsets, colWidths)}
           />
         ))}
+        {/* rubber-band selection highlight rings */}
+        {selectedIds && selectedIds.size > 0 && circuit.gates.map((g) => {
+          if (!selectedIds.has(g.id)) return null;
+          const b = gateBBox(g);
+          if (!b) return null;
+          return (
+            <rect
+              key={`sel-${g.id}`}
+              x={b.left} y={b.top}
+              width={b.right - b.left} height={b.bottom - b.top}
+              rx={4} ry={4}
+              fill="none"
+              stroke="var(--accent-2)"
+              strokeWidth={2}
+              strokeDasharray="4 3"
+              pointerEvents="none"
+            />
+          );
+        })}
+        {/* live rubber-band rectangle while dragging */}
+        {dragRect && (
+          <rect
+            x={Math.min(dragRect.x0, dragRect.x1)}
+            y={Math.min(dragRect.y0, dragRect.y1)}
+            width={Math.abs(dragRect.x1 - dragRect.x0)}
+            height={Math.abs(dragRect.y1 - dragRect.y0)}
+            fill="var(--accent-2)"
+            fillOpacity={0.12}
+            stroke="var(--accent-2)"
+            strokeWidth={1}
+            strokeDasharray="3 2"
+            pointerEvents="none"
+          />
+        )}
       </svg>
 
       {/* DOM drop zones overlaid on top (HTML DnD doesn't work on SVG reliably) */}

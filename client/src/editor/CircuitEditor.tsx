@@ -71,6 +71,10 @@ import { useStatevector, dataOf } from "../panels/useSimulation";
 import { useGPUNoisyProbabilities } from "../panels/useGPUNoisyProbabilities";
 import { loadNoise, saveNoise, type NoiseModel } from "../sim/noise";
 
+/** localStorage key for the cross-tab gate-rectangle clipboard. Holds the
+ *  serialised slice for Copy/Cut/Paste Selection on the canvas. */
+const GATE_CLIPBOARD_KEY = "quantiom:clipboard:v1";
+
 function RecordButton({ onRecord }: { onRecord: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   return (
@@ -210,12 +214,19 @@ function TransformMenu({
  * discoverability + a stable home for clipboard-style operations.
  */
 function EditMenu({
-  canUndo, canRedo, onUndo, onRedo, onCopyCircuit, onPasteCircuit, onDuplicateTab, onClear,
+  canUndo, canRedo, onUndo, onRedo,
+  selectionSize, onCopySelection, onCutSelection, onPasteSelection, hasGateClipboard,
+  onCopyCircuit, onPasteCircuit, onDuplicateTab, onClear,
 }: {
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  selectionSize: number;
+  onCopySelection: () => void;
+  onCutSelection: () => void;
+  onPasteSelection: () => void;
+  hasGateClipboard: boolean;
   onCopyCircuit: () => void;
   onPasteCircuit: () => void;
   onDuplicateTab: () => void;
@@ -269,6 +280,31 @@ function EditMenu({
             >
               <span>Paste Circuit</span>
               <span className="export-picker__hint">QASM in clipboard → new tab</span>
+            </button>
+            <div className="examples-picker__cat-label">Selection</div>
+            <button
+              className="examples-picker__item"
+              disabled={selectionSize === 0}
+              onClick={() => { setOpen(false); onCopySelection(); }}
+            >
+              <span>Copy Selection</span>
+              <span className="export-picker__hint">{selectionSize === 0 ? "drag a rectangle on the canvas first" : `${selectionSize} gate(s) → gate clipboard`}</span>
+            </button>
+            <button
+              className="examples-picker__item"
+              disabled={selectionSize === 0}
+              onClick={() => { setOpen(false); onCutSelection(); }}
+            >
+              <span>Cut Selection</span>
+              <span className="export-picker__hint">{selectionSize === 0 ? "drag a rectangle on the canvas first" : `${selectionSize} gate(s) → gate clipboard, removed`}</span>
+            </button>
+            <button
+              className="examples-picker__item"
+              disabled={!hasGateClipboard}
+              onClick={() => { setOpen(false); onPasteSelection(); }}
+            >
+              <span>Paste Selection</span>
+              <span className="export-picker__hint">{hasGateClipboard ? "append clipboard gates after the circuit" : "gate clipboard is empty"}</span>
             </button>
             <div className="examples-picker__cat-label">Circuit</div>
             <button
@@ -413,6 +449,16 @@ export function CircuitEditor() {
   const setPickedStep = t.setStep;
   const setParamValues = t.setParams;
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [gateClipboardVersion, setGateClipboardVersion] = useState(0);
+  const hasGateClipboard = useMemo(() => {
+    void gateClipboardVersion;
+    try { return !!localStorage.getItem(GATE_CLIPBOARD_KEY); } catch { return false; }
+  }, [gateClipboardVersion]);
+  // Reset rubber-band selection when switching tabs — it's a per-tab UI
+  // state, like selectedGateId, and stale ids would refer to gates that
+  // belong to a different circuit.
+  useEffect(() => { setSelectedIds(new Set()); }, [t.activeId]);
   const [customGates, setCustomGates] = useState<CustomGate[]>(() => loadCustomGates());
   const [noise, setNoise] = useState<NoiseModel>(() => loadNoise());
   const [findQuery, setFindQuery] = useState<string>("");
@@ -746,6 +792,71 @@ export function CircuitEditor() {
                 }
                 t.newTab(result.circuit, "Pasted");
               }}
+              selectionSize={selectedIds.size}
+              hasGateClipboard={hasGateClipboard}
+              onCopySelection={() => {
+                const selected = circuit.gates.filter((g) => selectedIds.has(g.id));
+                if (selected.length === 0) return;
+                const minCol = Math.min(...selected.map((g) => g.column));
+                const slice = selected.map((g) => ({
+                  gateId: g.gateId,
+                  controls: g.controls,
+                  targets: g.targets,
+                  clbits: g.clbits,
+                  params: g.params,
+                  column: g.column - minCol,
+                  controlStates: g.controlStates,
+                  condition: g.condition,
+                  annotation: g.annotation,
+                }));
+                try {
+                  localStorage.setItem(GATE_CLIPBOARD_KEY, JSON.stringify(slice));
+                  setGateClipboardVersion((v) => v + 1);
+                } catch { /* quota — silently drop */ }
+              }}
+              onCutSelection={() => {
+                const selected = circuit.gates.filter((g) => selectedIds.has(g.id));
+                if (selected.length === 0) return;
+                const minCol = Math.min(...selected.map((g) => g.column));
+                const slice = selected.map((g) => ({
+                  gateId: g.gateId,
+                  controls: g.controls,
+                  targets: g.targets,
+                  clbits: g.clbits,
+                  params: g.params,
+                  column: g.column - minCol,
+                  controlStates: g.controlStates,
+                  condition: g.condition,
+                  annotation: g.annotation,
+                }));
+                try {
+                  localStorage.setItem(GATE_CLIPBOARD_KEY, JSON.stringify(slice));
+                  setGateClipboardVersion((v) => v + 1);
+                } catch { /* quota — silently drop */ }
+                for (const g of selected) dispatch({ type: "remove-gate", id: g.id });
+                setSelectedIds(new Set());
+              }}
+              onPasteSelection={() => {
+                let raw: string | null = null;
+                try { raw = localStorage.getItem(GATE_CLIPBOARD_KEY); } catch { /* ignore */ }
+                if (!raw) return;
+                let slice: Array<Omit<import("./types").PlacedGate, "id"> & { column: number }>;
+                try { slice = JSON.parse(raw); } catch { return; }
+                const atColumn = circuit.gates.reduce((m, g) => Math.max(m, g.column + 1), 0);
+                for (const s of slice) {
+                  const allQs = [...(s.controls ?? []), ...(s.targets ?? [])];
+                  if (allQs.some((q) => q < 0 || q >= circuit.numQubits)) continue;
+                  if ((s.clbits ?? []).some((c) => c < 0 || c >= circuit.numClbits)) continue;
+                  dispatch({
+                    type: "place-gate",
+                    gate: {
+                      ...s,
+                      id: `paste_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                      column: atColumn + s.column,
+                    },
+                  });
+                }
+              }}
               onDuplicateTab={() => t.duplicateTab(t.activeId)}
               onClear={() => dispatch({ type: "clear" })}
             />
@@ -881,6 +992,8 @@ export function CircuitEditor() {
             currentStep={effectiveStep}
             customGates={customGates}
             highlightedIds={findMatches(circuit, findQuery)}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         </div>
         <InspectorSplitter />
