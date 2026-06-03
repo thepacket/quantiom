@@ -676,3 +676,15 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .tsweep__legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 10px; color: var(--muted); }
 .tsweep__legend span { display: inline-flex; align-items: center; gap: 3px; }
 .tsweep__swatch { width: 10px; height: 3px; border-radius: 1px; display: inline-block; }
+
+/* ─── Causal light-cone dimming + panel ────────────────────────────── */
+.gate--dimmed { opacity: 0.12; }
+.lightcone { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.lightcone__dir { display: flex; gap: 4px; }
+.lightcone__dir button { font-size: 10px; padding: 2px 6px; color: var(--muted); }
+.lightcone__dir-on { color: var(--accent); border-color: var(--accent-2); }
+.lightcone__qubits { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 10px; }
+.lightcone__label { color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.lightcone__q { padding: 1px 6px; color: var(--muted); }
+.lightcone__q--on { color: var(--accent); border-color: var(--accent-2); }
+.lightcone__clear { padding: 1px 6px; color: var(--muted); }

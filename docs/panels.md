@@ -347,6 +347,31 @@ Bloch ⟨Z⟩ each time. Opt-in (default-collapsed).
 
 ---
 
+## Causal cone
+
+A structural (no-simulation) view drawn on the **circuit canvas**, not a
+chart. Pick a target qubit and a direction; the canvas dims every gate
+outside that qubit's causal light cone, leaving only the sub-circuit
+that matters.
+
+**Controls.**
+- **Direction** — *affects ←* (backward: gates that can influence the
+  target's final state) or *→ affected by* (forward: gates the target's
+  input can reach).
+- **Qubit** — click to set the target; click again or *clear* to turn
+  the overlay off.
+
+**What it's for.**
+- How deep a measurement's dependency reaches (backward cone of the
+  measured qubit).
+- Which gates an error on a given qubit could spread to (forward cone).
+- Trimming a circuit mentally to the part relevant to one output.
+
+Computed by one pass over the gate list (markers excluded); the cone
+is cleared on tab switch.
+
+---
+
 ## Hamiltonian → Trotter
 
 Paste a Pauli-sum Hamiltonian (e.g. `0.5 * X1 X2 + 0.3 * Z0`) and the

@@ -87,6 +87,8 @@ type Props = {
    *  the Edit menu's Copy / Cut Selection items act on this set. */
   selectedIds?: Set<string>;
   onSelectionChange?: (ids: Set<string>) => void;
+  /** When set, gates NOT in this set are dimmed (causal light-cone view). */
+  coneIds?: Set<string> | null;
 };
 
 type HoverState =
@@ -94,7 +96,7 @@ type HoverState =
   | { kind: "move"; col: number; row: number; gateId: string; placedId: string }
   | null;
 
-export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep, customGates = [], highlightedIds, selectedIds, onSelectionChange }: Props) {
+export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep, customGates = [], highlightedIds, selectedIds, onSelectionChange, coneIds }: Props) {
   const [hover, setHover] = useState<HoverState>(null);
   // Tracks the in-flight move-gate drag so dragOver (which can't read payload) knows the gate.
   const dragMove = useRef<{ placedId: string; gateId: string } | null>(null);
@@ -415,6 +417,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
             past={currentStep !== undefined && g.column > currentStep}
             customGates={customGates}
             matched={highlightedIds?.has(g.id) ?? false}
+            dimmed={!!coneIds && !coneIds.has(g.id)}
             x={colX(g.column, colOffsets, colWidths)}
           />
         ))}
@@ -589,6 +592,7 @@ function PlacedGateView({
   past,
   customGates,
   matched,
+  dimmed,
   x,
 }: {
   gate: PlacedGate;
@@ -597,6 +601,7 @@ function PlacedGateView({
   past?: boolean;
   customGates: CustomGate[];
   matched?: boolean;
+  dimmed?: boolean;
   x: number;
 }) {
   const isCustom = gate.gateId.startsWith(CUSTOM_PREFIX);
@@ -617,7 +622,7 @@ function PlacedGateView({
     const w = Math.max(40, label.length * 8 + 12);
     return (
       <g
-        className={"gate gate--custom" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "")}
+        className={"gate gate--custom" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "")}
         onClick={(e) => { e.stopPropagation(); onClick(); }}
       >
         <rect x={x - w / 2} y={yTop} width={w} height={boxH} rx={6} className="gate__box gate__box--custom" />
@@ -635,7 +640,7 @@ qubits: ${all.join(", ")}
 column ${gate.column}${gate.params.length > 0 ? `\nparams: ${gate.params.join(", ")}` : ""}${gate.condition ? `\nif c[${gate.condition.clbit}] == ${gate.condition.value}` : ""}`;
   return (
     <g
-      className={"gate" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "")}
+      className={"gate" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "")}
       data-cat={def.category}
       onClick={(e) => {
         e.stopPropagation();

@@ -59,6 +59,8 @@ import { SpaceTimePanel } from "../panels/SpaceTimePanel";
 import { SchmidtPanel } from "../panels/SchmidtPanel";
 import { CorrelationPanel } from "../panels/CorrelationPanel";
 import { TSweepPanel } from "../panels/TSweepPanel";
+import { LightConePanel, type ConeDir } from "../panels/LightConePanel";
+import { computeLightCone } from "./lightcone";
 import { NoisePanel } from "../panels/NoisePanel";
 import { PhaseDiskPanel } from "../panels/PhaseDiskPanel";
 import { ResourcePanel } from "../panels/ResourcePanel";
@@ -457,6 +459,16 @@ export function CircuitEditor() {
   const setParamValues = t.setParams;
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [coneTarget, setConeTarget] = useState<number | null>(null);
+  const [coneDir, setConeDir] = useState<ConeDir>("backward");
+  // Clear the cone selection on tab switch.
+  useEffect(() => { setConeTarget(null); }, [t.activeId]);
+  const coneIds = useMemo(
+    () => (coneTarget === null || coneTarget >= circuit.numQubits
+      ? null
+      : computeLightCone(circuit, coneTarget, coneDir)),
+    [circuit, coneTarget, coneDir],
+  );
   const [gateClipboardVersion, setGateClipboardVersion] = useState(0);
   const hasGateClipboard = useMemo(() => {
     void gateClipboardVersion;
@@ -1001,6 +1013,7 @@ export function CircuitEditor() {
             highlightedIds={findMatches(circuit, findQuery)}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
+            coneIds={coneIds}
           />
         </div>
         <InspectorSplitter />
@@ -1107,6 +1120,9 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="t-sweep">
           <TSweepPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="light-cone">
+          <LightConePanel numQubits={circuit.numQubits} target={coneTarget} dir={coneDir} onTarget={setConeTarget} onDir={setConeDir} />
         </ErrorBoundary>
         <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
         <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} coupling={noise.coupling} /></ErrorBoundary>
