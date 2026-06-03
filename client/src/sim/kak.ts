@@ -113,6 +113,7 @@ function dagger(A: Complex[][]): Complex[][] {
 }
 
 function transposeReal(A: number[][]): number[][] {
+  if (A.length === 0) return [];
   const n = A.length, m = A[0].length;
   const out: number[][] = Array.from({ length: m }, () => new Array<number>(n).fill(0));
   for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) out[j][i] = A[i][j];
@@ -493,7 +494,17 @@ function su2ToU3(U: Complex[][]): { theta: number; phi: number; lambda: number }
 
 export function decomposeKAK4x4(U: Complex[][]): KakResult | null {
   if (U.length !== 4 || U[0].length !== 4) return null;
+  // Never throw: callers (the transpiler) treat null as "couldn't
+  // decompose, fall back". A numerical edge in the linear algebra should
+  // degrade to null, not crash the whole transpile.
+  try {
+    return decomposeKAK4x4Inner(U);
+  } catch {
+    return null;
+  }
+}
 
+function decomposeKAK4x4Inner(U: Complex[][]): KakResult | null {
   const M = magicBasis();
   const Mdag = dagger(M);
   const Um = matMul(Mdag, matMul(U, M));
