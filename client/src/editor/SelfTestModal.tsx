@@ -132,7 +132,7 @@ export function SelfTestModal({ onClose }: { onClose: () => void }) {
 
         <div style={{ borderTop: "1px solid var(--border)", padding: "10px 18px", color: "var(--muted)", fontSize: 11, lineHeight: 1.5 }}>
           A live, in-browser subset of the engine's validation. The full
-          suite — 417 automated tests — runs in continuous integration on
+          suite — 431 automated tests — runs in continuous integration on
           every commit:{" "}
           <a href={ACTIONS_URL} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>github.com/thepacket/quantiom/actions</a>.
         </div>
