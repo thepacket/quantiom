@@ -118,6 +118,14 @@ Quantiom is a two-name project:
 Bugs and design choices are the agent's; the call to keep them or fix
 them is the maintainer's.
 
+## Citation
+
+If you use Quantiom in your work, please cite it. Repository metadata is
+in [`CITATION.cff`](CITATION.cff) (GitHub renders a **"Cite this
+repository"** button from it). An archival, versioned DOI is minted via
+[Zenodo](https://zenodo.org) on each tagged release — the DOI badge will
+appear here once the first release is archived.
+
 ## Shape
 
 - **client/** — Vite + React + TypeScript. UI, simulators, parameter

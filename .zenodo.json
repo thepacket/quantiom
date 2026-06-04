@@ -1,0 +1,29 @@
+{
+  "title": "Quantiom: A browser-native, research-grade quantum circuit editor, simulator, and visualizer",
+  "description": "Quantiom is a browser-native quantum circuit editor, simulator, and visualizer for users already comfortable with quantum-computing concepts. It runs entirely in the browser with no installation: a multi-tab 64-gate editor feeds a dense statevector simulator, an Aaronson-Gottesman stabilizer tableau, and a quantum-trajectory noise simulator, alongside ~40 research-grade panels including 24 entanglement and dynamics visualizers, OpenQASM 3 round-trip, eight code/format exporters, optimizers, error mitigation, and a transpile/route/compile pipeline.",
+  "upload_type": "software",
+  "license": "MIT",
+  "creators": [
+    { "name": "Paquette, Andre" }
+  ],
+  "keywords": [
+    "quantum computing",
+    "quantum circuits",
+    "quantum simulation",
+    "scientific visualization",
+    "OpenQASM",
+    "TypeScript"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/thepacket/quantiom",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://quantiom.fly.dev",
+      "relation": "isDocumentedBy",
+      "scheme": "url"
+    }
+  ]
+}

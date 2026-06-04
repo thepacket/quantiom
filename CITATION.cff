@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: "Quantiom: A browser-native, research-grade quantum circuit editor, simulator, and visualizer"
+message: "If you use Quantiom in your research, please cite it using this metadata."
+type: software
+# Add your ORCID once you have one (orcid.org). A real ORCID also lets Zenodo
+# link the deposit to your profile. Leave it off rather than guessing — an
+# invalid ORCID will be rejected by Zenodo and by cff validators.
+authors:
+  - given-names: Andre
+    family-names: Paquette
+repository-code: "https://github.com/thepacket/quantiom"
+url: "https://quantiom.fly.dev"
+abstract: >-
+  Quantiom is a browser-native quantum circuit editor, simulator, and
+  visualizer for users already comfortable with quantum-computing concepts.
+  It runs entirely in the browser with no installation: a multi-tab 64-gate
+  editor feeds a dense statevector simulator, an Aaronson-Gottesman stabilizer
+  tableau, and a quantum-trajectory noise simulator, alongside ~40 research-
+  grade panels including 24 entanglement and dynamics visualizers, OpenQASM 3
+  round-trip, eight code/format exporters, optimizers, error mitigation, and a
+  transpile/route/compile pipeline.
+keywords:
+  - quantum computing
+  - quantum circuits
+  - quantum simulation
+  - scientific visualization
+  - OpenQASM
+  - TypeScript
+license: MIT
+version: 0.1.0
+date-released: "2026-06-04"
