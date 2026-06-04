@@ -403,6 +403,44 @@ These are the rules every change must respect:
 
 ---
 
+## Testing
+
+Quantiom ships with a comprehensive automated test suite. The numeric
+core — the part where correctness actually matters — is covered
+thoroughly and verified against analytic ground truth.
+
+- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **360
+  tests** cover the statevector simulator (Bell / GHZ / rotations /
+  measurement / state-prep / big-endian), every gate's matrix unitarity
+  and algebraic identities, the parameter evaluator, the Clifford
+  tableau (cross-checked against the statevector), Pauli expectations,
+  resource counting, circuit equivalence, gate inversion (U†·U = I), the
+  OpenQASM 3 round-trip, **all eight SDK / LaTeX emitters**, the
+  transpiler / router / Trotter builder, the noisy trajectory simulator,
+  the optimiser, the KAK decomposition, and all 24 visualiser
+  substrates.
+- **Continuous integration.** `.github/workflows/ci.yml` type-checks
+  the source and the tests, runs the full suite, and builds the client
+  on **every push and pull request**. A green build means all 360 tests
+  passed.
+- **In-app live Self-test.** The toolbar **Self-test** button runs a
+  **344-check** browser-side cross-section of the same engine the
+  session is using (`client/src/selftest/diagnostics.ts`), against
+  known-correct results, and reports pass/fail in ~10 ms — so a user can
+  validate the engine in their own browser without taking "it's tested"
+  on faith. It's a lazily-imported chunk: zero cost until the dialog is
+  opened.
+- **Commands.** `npm test` (CI mode), `npm run test:watch`,
+  `npm run test:coverage`, `npm run typecheck:test`. The lockfile is
+  pinned to npm 10 (see `CLAUDE.md`) so the suite installs identically
+  in CI and Docker.
+
+The suite has already earned its keep: its first run surfaced two real
+correctness bugs — a false-positive in the equivalence checker (circuits
+with disjoint basis images reported as equivalent) and two gates
+mislabelled as self-inverse in the inverter — both now fixed and
+regression-tested.
+
 ## Out of scope
 
 Out-of-scope features and why they were rejected live in
