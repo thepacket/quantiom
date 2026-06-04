@@ -409,7 +409,7 @@ Quantiom ships with a comprehensive automated test suite. The numeric
 core — the part where correctness actually matters — is covered
 thoroughly and verified against analytic ground truth.
 
-- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **399
+- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **417
   tests** cover the statevector simulator (Bell / GHZ / rotations /
   measurement / state-prep / big-endian), every gate's matrix unitarity
   and algebraic identities, the parameter evaluator, the Clifford
@@ -421,7 +421,7 @@ thoroughly and verified against analytic ground truth.
   substrates.
 - **Continuous integration.** `.github/workflows/ci.yml` type-checks
   the source and the tests, runs the full suite, and builds the client
-  on **every push and pull request**. A green build means all 399 tests
+  on **every push and pull request**. A green build means all 417 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
   **344-check** browser-side cross-section of the same engine the

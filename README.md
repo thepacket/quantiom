@@ -101,7 +101,7 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**399 tests** that run in continuous integration on **every push**
+**417 tests** that run in continuous integration on **every push**
 (`.github/workflows/ci.yml`). They verify the statevector simulator, every
 gate's matrix unitarity and algebra, the Clifford tableau, Pauli
 expectations, circuit equivalence, gate inversion, the OpenQASM 3
