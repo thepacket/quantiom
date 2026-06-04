@@ -1,18 +1,36 @@
-# Tutorial — from first circuit to running VQE
+# Tutorial — a guided tour of Quantiom
 
-This is a hands-on walkthrough. Open Quantiom in one window and this
-document in another; every section ends with a "what to look at"
-moment so you know whether you're on track.
+This is a hands-on walkthrough, organised as **workflows** rather than a
+feature checklist. Open Quantiom in one window and this document in
+another; every section ends with a "what to look at" moment so you know
+whether you're on track.
 
-The whole tour takes about thirty minutes if you don't get distracted
-poking around (you will get distracted poking around). Each section
-loads an example circuit from `examples/`; the file menu has a
-searchable picker for all 88 of them.
+It's a long tour — you don't have to do it in one sitting. Each **Part**
+stands alone, so jump to whatever you need. Where a section uses a panel,
+it links to [`panels.md`](panels.md) for the per-panel reference (this
+doc teaches *when and why* to reach for a panel; `panels.md` is the
+*what*).
+
+Each section loads an example circuit from `examples/`; the File menu has
+a searchable picker for all 93 of them, grouped by topic, each with an
+explanatory header.
 
 Throughout the tour, **bold** is for actions you take; *italic* is for
 the thing you should now see.
 
+**Contents**
+
+- **Part I — Foundations:** Bell pair · parameters & animation · editing fluently
+- **Part II — Reading the state:** entanglement structure · dynamics · phase space & magic · the operator · structure graphs
+- **Part III — Noise & error mitigation:** noise · ZNE · PEC
+- **Part IV — Optimisation & algorithms:** VQE & the optimiser toolbox · Hamiltonian → Trotter · the Clifford fast path & syndromes
+- **Part V — Hardware & interop:** transpile / route / compile · OpenQASM 3 & the nine exports
+- **Part VI — The AI assistant**
+- Keyboard shortcuts · where to look when you're stuck
+
 ---
+
+# Part I — Foundations
 
 ## 1. A Bell pair (5 min)
 
@@ -82,17 +100,223 @@ manually** — you'll see the state respond per pixel of drag.
 
 **Tip.** The Parameters panel auto-detects any non-Greek symbol you
 write in a gate argument as a free parameter. `theta`, `phi`, `gamma`,
-your-name-here all work and get their own sliders.
+your-name-here all work and get their own sliders. The `t` symbol is
+special only in that it gets the play button and is what every
+`t`-sweep visualiser sweeps.
 
 ---
 
-## 3. Noise (5 min)
+## 3. Editing fluently (10 min)
+
+Goal: stop fighting the editor. The features here are what make
+building a non-trivial circuit fast.
+
+**Multi-tab.** The tab strip below the header holds several circuits at
+once, each with its own undo history, parameters, and step position.
+**Cmd/Ctrl-T** opens a new tab, **Cmd/Ctrl-1..9** jumps to tab N,
+double-click a pill to rename, drag to reorder. The custom-gate palette
+and the noise model are shared across tabs; everything else is
+per-tab.
+
+**Place and wire gates.** Drag any palette tile onto a qubit wire. For
+controlled gates, drag the control onto another wire; right-click a
+control dot to toggle it to an **anti-control** (open circle). Click a
+placed gate to select it and edit its parameters in the inspector.
+
+**Rectangle-select.** Hold the left mouse on empty canvas and drag a
+rubber band; every gate it intersects highlights. The **Edit menu**'s
+Selection section then copies / cuts / pastes that block — across
+tabs, too (Cmd/Ctrl-C / V).
+
+**Append U†.** Build any sub-circuit, select a column range, and use
+**Edit → Append U†** to append its exact inverse (reversed and
+daggered). Handy for uncompute patterns and for "does this round-trip
+to identity?" sanity checks — pair it with the Equivalence panel
+(§9-bis below) to confirm.
+
+**Save as Gate.** Select a block and use the toolbar's **Save as Gate**
+to turn it into a reusable named tile in the palette. It's stored in
+local storage and shared across tabs; placing it inlines the
+definition at simulate time.
+
+**The example library.** File → Open example is a searchable, grouped
+picker for all 93 examples. Each entry's tooltip is its header comment
+— scan the library by *what it teaches*, not by gate count.
+
+*What to look at:* the **Resources panel** is your editing dashboard —
+total / 1q / 2q / multi-qubit counts, T-count, T-depth, CX count,
+parallel depth, distinct qubits, free symbols, and (when a coupling map
+is imported) connectivity-violation count. When a circuit "does
+something weird," Resources usually shows why (a stray ancilla, a
+missing measurement). See [`panels.md`](panels.md) → Resources.
+
+---
+
+# Part II — Reading the state (the visualisers)
+
+Quantiom's headline is its **24 peer visualisers** — every one a panel
+with the same screen-space rights as Statevector. They're all
+default-collapsed (zero cost until you open one) and capped so they
+stay fast. This part tours them by *task*. Open a few side by side; the
+point is to see the same state through complementary lenses.
+
+> Most of these need the statevector path — they show a notice under
+> the Clifford fast path or noise mode, because a reduced density matrix
+> from a single noisy trajectory isn't meaningful.
+
+## 4. Entanglement structure
+
+Goal: tell *what kind* of entanglement a state has, not just that it's
+entangled.
+
+**Load** `ghz.qasm` (3-qubit GHZ) and open four panels:
+**Mutual information**, **Entanglement negativity**, **Entanglement
+spectrum**, and **Entropy profile**.
+
+- *Mutual information* lights up all-to-all — every pair shares
+  correlation.
+- *Entanglement negativity*, though, reads **zero on every pair.** This
+  is the key lesson: GHZ entanglement is **global, not pairwise**.
+  Mutual information counts classical + quantum correlation together;
+  negativity (PPT-exact for two qubits) only fires on genuine pairwise
+  entanglement. Reading the two maps side by side is how you *see* the
+  difference.
+- *Entropy profile* is flat at exactly 1 bit for every cut — one shared
+  bit no matter where you cut.
+
+**Now load** `cluster_state_4q.qasm` and watch the same four panels.
+*Mutual information shows a nearest-neighbour band, not all-to-all*;
+*the entropy profile is no longer flat.* Different entanglement
+topology, immediately visible.
+
+**Try the Entanglement-spectrum cut selector**: tick different qubits
+into subset A and watch the Schmidt coefficients and S(ρ_A) update —
+the decay of the spectrum is the bond dimension an MPS would need.
+
+See [`panels.md`](panels.md) → Mutual information / Entanglement
+negativity / Entanglement spectrum / Entropy profile.
+
+## 5. Dynamics over the `t` clock
+
+Goal: read a circuit's *time evolution* as static pictures, without
+watching the animation play.
+
+**Load** `kicked_ising_floquet_4q.qasm` (a Floquet drive over `t`) and
+open **Space–time ⟨Z⟩**, **Space–time entropy**, **t-sweep ⟨Z⟩(t)**,
+and **t-sweep spectrum**.
+
+- *Space–time ⟨Z⟩* is the many-body space–time diagram (qubits ×
+  columns); a kicked drive shows period-doubling stripes.
+- *Space–time entropy* shows the **entanglement-growth front** — where
+  and when each qubit gets entangled.
+- *t-sweep ⟨Z⟩(t)* plots each qubit's ⟨Z⟩ over one period as a line;
+  *t-sweep spectrum* is its DFT, so Rabi/Larmor/Floquet frequencies
+  appear as peaks (a single `rx(t)` peaks at bin 1).
+
+**Then load** `trotter_heisenberg_2q.qasm` and open **Loschmidt echo**
+and **Bloch trajectory**. *Loschmidt* traces the return probability
+L(t) = |⟨ψ(0)|ψ(t)⟩|² with the DQPT rate function overlaid — cusps mark
+dynamical phase transitions. *Bloch trajectory* draws the full 3-D path
+each qubit's Bloch vector sweeps (not just ⟨Z⟩).
+
+For scrambling, open **OTOC** on a coupled circuit, pick a "butterfly"
+qubit and a "measure" qubit, and watch C(t) rise as the operator front
+spreads between them.
+
+See [`panels.md`](panels.md) → the Dynamics panels.
+
+## 6. Phase space & magic
+
+Goal: see interference, non-classicality, and "how hard is this state
+to simulate classically."
+
+**Load** `magic_state.qasm` (`T|+⟩`, the canonical magic state) and open
+**Amplitude · phase**, **Wigner function**, **Husimi Q**, and
+**Magic (M₂)**.
+
+- *Amplitude · phase* shows the full state as bars (height = |amp|, hue
+  = phase) — the only view of *full-state* phase. Load `qft_3q.qasm` to
+  see the QFT's phase staircase.
+- *Wigner function* is the discrete phase-space quasi-probability;
+  **negative cells = non-classicality.** A T-state shows negativity.
+- *Husimi Q* is the always-non-negative companion — a smooth coherent-
+  state projection on the sphere.
+- *Magic (M₂)* is the rigorous number: the stabilizer 2-Rényi entropy.
+  **M₂ = 0 exactly for any stabilizer state**, and climbs with every
+  T-like gate. The `T|+⟩` state reads ≈ 0.415 bit; load `bell.qasm` and
+  it reads 0 — Bell is a stabilizer state.
+
+**Load** `ghz.qasm` and open the **Q-sphere**: *two big antipodal dots*
+(|000⟩ at the north pole, |111⟩ at the south), the whole state on one
+sphere with hue = phase.
+
+See [`panels.md`](panels.md) → Amplitude · phase / Wigner / Husimi /
+Magic / Q-sphere.
+
+## 7. The operator, not the state
+
+Goal: inspect what the circuit *does* to every input, independent of
+the input.
+
+**Load** any small circuit (≤ 3 qubits) and open **Unitary heatmap**
+and **Pauli transfer matrix**.
+
+- *Unitary heatmap* is the 2ⁿ×2ⁿ operator (magnitude + phase). A
+  permutation shows one lit cell per row/column; a controlled gate
+  shows block structure; QFT shows uniform magnitude with a phase
+  staircase.
+- *Pauli transfer matrix* shows the same operator in the Pauli basis. A
+  **Clifford gate is a signed permutation** (one ±1 per row/column);
+  load a circuit with a `T` to see weight smear into the X–Y block.
+
+**Process tomography (χ)** reconstructs the process matrix in heatmap or
+Hinton view (and has a noise toggle for the trajectory-averaged
+channel). **Hamiltonian spectrum** diagonalises a Pauli-sum H you type
+and overlays the live state's ⟨H⟩ — drag a VQE ansatz and watch ⟨H⟩
+descend toward the ground line.
+
+**Equivalence** check: open two tabs, and the Equivalence panel compares
+them up to global phase, reporting process fidelity and a trace-distance
+bound. This is the tool for "did my optimisation change the circuit's
+meaning?" — see §12.
+
+See [`panels.md`](panels.md) → Unitary heatmap / Pauli transfer matrix /
+Tomography / Hamiltonian spectrum / Equivalence.
+
+## 8. Structure graphs
+
+Goal: read the circuit's *structure* — connectivity, checks, causal
+cones — with no simulation at all.
+
+- **Interaction graph** — qubits as nodes, edge weight = # of
+  multi-qubit gates per pair. Compare it against the hardware coupling
+  map in the Noise panel to gauge how much routing a device will need.
+- **Tanner / check graph** — load `surface_code_plaquette.qasm` or
+  `steane_encode_logical_zero.qasm`; each measurement becomes a check
+  node connected to the data qubits in its causal support (weight-4 for
+  a surface plaquette). The bipartite graph a decoder consumes.
+- **Causal cone** — pick a target qubit and a direction on the **canvas
+  overlay**; gates outside that qubit's light cone dim. Great for "how
+  far does this measurement's dependency reach."
+- **ZX diagram** — the circuit as green/red spiders + Hadamard boxes.
+  Load `cluster_state_4q.qasm` to see graph-state structure; the π/4
+  green spiders are exactly your T-count, at a glance. (This renders the
+  diagram; it does not do PyZX-style rewriting.)
+
+See [`panels.md`](panels.md) → Interaction graph / Tanner / Causal cone /
+ZX diagram.
+
+---
+
+# Part III — Noise & error mitigation
+
+## 9. Noise (5 min)
 
 Goal: turn on a noise model and see how it dulls the ideal state.
 
-**Load** `ghz.qasm` (a 3-qubit GHZ — like Bell but more entangled). With
-no noise, the Statevector panel shows two non-zero amplitudes
-(`|000⟩` and `|111⟩`), each at 1/√2. Bloch shows three origin vectors.
+**Load** `ghz.qasm`. With no noise, the Statevector panel shows two
+non-zero amplitudes (`|000⟩` and `|111⟩`), each at 1/√2. Bloch shows
+three origin vectors.
 
 **Open the Noise panel.** Drag the **1-qubit depolarising** slider up
 to 0.05 (5% depolarising per gate). *The Bloch vectors stay at the
@@ -105,23 +329,23 @@ vectors drift south* — amplitude damping pulls every qubit toward
 is significantly decohered.
 
 **Switch the Probabilities panel to Shots mode.** *You'll now see
-non-zero probability mass on basis states besides `|000⟩` and `|111⟩`
+non-zero probability mass on basis states besides `|000⟩` and `|111⟩`*
 — most prominently `|001⟩`, `|010⟩`, `|100⟩` — the result of
 amplitude damping flipping one of the three qubits in transit.
 
-**Try a device preset.** In the Noise panel, click **IBM Heron**. The
-sliders snap to a representative profile for that device. The noise
-visible on the GHZ now matches what you'd expect from a real
-near-term experiment.
+**Try a device import.** The Noise panel can import an IBM
+`BackendProperties` JSON (T1/T2, per-gate error, readout, coupling
+map), and it has a coupling-graph view and a custom-Kraus editor for
+arbitrary 1q/2q channels.
 
 **Turn noise OFF** when you're done — Quantiom's default-fast
 invariant means a noise-off circuit runs at full noiseless speed; an
 accidentally-left-on noise model can be a surprise in the next
 section if you forget.
 
----
+See [`panels.md`](panels.md) → Noise model.
 
-## 4. ZNE: undoing some of the noise (5 min)
+## 10. ZNE: undoing some of the noise (5 min)
 
 Goal: estimate a noise-free expectation value from a noisy circuit
 without changing the circuit.
@@ -144,9 +368,7 @@ further* — quadratic Richardson cancels both linear and quadratic
 error terms, at the cost of being noisier when the underlying noise
 is small. For deep circuits it's worth it.
 
----
-
-## 5. PEC: cancelling noise per gate (5 min)
+## 11. PEC: cancelling noise per gate (5 min)
 
 Goal: try the other big mitigation tool, with its own trade-offs.
 
@@ -169,9 +391,13 @@ better choice.
 Both ZNE and PEC report the SAME quantity (noise-free ⟨P⟩); they're
 different statistical strategies for estimating it.
 
+See [`panels.md`](panels.md) → Expectation ⟨P⟩ (the ZNE / PEC tool row).
+
 ---
 
-## 6. VQE: optimising parameters to minimise energy (10 min)
+# Part IV — Optimisation & algorithms
+
+## 12. VQE and the optimiser toolbox (10 min)
 
 Goal: the destination. Tune an ansatz to minimise the expectation of
 a Hamiltonian — the workflow that drives every NISQ-era ground-state
@@ -199,48 +425,147 @@ default) with parameter-shift gradients and converges in 20–50 steps.
 Watch the step counter and the running ⟨H⟩ live. *When it converges,
 the slider has moved to the true minimum* and the reported energy
 matches the Full-CI ground-state energy of H₂ at this bond length
-(roughly −1.137 Hartree).
+(roughly −1.137 Hartree). You just ran a VQE.
 
-You just ran a VQE.
+**The rest of the tool row:**
+- **Landscape** sweeps 1–2 symbols on a grid and renders ⟨H⟩ as a
+  curve or heatmap — the minimum becomes visually unambiguous.
+- **Plateau** samples random parameters and reports
+  `Var(∂⟨H⟩/∂θ)`. For this 1-parameter circuit the variance is
+  healthy; try it on `variational_ansatz.qasm` (4 qubits, 16
+  parameters, CNOT ring) to feel a real barren-plateau diagnostic.
+- **QNG** (Quantum Natural Gradient, statevector mode) preconditions
+  the gradient with the Fubini–Study metric — often far fewer steps
+  than plain Adam on a curved landscape.
 
-**Try Landscape** instead: the Landscape button sweeps `theta` across
-`[-π, π]` on a 50-point grid and renders ⟨H⟩ as a curve. *The
-minimum is visually unambiguous* — you can see why the optimiser
-converged where it did.
+See [`panels.md`](panels.md) → Expectation ⟨P⟩.
 
-**Try Plateau**: samples random `theta` values and reports
-`Var(∂⟨H⟩/∂theta)`. For this 1-parameter circuit the variance is
-healthy — no barren plateau here. Try it on `variational_ansatz.qasm`
-(4 qubits, 16 parameters, ring of CNOTs) for a more interesting
-plateau diagnostic.
+## 13. Hamiltonian → Trotter (5 min)
+
+Goal: turn a Hamiltonian into the circuit that simulates its time
+evolution.
+
+**Open the Hamiltonian → Trotter panel.** Paste a Pauli-sum (or click a
+preset: TFIM, XXZ, Heisenberg, H₂). Set the **order** (1, 2 = Strang,
+4 = Suzuki) or switch to **qDRIFT** random compilation, pick a time `t`
+and a step count, and **Generate** — the Trotter circuit opens in a new
+tab, parametrised by `t` so you can immediately animate it (Part I §2)
+and watch the dynamics with the Part II visualisers.
+
+**Tip.** Run the Plateau diagnostic on the generated circuit to feel how
+Trotter depth trades off against trainability.
+
+See [`panels.md`](panels.md) → Hamiltonian → Trotter.
+
+## 14. The Clifford fast path & syndromes (5 min)
+
+Goal: simulate *big* circuits, and sample error-correction syndromes.
+
+**Load** `ghz_16q.qasm`. A 16-qubit statevector would be 65 k
+amplitudes; this one runs instantly because it's **Clifford-only** —
+Quantiom routes it to the Aaronson–Gottesman tableau simulator (cap
+1024 qubits). The Statevector/Probabilities panels show a notice (no
+dense state), but **Bloch is exact** and **Expectation ⟨P⟩ works** (the
+tableau computes multi-qubit Pauli expectations exactly, returning
+{−1, 0, +1}).
+
+**Load** `stabilizer_measurement.qasm` (or a code example) and open
+**Syndrome sampling**: it runs N shots of the Clifford circuit and
+tabulates the measured syndrome bitstrings. Flip the **noise toggle**
+and it routes through a Pauli-frame tracker with per-gate depolarising
+injection — realistic syndromes from a stabilizer code.
+
+For dynamic (mid-circuit measurement) circuits generally, the
+**Measurement counts** panel is the shots view: N full simulations with
+the classical-register histogram.
+
+See [`panels.md`](panels.md) → Syndrome sampling / Measurement counts.
 
 ---
 
-## What's next
+# Part V — Hardware & interop
 
-You've now seen every major workflow Quantiom is built around. The
-remaining panels (Density matrix, Tomography, Compare, Equivalence,
-Hamiltonian → Trotter, Syndrome sampling, OpenQASM 3, Chat) work the
-same way: load an example, open the panel, observe.
+## 15. Transpile / Route / Compile to a device (5 min)
 
-Pick from the `examples/` library by topic:
+Goal: turn an abstract circuit into one a real device could run.
 
-| If you're interested in… | Try |
-|---|---|
-| Algorithms & speedups | `grover_3q.qasm`, `bv_8q.qasm`, `dj_6q.qasm` |
-| Quantum chemistry | `vqe_h2_minimal.qasm`, `ansatz_uccsd_lite_4q.qasm` |
-| Optimization | `qaoa_square_p2.qasm`, `qaoa_maxcut_triangle.qasm` |
-| Error correction | `bit_flip_code.qasm`, `phase_flip_code.qasm`, `steane_encode_logical_zero.qasm`, `shor_9q_encoder.qasm` |
-| Nonlocality & foundations | `chsh_test.qasm`, `mermin_ghz_test.qasm`, `no_cloning_witness.qasm` |
-| Communication protocols | `teleportation.qasm`, `superdense_coding.qasm`, `bb84_round.qasm` |
-| Measurement-based QC | `cluster_state_4q.qasm`, `gate_teleportation.qasm` |
-| Dynamics & physics | `trotter_heisenberg_2q.qasm`, `anim_ising_trotter.qasm` |
-| QFT & friends | `qft_3q.qasm`, `qft_5q.qasm`, `qft_8q.qasm`, `quantum_phase_estimation.qasm` |
-| Arithmetic | `half_adder.qasm`, `draper_adder.qasm`, `cuccaro_adder_2bit.qasm` |
-| Random walks | `quantum_walk_step.qasm`, `quantum_walk_8steps_3q.qasm`, `quantum_random_walk_cycle.qasm` |
+**Load** a circuit that uses gates a device doesn't have natively —
+e.g. one with an arbitrary 2-qubit gate (`u_arb_2`), `iSWAP`, or
+numeric `RXX`. Open the toolbar's **Compile…** dialog.
 
-Each file starts with a header explaining what it shows, what to look
-at in which panel, and (where appropriate) literature references.
+Pick a target — **Clifford+T**, **IBM heavy-hex {RZ, SX, CX}**, or
+**Rigetti {RZ, RX, CZ}** — and run. The one-click pipeline does
+**Transpile → Optimise → Route → Optimise** and reports per-stage gate
+counts and T-count. On the continuous targets, arbitrary two-qubit
+gates are **KAK-decomposed** (Cartan magic-basis) into the native set
+at machine precision.
+
+**Routing** inserts SWAPs to satisfy a coupling map; the **Resources**
+panel's connectivity-violation count (once a coupling map is imported in
+the Noise panel) tells you whether routing is even needed.
+
+To sanity-check the result, **Equivalence**-check the compiled circuit
+against the original (open both as tabs) — it should report fidelity 1
+up to global phase.
+
+See [`panels.md`](panels.md) → Resources / Equivalence; and
+[`qasm.md`](qasm.md) for the transpile targets.
+
+## 16. OpenQASM 3 round-trip & the nine exports (5 min)
+
+Goal: get your circuit out of Quantiom and into your real toolchain.
+
+**Open the OpenQASM 3 panel.** It shows the live circuit as OpenQASM 3
+and **round-trips** — edit the text and the canvas updates, edit the
+canvas and the text updates. It preserves the symbolic look of
+parameter expressions, anti-controls (`negctrl @`), conditional gates
+(`if (c[k]==v) …`), and qubit-name / note comments. It also parses
+OpenQASM 2.
+
+**File → Export** offers nine one-way emitters: **Qiskit, Cirq, Braket,
+Q#, PyQuil, pytket, OpenQASM 2, LaTeX (quantikz), JSON**. Gates without
+a native method in a target are lowered to exact decompositions where
+possible (e.g. `R(θ,φ) → Rz·Rx·Rz`) or emitted as a clear comment, so
+nothing is silently lost. Watch the **angle conventions**: pytket uses
+half-turns, the others radians (the qasm.md reference spells out each
+target's quirks).
+
+**Share link.** File → Share copies a URL whose hash is the
+gzip-compressed circuit — paste it to a colleague and they open the
+exact circuit, no account, no server.
+
+See [`qasm.md`](qasm.md) for the full round-trip contract and per-emitter
+conventions.
+
+---
+
+# Part VI — The AI assistant
+
+## 17. Chat (optional; needs your own key)
+
+Goal: an in-tool tutor and circuit-rewriter.
+
+The chat panel at the bottom of the canvas talks to any
+[OpenRouter](https://openrouter.ai) model (you supply the key; it's
+stored only in your browser). Two things make it more than a generic
+chatbot:
+
+- **Circuit context.** Every message ships the current circuit as
+  OpenQASM 3, and the **+ context** picker attaches panel snapshots
+  (statevector, probabilities, Bloch, resources, noise, classical
+  register) so the model reasons about the *actual* state, not your
+  description.
+- **Auto-open suggestions.** When a reply contains a `qasm` /
+  `openqasm` fenced block, Quantiom parses it and **opens it as a new
+  tab** the moment streaming finishes — "rewrite this as a Z-basis cat
+  state" lands as a runnable circuit.
+
+Replies render as **markdown + LaTeX** (KaTeX, including Dirac braket
+notation), so derivations come back formatted. Treat answers as
+suggestions, not truth — verify anything non-trivial by running it in
+the simulator (the Equivalence panel is your friend here).
+
+See [`panels.md`](panels.md) → Chat (AI).
 
 ---
 
@@ -253,6 +578,7 @@ at in which panel, and (where appropriate) literature references.
 | `Cmd-Shift-Z` / `Ctrl-Y` | Redo |
 | `Cmd-K` | Find within circuit (gate id, qubit name, parameter) |
 | `Cmd-S` | Save the current tab to a `.qasm` file |
+| `Cmd-T` | New tab · `Cmd-1..9` jump to tab N |
 | `Delete` / `Backspace` | Delete the selected gate |
 | `Cmd-D` | Duplicate selected gate(s) |
 | `Cmd-C` / `Cmd-V` | Copy / paste gate ranges across tabs |
@@ -263,20 +589,22 @@ The full list is in the `?` dialog; this is the working set.
 
 ## Where to look when you're stuck
 
-- **Panel reference**: [`docs/panels.md`](panels.md) — every panel's
+- **Panel reference**: [`panels.md`](panels.md) — every panel's
   controls, what it computes, when it's hidden.
-- **Examples library**: the `examples/` directory has 88 circuits,
+- **OpenQASM & export**: [`qasm.md`](qasm.md) — round-trip rules and
+  per-emitter conventions.
+- **Architecture**: [`architecture.md`](architecture.md) — how the
+  pieces connect, the fast-path routing, where things live.
+- **Examples library**: the `examples/` directory has 93 circuits,
   each with an explanatory header.
-- **Resources panel**: when your circuit is "doing something weird",
+- **Resources panel**: when your circuit is "doing something weird,"
   open Resources and check the gate counts. Often the issue is a
   stray ancilla or a missing measurement.
 - **Equivalence panel**: when an optimisation feels suspicious, save
-  the before-state to a `.qasm`, run Optimise, and Equivalence-check
-  the result against the saved version.
-- **AI chat**: paste your current circuit's QASM and the panel
-  snapshot you're confused about; the chat panel has a context-attach
-  picker for exactly this. Treat its answers as suggestions, not
-  truth.
+  the before-state to a `.qasm`, run Optimise / Compile, and
+  Equivalence-check the result against the saved version.
+- **AI chat**: paste your circuit and attach the panel snapshot you're
+  confused about. Treat its answers as suggestions, not truth.
 
-That covers the basics. Open the file picker, pick something that
+That covers the ground. Open the file picker, pick something that
 sounds interesting, and play.

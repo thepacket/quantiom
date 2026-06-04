@@ -140,13 +140,13 @@ function renderTable(rows: string[], key: number): ReactNode {
   );
 }
 
-/** Apply inline transforms: `code`, **bold**, *italic*. Returns React nodes. */
+/** Apply inline transforms: `code`, math, [link](url), **bold**, *italic*. */
 function inline(text: string, baseKey: number): ReactNode {
   const nodes: ReactNode[] = [];
   let cursor = 0; let k = baseKey * 17;
-  // Order matters: code first (so $/* inside code are ignored), then math
-  // ($$…$$ display, $…$ inline, \(…\) inline), then bold, then italic.
-  const re = /(`[^`]+`)|(\$\$[^$]+\$\$)|(\\\([\s\S]*?\\\))|(\$[^$\n]+\$)|(\*\*[^*]+\*\*)|(\*[^*]+\*)/g;
+  // Order matters: code first (so $/*/[ inside code are ignored), then math
+  // ($$…$$, $…$, \(…\)), then links, then bold, then italic.
+  const re = /(`[^`]+`)|(\$\$[^$]+\$\$)|(\\\([\s\S]*?\\\))|(\$[^$\n]+\$)|(\[[^\]]+\]\([^)\s]+\))|(\*\*[^*]+\*\*)|(\*[^*]+\*)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     if (m.index > cursor) nodes.push(text.slice(cursor, m.index));
@@ -155,6 +155,19 @@ function inline(text: string, baseKey: number): ReactNode {
     else if (tok.startsWith("$$")) nodes.push(<Tex key={k++} latex={tok.slice(2, -2).trim()} display />);
     else if (tok.startsWith("\\(")) nodes.push(<Tex key={k++} latex={tok.slice(2, -2).trim()} />);
     else if (tok.startsWith("$")) nodes.push(<Tex key={k++} latex={tok.slice(1, -1).trim()} />);
+    else if (tok.startsWith("[")) {
+      const mm = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(tok);
+      const label = mm ? mm[1] : tok;
+      const href = mm ? mm[2] : "#";
+      // Only http(s) links navigate (new tab). Relative links (e.g. other
+      // docs' .md files) would break the SPA, so render them as an inert
+      // styled reference — this renderer is only used in-app, not by GitHub.
+      if (/^https?:\/\//.test(href)) {
+        nodes.push(<a key={k++} href={href} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>{label}</a>);
+      } else {
+        nodes.push(<span key={k++} style={{ color: "var(--accent)" }}>{label}</span>);
+      }
+    }
     else if (tok.startsWith("**")) nodes.push(<strong key={k++}>{tok.slice(2, -2)}</strong>);
     else nodes.push(<em key={k++}>{tok.slice(1, -1)}</em>);
     cursor = m.index + tok.length;

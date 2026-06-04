@@ -56,10 +56,12 @@ Live: **<https://quantiom.fly.dev>**
 
 ## Documentation
 
-- **[Tutorial walkthrough](docs/tutorial.md)** — six-section hands-on
-  tour: Bell pair → parameters & animation → noise → ZNE → PEC → VQE.
-  Every section ends with "what to look at" so you know whether
-  you're on track.
+- **[Tutorial walkthrough](docs/tutorial.md)** — a workflow-based tour
+  in six parts: foundations (build/edit), reading the state (all 24
+  visualisers by task), noise & mitigation, optimisation & algorithms
+  (VQE, Trotter, the Clifford fast path), hardware & interop
+  (transpile/export), and the AI assistant. Every section ends with
+  "what to look at" and links to the panel reference for detail.
 - **[Panel reference](docs/panels.md)** — every user-facing panel:
   what it shows, when it's available, key controls, default-fast
   behaviour, and a "Tip" callout for the non-obvious things.

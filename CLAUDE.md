@@ -311,7 +311,9 @@ host plus `/api/health`.
   `client/src/examples.ts` pulls it out as a tooltip for the file
   picker.
 - `docs/` — markdown documentation: `panels.md` (per-panel
-  reference), `tutorial.md` (six-section hands-on walkthrough),
+  reference), `tutorial.md` (workflow-based hands-on tour in six
+  parts, covering the full feature breadth incl. all 24 visualisers,
+  cross-linked to panels.md),
   `architecture.md` (codebase map / data flow / fast paths),
   `qasm.md` (OpenQASM round-trip + the eight SDK emitters). All four
   are imported into the app via `client/src/editor/DocsModal.tsx` and
