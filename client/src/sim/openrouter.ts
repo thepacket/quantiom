@@ -62,10 +62,20 @@ export type StreamCallbacks = {
   onError: (message: string) => void;
 };
 
+/** Abort the stream if no data arrives for this long — catches a hung
+ *  connection or a mid-stream stall without killing a slow-but-healthy
+ *  reply (the timer resets on every received chunk). */
+const IDLE_TIMEOUT_MS = 20_000;
+
 /**
  * Stream a chat completion. Returns an `AbortController` so the caller can
  * cancel mid-stream (e.g. when the user clicks Stop). The callbacks fire in
  * order: many onDelta, then exactly one of onDone or onError.
+ *
+ * Includes a 20-second **idle** timeout: if no bytes arrive for 20s (either
+ * because the request hangs before the first token or stalls mid-stream),
+ * the request is aborted and onError reports a timeout. The timer resets on
+ * every chunk, so a long reply that keeps streaming is never cut off.
  */
 export function streamChat(
   apiKey: string,
@@ -74,9 +84,19 @@ export function streamChat(
   callbacks: StreamCallbacks,
 ): AbortController {
   const controller = new AbortController();
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
+  const armIdleTimeout = () => {
+    if (idleTimer !== undefined) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { timedOut = true; controller.abort(); }, IDLE_TIMEOUT_MS);
+  };
+  const clearIdleTimeout = () => {
+    if (idleTimer !== undefined) { clearTimeout(idleTimer); idleTimer = undefined; }
+  };
   (async () => {
     let full = "";
     try {
+      armIdleTimeout(); // covers a connection that never responds
       const res = await fetch(`${BASE_URL}/chat/completions`, {
         method: "POST",
         headers: {
@@ -100,11 +120,13 @@ export function streamChat(
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buf = "";
+      armIdleTimeout(); // fresh 20s window for the first body chunk
       // SSE frames are separated by blank lines. Each frame has one or more
       // `data: ...` lines; OpenRouter sends `data: [DONE]` to signal the end.
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
+        armIdleTimeout(); // progress — reset the idle timer
         buf += decoder.decode(value, { stream: true });
         // Split on double-newline (\n\n) to extract complete SSE events.
         let idx;
@@ -133,13 +155,22 @@ export function streamChat(
       }
       callbacks.onDone(full);
     } catch (err) {
+      if (timedOut) {
+        callbacks.onError(
+          `Timed out: no response from the model for ${IDLE_TIMEOUT_MS / 1000}s. ` +
+          `Try again, or pick a different model.`,
+        );
+        return;
+      }
       if (controller.signal.aborted) {
-        // User-initiated cancel; treat the partial as done so the panel
-        // keeps what's already streamed.
+        // User-initiated cancel (Stop button); treat the partial as done so
+        // the panel keeps what's already streamed.
         callbacks.onDone(full);
         return;
       }
       callbacks.onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      clearIdleTimeout();
     }
   })();
   return controller;
