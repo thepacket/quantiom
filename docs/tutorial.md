@@ -18,8 +18,13 @@ explanatory header.
 Throughout the tour, **bold** is for actions you take; *italic* is for
 the thing you should now see.
 
+**New to quantum computing?** Start with **Part 0** — a gentle, almost
+math-free on-ramp. Parts I onward assume you're comfortable with the
+basics it covers.
+
 **Contents**
 
+- **Part 0 — A gentle on-ramp:** qubits, gates, measurement, entanglement — no heavy math
 - **Part I — Foundations:** Bell pair · parameters & animation · editing fluently
 - **Part II — Reading the state:** entanglement structure · dynamics · phase space & magic · the operator · structure graphs
 - **Part III — Noise & error mitigation:** noise · ZNE · PEC
@@ -27,6 +32,124 @@ the thing you should now see.
 - **Part V — Hardware & interop:** transpile / route / compile · OpenQASM 3 & the nine exports
 - **Part VI — The AI assistant**
 - Keyboard shortcuts · where to look when you're stuck
+
+---
+
+# Part 0 — A gentle on-ramp (no heavy math)
+
+This part assumes **zero** quantum background and almost no math — just
+curiosity and the editor in front of you. Everything here is something
+you *do* and *watch happen*. If you already know what a qubit and a gate
+are, skip ahead to Part I.
+
+There's only one piece of notation to meet: we write the two definite
+answers a qubit can give as **`|0⟩`** and **`|1⟩`** — read them as just
+"zero" and "one." The funny brackets are tradition; that's all.
+
+## 0.1 The three panels to start with
+
+The right-hand column has a lot of panels. Ignore most of them for now.
+You only need three, and they're three views of the *same* thing:
+
+- **Probabilities** — "if I looked, how likely is each answer?" Bars.
+- **Statevector** — the same, but with exact numbers.
+- **Bloch spheres** — a picture of each qubit as an *arrow on a ball*.
+
+Open those three. Leave everything else (the dozens of visualisers,
+noise, optimisers) collapsed — they're for later.
+
+## 0.2 A qubit is an arrow on a ball
+
+**Start a fresh tab** (the `+` on the tab strip). You have one qubit,
+sitting in `|0⟩`.
+
+**Look at the Bloch sphere.** *The arrow points straight up.* That's
+`|0⟩`. If it pointed straight down, that's `|1⟩`. The whole trick of
+quantum computing is that the arrow can also point **anywhere in
+between** — and where it points decides the odds of seeing 0 vs 1 when
+you finally look. Up = "definitely 0," down = "definitely 1," on the
+equator = "50/50."
+
+That's the one idea to hold onto: **a qubit is an arrow, and gates move
+the arrow.**
+
+## 0.3 Gates are moves
+
+From the palette on the left, **drag the `X` gate onto the wire.**
+*The Bloch arrow flips to point down* — `X` is a flip (0 becomes 1).
+*Probabilities now shows `|1⟩` at 100%.* Delete it (click it, press
+Delete).
+
+**Drag the `H` gate on instead.** *The arrow swings to the equator.*
+Now the qubit is in a 50/50 superposition — *Probabilities shows two
+half-height bars.* `H` ("Hadamard") is the gate that puts a qubit
+"both at once."
+
+**Try `Z`, then the rotation gates `RX` / `RY` / `RZ`** (they take an
+angle — a dial for how far to turn the arrow). Each one just moves the
+arrow somewhere. Watch Bloch and Probabilities respond as you add and
+delete them. There's no wrong move here — poke at it.
+
+## 0.4 Measuring is looking
+
+In real life you can't read the arrow directly; you can only **look**,
+and looking forces the qubit to commit to 0 or 1 — at the odds the
+arrow implied. The **Probabilities** panel shows those odds.
+
+Flip Probabilities to **Shots** mode (top toolbar) and turn on the
+auto-shots timer. *The bars now jiggle a little each refresh* — that's
+the tool actually "rolling the dice" a few thousand times and counting.
+On a 50/50 qubit you'll see roughly-but-not-exactly half each time, just
+like real flips. Switch back to **Exact** to see the true odds.
+
+## 0.5 Two qubits, and the magic word: entanglement
+
+**Add a second qubit** (the `+` next to the qubit count). **Put an `H`
+on qubit 0, then drag a `CX` (control on q0, target on q1).** You've
+just built a *Bell pair* — the "hello world" of entanglement.
+
+*Open Statevector:* **only `|00⟩` and `|11⟩` appear, each at 50%.**
+Never `|01⟩` or `|10⟩`. That's the famous part: the two qubits always
+agree. Look at one and get 0, and the other is *instantly* 0 too; get 1,
+the other is 1 — even though each one alone is a coin flip.
+
+*Now look at Bloch:* **both arrows have shrunk to the centre of the
+ball.** That's not a bug — it's the deep weirdness. Once two qubits are
+entangled, the information lives in the *pair*, not in either one alone,
+so neither qubit has its own arrow anymore. (Quantiom has a whole set
+of panels for *seeing* that shared information — that's Part II, for
+later.)
+
+## 0.6 The other weird thing: interference
+
+**On a fresh single qubit, place two `H` gates in a row.** *The qubit
+is back to `|0⟩` — 100%.* Two coin-flips' worth of "both at once"
+didn't pile up; they **cancelled.** Quantum states behave like waves
+that can add or cancel, and *that* cancellation — interference — is what
+every quantum algorithm secretly exploits to make the right answer loud
+and the wrong answers quiet.
+
+You've now met the whole toolkit: superposition (`H`), flips and turns
+(`X`, rotations), measurement (Probabilities), entanglement (`CX`), and
+interference (`H·H`). Everything else is combinations of these.
+
+## 0.7 What to ignore (for now)
+
+Quantiom is a research tool, so most of what you see is built for people
+doing serious work — the 24 visualisers, the noise model, the
+optimisers, transpilation. **You don't need any of it to play and
+learn.** Stick to the editor + the three beginner panels. Come back to
+the rest when a question makes you curious about it.
+
+## 0.8 Your first win, in three minutes
+
+1. **New tab**, 2 qubits.
+2. **`H` on q0**, then **`CX(0→1)`**.
+3. **Open Probabilities** → two bars, `|00⟩` and `|11⟩`.
+
+That's a Bell pair — a genuinely entangled state you built and verified
+yourself. When you're ready for more, Part I picks up from exactly here
+and the rest of the tour opens up the serious tools one at a time.
 
 ---
 
