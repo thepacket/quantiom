@@ -9,52 +9,62 @@ workstation, and visualizer.**
 
 ![Quantiom — a 4-qubit LiH Jordan–Wigner Trotter step, with the AI chat panel explaining the circuit in rendered LaTeX alongside the statevector, probabilities, and Bloch panels](screenshots/quantiom.png)
 
-Quantiom is a multi-tab editor over a 64-gate palette, three
-simulators (pure-TypeScript `Float64Array` statevector ≤ 20 qubits,
-Aaronson–Gottesman tableau ≤ 1024 qubits with **Pauli frame tracking
-for depolarising noise**, and a quantum-trajectory noise simulator
-with calibrated NISQ channels), and a column of researcher-grade
-panels. The Expectation panel evaluates either a single Pauli string
-or a **full weighted Pauli-sum Hamiltonian**, with **Adam · SGD ·
-Quantum Natural Gradient (Fubini–Study metric)** optimisers,
-**zero-noise extrapolation**, **probabilistic error cancellation** for
-the 1q-depolarising / phase-damping / 2q-depolarising channels, plus
-**conditional ⟨P⟩** post-selected on a classical-bit outcome. A
-one-click **Compile…** pipeline runs Transpile → Optimise → Route →
-Optimise to a target native gate set, reporting per-stage gate counts;
-arbitrary two-qubit unitaries are **KAK-decomposed** (Cartan, faithful
-Cirq port) for the IBM and Rigetti targets.
-The Hamiltonian panel emits **Trotter circuits at order 1 / 2 (Strang)
-/ 4 (Suzuki) or QDrift** random compilation. Process tomography
-reconstructs the χ matrix in heatmap or Hinton view; equivalence-
-checking compares two open tabs with process fidelity and trace
-distance. Noise is per-gate-id, per-qubit, T1 / T2, crosstalk, **1q
-and 2q custom Kraus**, readout — all importable from IBM
-`BackendProperties` JSON (T1, T2, per-gate gate_error, readout error,
-coupling map). **WebGPU** trajectory parallelism feeds the
-Probabilities panel directly when the circuit fits the 1q-gate +
-depolarising support set, and the Optimise / Landscape / Plateau / ZNE
-loops route each noisy evaluation through it too (CPU fallback when the
-circuit doesn't fit). A column of **entanglement & dynamics
-visualisers** — mutual-information map, entanglement spectrum across a
-cut, an entanglement-entropy profile across every cut, ZZ correlations,
-space–time ⟨Z⟩ and entropy diagrams, t-sweep traces and their Fourier
-spectrum, a full-state amplitude·phase plot, a unitary heatmap, a
-logical interaction graph, a discrete-Wigner phase-space map, a magic
-(stabilizer-Rényi M₂) readout, a pairwise entanglement-negativity map,
-a Loschmidt-echo / DQPT trace, a Pauli transfer matrix, a Bloch-vector
-trajectory over time, an OTOC scrambling probe, an exact
-Hamiltonian-spectrum diagonaliser, a Tanner / check-graph view, a
-Q-sphere, a spin Husimi-Q phase-space map, a ZX-calculus diagram, and a
-causal-cone canvas overlay — sits alongside the statevector / Bloch /
-probability panels. An **AI chat panel
-at the bottom of the canvas** talks to OpenRouter (any of ~340 models,
-your own key), receives the current circuit as OpenQASM 3 on every
-turn, and **auto-opens any OpenQASM block in the reply as a new tab**.
-Circuits round-trip OpenQASM 3 (and parse OpenQASM 2), export to
-**Qiskit · Cirq · Braket · Q# · PyQuil · pytket · OpenQASM 2 · LaTeX
-(quantikz) · JSON · SVG**, serialize into a shareable URL hash, and
-the t-animation can be recorded as a WebM video.
+Quantiom is a quantum circuit workstation that runs entirely in your
+browser — no install, no account. It's built for people already
+comfortable with quantum computing: the editor is never simplified to
+accommodate beginners, and the analysis panels are treated as peers of
+the editor, not afterthoughts.
+
+**Editor.** A multi-tab editor over a 64-gate palette, with
+arbitrary-angle rotations, arbitrary unitary matrices, custom gates and
+subroutines, classical registers, mid-circuit measurement, conditional
+gates, and anti-controls.
+
+**Three simulators.** A pure-TypeScript `Float64Array` statevector
+simulator (≤ 20 qubits); an Aaronson–Gottesman stabilizer tableau
+(≤ 1024 qubits, with Pauli-frame tracking for depolarising noise); and a
+quantum-trajectory noise simulator with calibrated NISQ channels.
+
+**Expectation & optimisation.** The Expectation panel evaluates a single
+Pauli string or a full weighted Pauli-sum Hamiltonian, with Adam, SGD,
+and Quantum Natural Gradient (Fubini–Study metric) optimisers, zero-noise
+extrapolation, probabilistic error cancellation, and conditional ⟨P⟩
+post-selected on a classical-bit outcome.
+
+**Noise modelling.** Per-gate-id, per-qubit, T1 / T2, crosstalk,
+readout, and 1- and 2-qubit custom Kraus channels — all importable from
+IBM `BackendProperties` JSON. WebGPU runs noisy trajectories in parallel
+where the circuit fits the support set, feeding the Probabilities panel
+and the Optimise / Landscape / Plateau / ZNE loops (with a CPU fallback).
+
+**Compile & hardware.** A one-click Compile pipeline runs Transpile →
+Optimise → Route → Optimise to a target native gate set with per-stage
+gate counts; arbitrary two-qubit unitaries are KAK-decomposed (Cartan,
+faithful Cirq port) for the IBM and Rigetti targets. The Hamiltonian
+panel builds Trotter circuits (order 1, 2 Strang, 4 Suzuki, or QDrift).
+Process tomography reconstructs the χ matrix in a heatmap or Hinton view;
+equivalence-checking compares two open tabs by process fidelity and trace
+distance.
+
+**Visualisers.** A column of 24 entanglement-and-dynamics visualisers
+sits alongside the statevector / probability / Bloch panels: mutual
+information, entanglement spectrum and entropy profile, ZZ correlations,
+space–time ⟨Z⟩ and entropy, t-sweep traces and their Fourier spectrum,
+amplitude·phase, unitary heatmap, interaction graph, discrete-Wigner and
+spin Husimi-Q phase space, magic (stabilizer-Rényi M₂), entanglement
+negativity, Loschmidt / DQPT, the Pauli transfer matrix, Bloch
+trajectories, OTOC scrambling, exact Hamiltonian spectra, a Tanner /
+check graph, a Q-sphere, a ZX-calculus diagram, and a causal-cone
+overlay.
+
+**AI assistant.** An optional chat panel talks to OpenRouter (any model,
+your own key), receives the current circuit as OpenQASM 3 on every turn,
+and auto-opens any OpenQASM block in its reply as a new tab.
+
+**Interoperability.** Circuits round-trip OpenQASM 3 (and parse
+OpenQASM 2), export to Qiskit, Cirq, Braket, Q#, PyQuil, pytket,
+OpenQASM 2, LaTeX (quantikz), JSON, and SVG, serialise into a shareable
+URL hash, and the `t`-animation can be recorded as a WebM video.
 
 Live: **<https://quantiom.fly.dev>**
 
