@@ -397,7 +397,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (369 tests): the simulator core is deeply covered —
+- **What's covered** (399 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/prep/big-endian),
   `expr`, `apply`, `expectation`, `stabilizer` (tableau correlations vs
@@ -411,12 +411,22 @@ host plus `/api/health`.
   complex-matrix utilities); `test/check.ts` (adapter that lets the
   original `check(name, cond)` verification scripts register as Vitest
   cases — used by the migrated `test-*.test.ts` files).
-- **Two real bugs the suite caught on first run** (both fixed):
-  `equivalenceCheck` declared circuits with disjoint basis images (e.g.
-  X vs Z) falsely equivalent because the global-phase lock never engaged;
-  `invertGate` mislabelled iSWAP (order 4) and DCX (order 3) as
-  self-inverse. When adding behaviour, add a test — the suite has already
-  paid for itself.
+- **Real bugs the suite has caught (all fixed)** — the suite has paid for
+  itself several times over; when adding behaviour, add a test:
+  - `equivalenceCheck` declared circuits with disjoint basis images
+    (e.g. X vs Z) falsely equivalent — the global-phase lock never engaged.
+  - `invertGate` mislabelled iSWAP (order 4) and DCX (order 3) as
+    self-inverse.
+  - **`optimisePasses` merged `sx·sx → x` *across* an intervening `rz`**
+    (it popped the kept merged gate off the per-qubit stack, exposing the
+    earlier gate) — broke the Optimise/Compile pipeline on every
+    IBM-transpiled circuit. Fixed with a stack "blocker" sentinel.
+  - **`optimiseCircuit` mutated its input** circuit's gate `column` fields
+    (shared objects in the ASAP reflow) — could corrupt the user's open
+    tab. Fixed by cloning gates up front.
+  - **`pecExpectation` used `parseFloat` for gate params and ignored
+    `paramValues`** — any symbolic param (`pi/3`) or free variable became
+    NaN, poisoning the whole PEC estimate. Fixed to use `evalExpr`.
 
 ## Things not to propose
 

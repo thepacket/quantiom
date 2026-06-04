@@ -1,6 +1,7 @@
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 import { simulate, type ParameterValues } from "./simulate";
+import { evalExpr } from "./expr";
 import { expandCustomGates } from "../editor/customGates";
 import { evaluateObservable, type Observable } from "./expectation";
 import { applyKQubit } from "./apply";
@@ -342,7 +343,10 @@ export function pecExpectation(
       g.gateId === "measure" || g.gateId === "measure_x" || g.gateId === "measure_y" ||
       g.gateId === "reset" || g.gateId.startsWith("init")
     ) return { kind: "skip" };
-    const params = g.params.map((expr) => parseFloat(expr));
+    // Evaluate symbolic parameters (π, expressions, bound free vars) the
+    // same way the rest of the simulator does — parseFloat would turn
+    // "pi/3" or any free symbol into NaN and poison the whole estimate.
+    const params = g.params.map((expr) => evalExpr(expr, paramValues));
     const U = buildMatrix(g.gateId, params, g.controls.length);
     if (!U) return { kind: "skip" };
     const qubits = [...g.controls, ...g.targets];
@@ -356,7 +360,6 @@ export function pecExpectation(
     if (qubits.length === 2) return { kind: "2q", U, qubits, antiQubits, involvedPair: [qubits[0], qubits[1]] };
     return { kind: "multi", U, qubits, antiQubits };
   });
-  void paramValues;
 
   // Per-channel location counts (drives variance overhead reporting).
   let n1q = 0, n2q = 0;

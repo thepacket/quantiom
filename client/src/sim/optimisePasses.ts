@@ -97,9 +97,13 @@ export type OptimiseOptions = {
 export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): OptimiseResult {
   const before = circuit.gates.length;
   const rulesFired: Record<string, number> = {};
-  let gates = [...circuit.gates].sort(
-    (a, b) => a.column - b.column || a.id.localeCompare(b.id),
-  );
+  // Clone each gate: the final ASAP column reflow assigns `g.column`, and
+  // gates kept verbatim flow through to the output, so a shallow array copy
+  // would mutate the caller's circuit (corrupting the user's open tab, and
+  // any later simulation of the original). Copy the gate objects too.
+  let gates = circuit.gates
+    .map((g) => ({ ...g }))
+    .sort((a, b) => a.column - b.column || a.id.localeCompare(b.id));
   // Outer fixed-point loop: re-run the main per-qubit walker AND every
   // post-pass until none of them change the gate list. This lets gates
   // introduced by a post-pass (e.g. the Z·Z that fuseISwapPair emits, or
@@ -159,10 +163,11 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
           if (pauliResult) {
             rewrites.push({ keepId: common.id, killId: g.id, newGateId: pauliResult });
             remove.add(g.id);
-            // Pop common so subsequent gates don't re-merge with this same
-            // stack entry — chained collapses accumulate over outer passes
-            // instead of double-rewriting one entry in a single pass.
-            for (const q of qubits) stacks[q].pop();
+            // The rewritten gate is KEPT, so it still occupies this slot.
+            // Block the stack top (don't expose earlier gates across it, and
+            // don't re-merge it this pass — chained collapses accumulate over
+            // outer passes); see blockTops.
+            blockTops(stacks, qubits);
             changed = true;
             continue;
           }
@@ -170,7 +175,7 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
           if (powerResult) {
             rewrites.push({ keepId: common.id, killId: g.id, newGateId: powerResult });
             remove.add(g.id);
-            for (const q of qubits) stacks[q].pop();
+            blockTops(stacks, qubits);
             changed = true;
             continue;
           }
@@ -183,7 +188,10 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
             mergedParams: mergeRotationParams(common, g),
           });
           remove.add(g.id);
-          for (const q of qubits) stacks[q].pop();
+          // The merged rotation is KEPT and still separates earlier from later
+          // gates on these qubits — block, don't pop, or a later same-id gate
+          // could wrongly merge across it (e.g. sx·rz·rz·sx → x·rz).
+          blockTops(stacks, qubits);
           changed = true;
           continue;
         }
@@ -326,6 +334,27 @@ export function optimiseCircuit(circuit: Circuit, opts: OptimiseOptions = {}): O
 
 function qubitsOf(g: PlacedGate): number[] {
   return [...g.controls, ...g.targets];
+}
+
+/**
+ * After a merge/rewrite that KEEPS a gate (rotation merge, power-merge,
+ * Pauli collapse), the surviving gate still occupies its slot on every
+ * qubit it touched. Replace each involved qubit's stack top with one shared
+ * "blocker" sentinel rather than popping it: a real popped predecessor would
+ * leave the earlier gate exposed to later ones, letting a same-id gate merge
+ * straight across the kept gate (the sx·rz·rz·sx → x·rz bug). The blocker's
+ * synthetic gateId matches no real gate, so nothing merges with it this pass;
+ * the outer fixed-point loop still chains legitimate merges on later passes.
+ */
+function blockTops(stacks: PlacedGate[][], qubits: number[]): void {
+  const blocker: PlacedGate = {
+    id: newGateId(), gateId: " merge-blocker", column: 0,
+    controls: [], targets: [...qubits], clbits: [], params: [],
+  };
+  for (const q of qubits) {
+    stacks[q].pop();
+    stacks[q].push(blocker);
+  }
 }
 
 function sameQubitSet(a: PlacedGate, b: PlacedGate): boolean {
