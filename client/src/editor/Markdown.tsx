@@ -42,7 +42,7 @@ export function Markdown({ source }: { source: string }): ReactNode {
       while (i < lines.length && !lines[i].startsWith("```")) { buf.push(lines[i]); i++; }
       i++; // consume closing fence
       out.push(
-        <pre key={key++} style={{ background: "var(--bg-alt, var(--bg-2))", padding: 10, borderRadius: 4, overflowX: "auto", fontSize: 12 }}>
+        <pre key={key++} style={{ background: "var(--bg-alt, var(--bg-2))", padding: 10, borderRadius: 4, overflowX: "auto", fontSize: "0.88em" }}>
           <code>{buf.join("\n")}</code>
         </pre>,
       );
@@ -68,7 +68,8 @@ export function Markdown({ source }: { source: string }): ReactNode {
     if (h) {
       const level = h[1].length;
       const tag = level === 1 ? "h1" : level === 2 ? "h2" : "h3";
-      const sizes: Record<string, number> = { h1: 18, h2: 16, h3: 14 };
+      // Relative (em) so headings scale with the container's base font.
+      const sizes: Record<string, string> = { h1: "1.5em", h2: "1.28em", h3: "1.12em" };
       out.push(
         // eslint-disable-next-line react/no-children-prop
         Reactish(tag, key++, { style: { fontSize: sizes[tag], marginTop: 16, marginBottom: 6 }, children: inline(h[2], key++) }),
@@ -127,7 +128,7 @@ function renderTable(rows: string[], key: number): ReactNode {
   if (dataRows.length === 0) return null;
   const [header, ...body] = dataRows;
   return (
-    <table key={key} style={{ borderCollapse: "collapse", margin: "8px 0", fontSize: 12 }}>
+    <table key={key} style={{ borderCollapse: "collapse", margin: "8px 0", fontSize: "0.92em" }}>
       <thead>
         <tr>{header.map((c, i) => <th key={i} style={{ borderBottom: "1px solid var(--border)", padding: "4px 10px", textAlign: "left" }}>{inline(c, key * 100 + i)}</th>)}</tr>
       </thead>
@@ -151,7 +152,7 @@ function inline(text: string, baseKey: number): ReactNode {
   while ((m = re.exec(text)) !== null) {
     if (m.index > cursor) nodes.push(text.slice(cursor, m.index));
     const tok = m[0];
-    if (tok.startsWith("`")) nodes.push(<code key={k++} style={{ background: "var(--bg-alt, var(--bg-2))", padding: "1px 4px", borderRadius: 3, fontSize: 12 }}>{tok.slice(1, -1)}</code>);
+    if (tok.startsWith("`")) nodes.push(<code key={k++} style={{ background: "var(--bg-alt, var(--bg-2))", padding: "1px 4px", borderRadius: 3, fontSize: "0.88em" }}>{tok.slice(1, -1)}</code>);
     else if (tok.startsWith("$$")) nodes.push(<Tex key={k++} latex={tok.slice(2, -2).trim()} display />);
     else if (tok.startsWith("\\(")) nodes.push(<Tex key={k++} latex={tok.slice(2, -2).trim()} />);
     else if (tok.startsWith("$")) nodes.push(<Tex key={k++} latex={tok.slice(1, -1).trim()} />);
