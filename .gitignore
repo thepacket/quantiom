@@ -22,3 +22,18 @@ build/
 .DS_Store
 .idea/
 .vscode/
+
+# Secrets / credentials (see SECURITY.md) — never commit these
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+id_rsa*
+id_ed25519*
+secrets.*
+.secrets
+.fly/
