@@ -335,6 +335,16 @@ host plus `/api/health`.
 
 ## Conventions
 
+- **npm 10 only for the client.** Docker (`node:20-alpine`) and CI
+  (Actions node 20) both run **npm 10**, and `client/package.json` pins
+  `"packageManager": "npm@10.9.8"` + `engines.npm ">=10 <11"`. The
+  `package-lock.json` MUST be generated with npm 10 — npm 11 resolves the
+  Vitest/vite/esbuild tree differently and produces a lock that npm 10's
+  `npm ci` rejects ("Missing: esbuild@… from lock file"), breaking the
+  Docker build. If your machine's default npm is 11, regenerate the lock
+  with `npx npm@10 install` (never commit an npm-11-generated lock).
+  Vitest is pinned to the 2.x line so its bundled vite matches the app's
+  vite 5.4.
 - TypeScript strict.
 - Big-endian basis: qubit 0 is the MSB of basis index.
 - The Float64Array state has `re` at even indices and `im` at odd;
