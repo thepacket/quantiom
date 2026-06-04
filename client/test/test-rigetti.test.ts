@@ -4,6 +4,7 @@
 import { simulate } from "../src/sim/simulate";
 import { transpile } from "../src/sim/transpile";
 import type { Circuit, PlacedGate, GateId } from "../src/editor/types";
+import { test, expect } from "vitest";
 
 let idc = 0;
 function gate(gateId: string, targets: number[], controls: number[] = [], params: string[] = []): PlacedGate {
@@ -139,19 +140,14 @@ function haarParams(): string[] {
   return out;
 }
 
-let pass = 0, fail = 0;
 for (const c of cases) {
-  const orig: Circuit = { numQubits: c.n, numClbits: 0, gates: [c.gate] };
-  let tr;
-  try { tr = transpile(orig, "rigetti"); } catch (e) { console.log(`✗ ${c.name}: transpile threw ${e}`); fail++; continue; }
-  if (tr.skipped.length) { console.log(`✗ ${c.name}: skipped ${JSON.stringify(tr.skipped)}`); fail++; continue; }
-  const nativeErr = checkNative(tr.circuit.gates);
-  const Uo = unitary(orig);
-  const Ut = unitary(tr.circuit);
-  const d = distance(Uo, Ut);
-  const ok = d < 1e-6 && !nativeErr;
-  console.log(`${ok ? "✓" : "✗"} ${c.name}: dist=${d.toExponential(2)} gates=${tr.circuit.gates.length}${nativeErr ? "  NATIVE-ERR: " + nativeErr : ""}`);
-  if (ok) pass++; else fail++;
+  test(`rigetti: ${c.name}`, () => {
+    const orig: Circuit = { numQubits: c.n, numClbits: 0, gates: [c.gate] };
+    const tr = transpile(orig, "rigetti");
+    expect(tr.skipped.length, JSON.stringify(tr.skipped)).toBe(0);
+    const nativeErr = checkNative(tr.circuit.gates);
+    expect(nativeErr, nativeErr ?? "").toBeNull();
+    const d = distance(unitary(orig), unitary(tr.circuit));
+    expect(d, `dist ${d.toExponential(2)}`).toBeLessThan(1e-6);
+  });
 }
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);

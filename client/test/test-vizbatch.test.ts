@@ -10,6 +10,7 @@ import { interactionGraph } from "../src/sim/interaction";
 import { buildUnitary } from "../src/sim/unitary";
 import { tSweepSpectrum } from "../src/sim/tsweep";
 import type { Circuit, PlacedGate, GateId } from "../src/editor/types";
+import { check } from "./check";
 
 let idc = 0;
 function gate(gateId: string, targets: number[], controls: number[] = [], params: string[] = [], column = 0): PlacedGate {
@@ -19,11 +20,6 @@ function circ(numQubits: number, gates: PlacedGate[]): Circuit {
   return { numQubits, numClbits: 0, gates };
 }
 
-let pass = 0, fail = 0;
-function check(name: string, cond: boolean, detail = "") {
-  if (cond) { pass++; console.log(`  ok   ${name}`); }
-  else { fail++; console.log(`  FAIL ${name} ${detail}`); }
-}
 
 // ── 1. H·CZ·H → CX equivalence ────────────────────────────────────────
 {
@@ -125,5 +121,3 @@ function check(name: string, cond: boolean, detail = "") {
   check("rx(t) bin-1 amplitude ~1", Math.abs(bins[1] - 1) < 1e-6, `${bins[1]}`);
 }
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail === 0 ? 0 : 1);

@@ -101,8 +101,13 @@ export function equivalenceCheck(
       traceIm += aRe * bIm - aIm * bRe;
     }
 
-    // Lock the global phase on the first column whose first nonzero entry
-    // is large enough to be reliable.
+    // Lock the global phase on the first index where BOTH columns carry
+    // significant amplitude. Requiring overlap matters: if we locked on an
+    // index where ψ_A is large but ψ_B ≈ 0 (or vice versa) the phase would
+    // be meaningless — and, worse, two circuits with *disjoint* basis
+    // images (e.g. X vs Z) would never lock at all and slip through the
+    // `!phaseLocked` fallback as falsely "equivalent". Scanning for a
+    // genuinely shared support fixes that.
     if (!phaseLocked) {
       for (let i = 0; i < dim; i++) {
         const aRe = psiA[2 * i];
@@ -110,15 +115,13 @@ export function equivalenceCheck(
         const bRe = psiB[2 * i];
         const bIm = psiB[2 * i + 1];
         const mag2 = aRe * aRe + aIm * aIm;
-        if (mag2 > 0.01) {
+        const denom = bRe * bRe + bIm * bIm;
+        if (mag2 > 0.01 && denom > 1e-12) {
           // ψ_A[i] = e^{iφ} ψ_B[i] ⇒ e^{iφ} = ψ_A[i] / ψ_B[i].
-          const denom = bRe * bRe + bIm * bIm;
-          if (denom > 1e-12) {
-            const cRe = (aRe * bRe + aIm * bIm) / denom;
-            const cIm = (aIm * bRe - aRe * bIm) / denom;
-            globalPhase = Math.atan2(cIm, cRe);
-            phaseLocked = true;
-          }
+          const cRe = (aRe * bRe + aIm * bIm) / denom;
+          const cIm = (aIm * bRe - aRe * bIm) / denom;
+          globalPhase = Math.atan2(cIm, cRe);
+          phaseLocked = true;
           break;
         }
       }
@@ -156,12 +159,18 @@ export function equivalenceCheck(
   const processFidelity = Math.max(0, Math.min(1, F));
   const traceDistanceProxy = Math.sqrt(Math.max(0, 1 - processFidelity));
 
-  // If we never locked a phase (both circuits act trivially on the basis
-  // states sampled, e.g. both are identity-on-zeros), they're equivalent.
+  // We never found a shared-support index to lock the phase on. This is
+  // NOT automatically "equivalent": it also happens when the two circuits
+  // map basis states to disjoint subspaces (X vs Z). The process fidelity
+  // F = |Tr(U_A† U_B)/d|² is the rigorous arbiter here — exactly 1 iff the
+  // unitaries agree up to a global phase — so defer to it.
   if (!phaseLocked) {
+    const eqv = processFidelity > 1 - EPS;
     return {
-      equivalent: true,
-      maxDeviation: 0,
+      equivalent: eqv,
+      // No entrywise deviation was measured; report the fidelity-derived
+      // proxy so callers still see a non-zero distance when inequivalent.
+      maxDeviation: eqv ? 0 : Math.min(2, 2 * traceDistanceProxy),
       globalPhase: 0,
       exact,
       sampledColumns: indices.length,

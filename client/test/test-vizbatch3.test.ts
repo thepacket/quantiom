@@ -7,6 +7,7 @@ import { hamiltonianSpectrum } from "../src/sim/hamSpectrum";
 import { parsePauliSum } from "../src/sim/trotter";
 import { tannerGraph } from "../src/sim/tanner";
 import type { Circuit, PlacedGate, GateId } from "../src/editor/types";
+import { check } from "./check";
 
 let idc = 0;
 function gate(gateId: string, targets: number[], controls: number[] = [], params: string[] = [], column = 0, clbits: number[] = []): PlacedGate {
@@ -16,11 +17,6 @@ function circ(numQubits: number, gates: PlacedGate[], numClbits = 0): Circuit {
   return { numQubits, numClbits, gates };
 }
 
-let pass = 0, fail = 0;
-function check(name: string, cond: boolean, detail = "") {
-  if (cond) { pass++; console.log(`  ok   ${name}`); }
-  else { fail++; console.log(`  FAIL ${name} ${detail}`); }
-}
 const approx = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
 
 // ── PTM ──────────────────────────────────────────────────────────────
@@ -115,5 +111,3 @@ const approx = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
   check("tanner: no measurements → 0 checks", tannerGraph(c2).checks.length === 0);
 }
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail === 0 ? 0 : 1);

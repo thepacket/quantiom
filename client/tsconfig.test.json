@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["@webgpu/types", "vitest/globals"],
+    "noUnusedLocals": false
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

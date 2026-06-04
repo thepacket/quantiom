@@ -145,8 +145,8 @@ host plus `/api/health`.
     symmetric_products + kron_factor_4x4_to_2x2s + so4_to_magic_su2s +
     KAK_GAMMA angle extraction). `decomposeKAK4x4(U)` returns null on
     any numerical edge (try/catch; rank-deficient Re(Uₘ) handled).
-    Verified at machine precision on CNOT + Haar. Harness:
-    `client/scripts/test-kak.ts`.
+    Verified at machine precision on CNOT + Haar (see
+    `client/test/test-kak.test.ts`).
   - `router.ts`: greedy SWAP router. Maintains logical→physical
     mapping; for each 2q gate, BFS shortest path on coupling graph,
     inserts SWAPs to bring qubits adjacent, applies the gate, commits
@@ -377,6 +377,36 @@ host plus `/api/health`.
   `quantiom:circuit:v1` migration), `quantiom:custom-gates:v1`,
   `quantiom:noise:v2`, `quantiom:panel-collapsed:v1`,
   `quantiom:probabilities-mode`, `quantiom:probabilities-shots`.
+
+## Testing
+
+- **Framework: Vitest** (`client/`). Tests live in `client/test/*.test.ts`
+  and run in the Node environment (the suite is pure logic — no DOM).
+  Run with `npm test` (CI mode), `npm run test:watch`, or
+  `npm run test:coverage`. `npm run typecheck:test` type-checks the
+  tests via `tsconfig.test.json`.
+- **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
+  `npm test` → `npm run build` on every push and PR.
+- **What's covered** (358 tests): the simulator core is deeply covered —
+  `complex`/`matrices` (every gate's unitarity + known identities),
+  `simulate` (Bell/GHZ/rotations/measurement/prep/big-endian),
+  `expr`, `apply`, `expectation`, `stabilizer` (tableau correlations vs
+  statevector), `measure`/RNG, `resources`, `equivalence`, `inverse`
+  (U†·U = I), the OpenQASM round-trip, all eight SDK emitters,
+  `transpile`/`router`/`trotter`, the noisy simulator, the optimiser,
+  `sample`, KAK, and all 24 visualiser substrates (the `test-vizbatch*`
+  files). `npm run test:coverage` reports ~55% statements (the core
+  modules are 90–100%; the long tail is UI-only and importer code).
+- **Shared helpers**: `test/helpers.ts` (terse `circ()`/`gate()` builders +
+  complex-matrix utilities); `test/check.ts` (adapter that lets the
+  original `check(name, cond)` verification scripts register as Vitest
+  cases — used by the migrated `test-*.test.ts` files).
+- **Two real bugs the suite caught on first run** (both fixed):
+  `equivalenceCheck` declared circuits with disjoint basis images (e.g.
+  X vs Z) falsely equivalent because the global-phase lock never engaged;
+  `invertGate` mislabelled iSWAP (order 4) and DCX (order 3) as
+  self-inverse. When adding behaviour, add a test — the suite has already
+  paid for itself.
 
 ## Things not to propose
 

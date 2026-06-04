@@ -6,8 +6,12 @@ import { newGateId } from "./state";
  *
  * Algorithm: reverse the gate order and dagger each gate. Gate-specific
  * rules:
- *   • Self-inverse gates (X, Y, Z, H, SWAP, iSWAP, CX, CY, CZ, CH, CCX,
- *     CCZ, CSWAP, DCX, ECR up to phase) — unchanged.
+ *   • Self-inverse gates (X, Y, Z, H, SWAP, CX, CY, CZ, CH, CCX,
+ *     CCZ, CSWAP, ECR up to phase) — unchanged.
+ *   • iSWAP and DCX are NOT self-inverse (iSWAP has order 4 — iSWAP² = Z⊗Z;
+ *     DCX has order 3), and neither adjoint is a single catalog gate, so
+ *     they're skipped (returned as null) like u_arb rather than inverted
+ *     wrongly.
  *   • Adjointable pairs (S↔S†, T↔T†, √X↔√X†, C√X↔C√X†) — swap.
  *   • Rotation gates (RX, RY, RZ, P, U1, RXX, …) — negate the angle.
  *   • U(θ,φ,λ)† = U(-θ, -λ, -φ) — and U3 the same.
@@ -26,7 +30,7 @@ import { newGateId } from "./state";
 const SELF_INVERSE = new Set([
   "i", "x", "y", "z", "h",
   "cx", "cy", "cz", "ch",
-  "swap", "iswap", "dcx", "ecr",
+  "swap", "ecr",
   "ccx", "ccz", "cswap",
   "c3x", "c4x", "mcx",
   "rccx", "rcccx",

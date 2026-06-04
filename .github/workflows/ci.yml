@@ -1,0 +1,44 @@
+name: CI
+
+# Type-checks, runs the Vitest suite, and builds the client on every push
+# and pull request. The suite is pure-logic (simulator core, gate matrices,
+# QASM round-trip, optimiser, transpiler, visualiser substrates) and runs in
+# Node with no browser, so it's fast and deterministic.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check (source)
+        run: npm run typecheck
+
+      - name: Type-check (tests)
+        run: npm run typecheck:test
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

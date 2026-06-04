@@ -8,6 +8,7 @@ import { discreteWigner } from "../src/sim/wigner";
 import { negativityMatrix } from "../src/sim/negativity";
 import { loschmidtEcho } from "../src/sim/loschmidt";
 import type { Circuit, PlacedGate, GateId } from "../src/editor/types";
+import { check } from "./check";
 
 let idc = 0;
 function gate(gateId: string, targets: number[], controls: number[] = [], params: string[] = [], column = 0): PlacedGate {
@@ -17,11 +18,6 @@ function circ(numQubits: number, gates: PlacedGate[]): Circuit {
   return { numQubits, numClbits: 0, gates };
 }
 
-let pass = 0, fail = 0;
-function check(name: string, cond: boolean, detail = "") {
-  if (cond) { pass++; console.log(`  ok   ${name}`); }
-  else { fail++; console.log(`  FAIL ${name} ${detail}`); }
-}
 const approx = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
 
 // ── Magic M₂ ───────────────────────────────────────────────────────────
@@ -98,5 +94,3 @@ const approx = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps;
   check("L(t) = cos²(t/2)", approx(le.L[kThird], Math.cos(tThird / 2) ** 2, 1e-6), `${le.L[kThird]}`);
 }
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail === 0 ? 0 : 1);

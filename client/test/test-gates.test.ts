@@ -7,12 +7,8 @@ import { emitQasm3 } from "../src/qasm/emit";
 import { parseQasm3 } from "../src/qasm/parse";
 import { invertGate } from "../src/editor/inverse";
 import type { Circuit, PlacedGate, GateId } from "../src/editor/types";
+import { check } from "./check";
 
-let pass = 0, fail = 0;
-function check(name: string, cond: boolean, detail = "") {
-  if (cond) { pass++; console.log(`  ok   ${name}`); }
-  else { fail++; console.log(`  FAIL ${name} ${detail}`); }
-}
 
 function matmul(A: Matrix, B: Matrix): Matrix {
   const n = A.length;
@@ -155,5 +151,3 @@ function gate(gateId: string, targets: number[], params: string[] = [], column =
   check("MS(φ₀,φ₁,θ)† = MS(φ₀,φ₁,−θ)", ms.gateId === "ms" && ms.params[0] === "0.4" && ms.params[2] === "-(1.3)", JSON.stringify(ms.params));
 }
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail === 0 ? 0 : 1);

@@ -5,6 +5,7 @@
 
 import type { Complex } from "../src/sim/complex";
 import { decomposeKAK4x4 } from "../src/sim/kak";
+import { test, expect } from "vitest";
 
 const I_C: Complex = [1, 0];
 const Z_C: Complex = [0, 0];
@@ -109,13 +110,11 @@ function randomUnitary(seed: number): Complex[][] {
 // ── Run tests ─────────────────────────────────────────────────────────
 
 function testCase(label: string, U: Complex[][]) {
-  const r = decomposeKAK4x4(U);
-  if (!r) {
-    console.log(`FAIL  ${label}: decomposition returned null`);
-    return;
-  }
-  const status = r.residual < 1e-4 ? "PASS" : "FAIL";
-  console.log(`${status}  ${label}: residual = ${r.residual.toExponential(2)} · α=${r.interaction.alpha.toFixed(4)} β=${r.interaction.beta.toFixed(4)} γ=${r.interaction.gamma.toFixed(4)} · ${r.gates.length} gates`);
+  test(`kak: ${label}`, () => {
+    const r = decomposeKAK4x4(U);
+    expect(r, "decomposition returned null").not.toBeNull();
+    expect(r!.residual, `residual ${r!.residual.toExponential(2)}`).toBeLessThan(1e-4);
+  });
 }
 
 testCase("identity", eye4());
