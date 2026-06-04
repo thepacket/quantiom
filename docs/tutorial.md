@@ -31,7 +31,7 @@ basics it covers.
 - **Part IV — Optimisation & algorithms:** VQE & the optimiser toolbox · Hamiltonian → Trotter · the Clifford fast path & syndromes
 - **Part V — Hardware & interop:** transpile / route / compile · OpenQASM 3 & the nine exports
 - **Part VI — The AI assistant**
-- Keyboard shortcuts · where to look when you're stuck
+- Reference: gate cheat-sheet · common gotchas (FAQ) · keyboard shortcuts · where to look when you're stuck
 
 ---
 
@@ -89,6 +89,9 @@ half-height bars.* `H` ("Hadamard") is the gate that puts a qubit
 angle — a dial for how far to turn the arrow). Each one just moves the
 arrow somewhere. Watch Bloch and Probabilities respond as you add and
 delete them. There's no wrong move here — poke at it.
+
+(A one-line-each **cheat-sheet of every common gate** is near the end of
+this doc, under *Reference*.)
 
 ## 0.4 Measuring is looking
 
@@ -689,6 +692,119 @@ suggestions, not truth — verify anything non-trivial by running it in
 the simulator (the Equivalence panel is your friend here).
 
 See [`panels.md`](panels.md) → Chat (AI).
+
+---
+
+## Gate cheat-sheet
+
+A one-line-each reference for the gates you'll actually reach for. The
+palette has 64 in all — **hover any tile for its exact definition**;
+this is the working set. "Arrow" refers to the Bloch picture from
+Part 0.
+
+**Single-qubit — flips, phases, turns**
+
+| Gate | What it does |
+|---|---|
+| `I` | identity — does nothing (a placeholder / timing slot) |
+| `X` | bit flip (0 ↔ 1) — a half-turn of the arrow about X |
+| `Y` | half-turn about Y (a bit flip *and* a phase flip) |
+| `Z` | phase flip on the 1 state — invisible to probabilities, visible in interference |
+| `H` | Hadamard — makes a 50/50 superposition; `H·H` cancels back to the start |
+| `S` / `S†` | quarter-turn about Z (√Z) — a phase of ±i on the 1 state |
+| `T` / `T†` | eighth-turn about Z (√S) — the key *non-Clifford* gate (its count sets circuit "hardness") |
+| `√X` / `√Y` (+ `†`) | half an X / Y — common hardware-native single-qubit gates |
+| `P(λ)` | phase gate — the general Z-axis phase (Z, S, T are special cases) |
+| `RX/RY/RZ(θ)` | rotate the arrow by angle θ about X / Y / Z |
+| `U(θ,φ,λ)` | the *most general* single-qubit gate (any one-qubit operation) |
+
+**Two-qubit — entanglers**
+
+| Gate | What it does |
+|---|---|
+| `CX` (CNOT) | flip the target **if** the control is set (the 1 state) — the workhorse entangler |
+| `CY` / `CZ` | controlled Y / Z; `CZ` is symmetric (a phase flip when both qubits are 1) |
+| `SWAP` | exchange two qubits; `iSWAP` swaps with an `i` phase |
+| `√SWAP` | half a swap — a partial entangler |
+| `CRX/CRY/CRZ/CP` | controlled rotations / phase |
+| `RXX/RYY/RZZ(θ)` | Ising rotations `exp(−iθ/2 · XX)` etc. — the building blocks of Trotterised dynamics |
+
+**Three-or-more**
+
+| Gate | What it does |
+|---|---|
+| `CCX` (Toffoli) | flip the target if **both** controls are set |
+| `CCZ` / `CSWAP` | controlled-CZ / controlled-SWAP (Fredkin) |
+| `MCX` | n-controlled X (you choose how many controls) |
+
+**Hardware-native sets** (for "design here, run there"): IBM uses
+`SX` + `ECR`; Google uses `fSim(θ,φ)` / `√iSWAP`; IonQ / trapped-ion use
+`GPi`, `GPi2`, `MS`, and the equatorial rotation `R(θ,φ)`.
+
+**State prep & non-unitary**
+
+| Item | What it does |
+|---|---|
+| State preps | prepare a qubit directly in 0, 1, +, −, +i or −i |
+| `Initialize` | prepare an arbitrary state (amplitude tuple or label) |
+| `Measure` (Z/X/Y) | look — collapse to 0 or 1 and record to a classical bit |
+| `Reset` | force a qubit back to 0 mid-circuit |
+| `Barrier` / `Delay` | markers — stop the optimiser from crossing / model idle time |
+
+---
+
+## Common gotchas (FAQ)
+
+The questions that trip people up most, with the two-line answer.
+
+**My Bloch arrows are stuck at the centre of the ball.** They're either
+*entangled* or *noisy*. A qubit that's entangled with another has no
+arrow of its own — the information lives in the pair (that's the whole
+point of a Bell state). Look at the entanglement panels instead.
+
+**The probability bars jiggle every refresh.** You're in **Shots**
+mode — the tool is sampling, so the bars wobble like real measurements.
+Switch to **Exact** for the true values.
+
+**There's no Statevector — it says "Clifford fast path."** A
+Clifford-only circuit past ~16 qubits routes to the tableau simulator,
+which doesn't build a dense state (it couldn't — that's the point).
+**Bloch and ⟨P⟩ still work**; add a non-Clifford gate (e.g. `T`) or use
+fewer qubits if you need the amplitudes.
+
+**Everything looks dull / decohered.** You left the **Noise model on.**
+Toggle it off — a noise-off circuit runs at full noiseless speed.
+
+**A visualiser shows a notice instead of a plot.** Most visualisers need
+the statevector path, so they hide under Clifford or noise mode (a
+single noisy trajectory isn't meaningful), or your circuit exceeds that
+panel's qubit cap. The notice says which.
+
+**My measurement did nothing / Measurement counts is empty.** You need a
+**measurement gate *and* at least one classical bit** allocated (the
+`clbits` control in the toolbar).
+
+**RZ doesn't move ⟨Z⟩ / the Bloch arrow looks unchanged.** `RZ` (and
+`Z`, `S`, `T`, `P`) only move *phase* — rotation about the Z axis. It's
+invisible on ⟨Z⟩; look at the **Phase disk** or the X-Y plane.
+
+**The animation won't play / there's no ▶.** The circuit needs a free
+`t` symbol somewhere — write e.g. `rz(t)` or `rx(t/2)`. `t` is the
+special clock symbol every time-sweep panel uses.
+
+**I optimised / compiled — did it change what the circuit means?** Open
+the before and after as two tabs and use the **Equivalence** panel; it
+compares up to global phase and reports fidelity. Fidelity 1 = same
+operation.
+
+**An SDK export has a comment where a gate should be.** That gate has no
+native method in that target. Quantiom lowers it to an exact
+decomposition where it can, and otherwise leaves a clear comment rather
+than emit something wrong — see [`qasm.md`](qasm.md).
+
+**The AI chat stopped with a "timed out" message.** It has a 20-second
+idle timeout, so a hung or stalled request fails cleanly instead of
+freezing. Retry, or pick a faster model.
 
 ---
 
