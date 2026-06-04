@@ -1,9 +1,11 @@
 # Quantiom
 
+[![CI](https://github.com/thepacket/quantiom/actions/workflows/ci.yml/badge.svg)](https://github.com/thepacket/quantiom/actions/workflows/ci.yml)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20540701.svg)](https://doi.org/10.5281/zenodo.20540701)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **A browser-native research-grade quantum circuit editor, simulator,
 workstation, and visualizer.**
-
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20540701.svg)](https://doi.org/10.5281/zenodo.20540701)
 
 ![Quantiom — a 4-qubit LiH Jordan–Wigner Trotter step, with the AI chat panel explaining the circuit in rendered LaTeX alongside the statevector, probabilities, and Bloch panels](screenshots/quantiom.png)
 
