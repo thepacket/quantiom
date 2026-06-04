@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-app = FastAPI(title="Quantiom", version="0.1.0")
+app = FastAPI(title="Quantiom", version="0.9.0")
 
 
 @app.get("/api/health")
