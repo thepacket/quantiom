@@ -1004,11 +1004,11 @@ export function CircuitEditor() {
               Measure All
             </button>
             <HelpMenu onOpen={(tabId) => setShowDocs(tabId)} />
-            <button onClick={() => setShowSelfTest(true)} title="Validate the engine live in your browser">
-              Self-test
-            </button>
             <button onClick={() => setShowAbout(true)} title="About Quantiom">
               About
+            </button>
+            <button onClick={() => setShowSelfTest(true)} title="Validate the engine live in your browser">
+              Self-test
             </button>
           </div>
           <div className="editor__counts">
