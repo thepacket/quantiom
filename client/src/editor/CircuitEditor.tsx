@@ -8,6 +8,7 @@ import { Inspector } from "./Inspector";
 import { FileMenu } from "./FileMenu";
 import { DocsModal } from "./DocsModal";
 import { AboutModal } from "./AboutModal";
+import { SelfTestModal } from "./SelfTestModal";
 import { StepBar } from "./StepBar";
 import { loadCustomGates, newCustomGateId, saveCustomGates, type CustomGate } from "./customGates";
 import type { Circuit } from "./types";
@@ -503,6 +504,7 @@ export function CircuitEditor() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showDocs, setShowDocs] = useState<null | string>(null);
   const [showAbout, setShowAbout] = useState(false);
+  const [showSelfTest, setShowSelfTest] = useState(false);
 
   useEffect(() => {
     saveCustomGates(customGates);
@@ -722,6 +724,7 @@ export function CircuitEditor() {
     <div className="editor">
       {showDocs !== null && <DocsModal initialTab={showDocs} onClose={() => setShowDocs(null)} />}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      {showSelfTest && <SelfTestModal onClose={() => setShowSelfTest(false)} />}
       {showShortcuts && (
         <div
           onClick={() => setShowShortcuts(false)}
@@ -1001,6 +1004,9 @@ export function CircuitEditor() {
               Measure All
             </button>
             <HelpMenu onOpen={(tabId) => setShowDocs(tabId)} />
+            <button onClick={() => setShowSelfTest(true)} title="Validate the engine live in your browser">
+              Self-test
+            </button>
             <button onClick={() => setShowAbout(true)} title="About Quantiom">
               About
             </button>
