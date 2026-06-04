@@ -8,6 +8,7 @@ authors:
     orcid: "https://orcid.org/0009-0001-3961-9500"
 repository-code: "https://github.com/thepacket/quantiom"
 url: "https://quantiom.fly.dev"
+doi: 10.5281/zenodo.20540701
 abstract: >-
   Quantiom is a browser-native quantum circuit editor, simulator, and
   visualizer for users already comfortable with quantum-computing concepts.

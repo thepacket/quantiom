@@ -3,6 +3,8 @@
 **A browser-native research-grade quantum circuit editor, simulator,
 workstation, and visualizer.**
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20540701.svg)](https://doi.org/10.5281/zenodo.20540701)
+
 ![Quantiom — a 4-qubit LiH Jordan–Wigner Trotter step, with the AI chat panel explaining the circuit in rendered LaTeX alongside the statevector, probabilities, and Bloch panels](screenshots/quantiom.png)
 
 Quantiom is a multi-tab editor over a 64-gate palette, three
@@ -123,8 +125,12 @@ them is the maintainer's.
 If you use Quantiom in your work, please cite it. Repository metadata is
 in [`CITATION.cff`](CITATION.cff) (GitHub renders a **"Cite this
 repository"** button from it). An archival, versioned DOI is minted via
-[Zenodo](https://zenodo.org) on each tagged release — the DOI badge will
-appear here once the first release is archived.
+[Zenodo](https://zenodo.org) on each tagged release.
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20540701.svg)](https://doi.org/10.5281/zenodo.20540701)
+
+The DOI above is the *concept* DOI — it always resolves to the latest
+archived version. Each release also gets its own version-specific DOI.
 
 ## Shape
 
