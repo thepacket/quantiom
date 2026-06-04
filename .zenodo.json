@@ -4,7 +4,7 @@
   "upload_type": "software",
   "license": "MIT",
   "creators": [
-    { "name": "Paquette, Andre" }
+    { "name": "Paquette, Andre", "orcid": "0009-0001-3961-9500" }
   ],
   "keywords": [
     "quantum computing",

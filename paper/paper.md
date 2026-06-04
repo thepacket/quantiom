@@ -9,7 +9,7 @@ tags:
   - OpenQASM
 authors:
   - name: Andre Paquette
-    orcid: 0000-0000-0000-0000
+    orcid: 0009-0001-3961-9500
     affiliation: 1
 affiliations:
   - name: Independent researcher
