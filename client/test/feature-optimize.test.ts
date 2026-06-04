@@ -30,6 +30,21 @@ describe("parameter-shift optimizer (CPU path)", () => {
     expect(Math.abs(res.finalParams.theta - Math.PI)).toBeLessThan(0.3);
   });
 
+  test("Quantum Natural Gradient also minimizes ⟨Z⟩ over RY(θ)|0⟩", async () => {
+    const c = circ(1, [gate("ry", [0], [], ["theta"])]);
+    const res = await optimizeExpectation(c, [], {
+      symbols: ["theta"],
+      observable: ["Z"],
+      initial: { theta: 2.0 },
+      steps: 80,
+      learningRate: 0.2,
+      epsilon: 1e-4,
+      goal: "minimize",
+      optimizer: "qng",
+    });
+    expect(res.finalValue).toBeLessThan(-0.9);
+  });
+
   test("maximizing ⟨Z⟩ converges to θ ≈ 0, ⟨Z⟩ ≈ +1", async () => {
     const c = circ(1, [gate("ry", [0], [], ["theta"])]);
     const res = await optimizeExpectation(c, [], {
