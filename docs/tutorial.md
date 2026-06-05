@@ -374,7 +374,8 @@ to simulate classically."
 
 **Load** `ghz.qasm` and open the **Q-sphere**: *two big antipodal dots*
 (|000⟩ at the north pole, |111⟩ at the south), the whole state on one
-sphere with hue = phase.
+sphere with hue = phase. **Drag to orbit** the globe, scroll to zoom, and
+**hover any dot** for its state, probability, and phase angle.
 
 See [`panels.md`](panels.md) → Amplitude · phase / Wigner / Husimi /
 Magic / Q-sphere.

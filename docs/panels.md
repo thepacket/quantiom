@@ -164,6 +164,14 @@ relative phases into a single picture.
 
 **When available.** Statevector path only; capped at 6 qubits (64 points).
 
+**Interaction.** The view is an orbitable 3-D globe — **drag to rotate**,
+**scroll to zoom**, **double-click to reset**. A wireframe of latitude rings
+(one per Hamming-weight level) and meridians orients the sphere, and the
+**equatorial plane** (the z = 0 great circle) is drawn as a translucent disk.
+**Hover any dot** for an IBM-Composer-style tooltip showing the **State |x⟩**,
+its **Probability** (= |amplitude|²), and the **Phase angle** (as a multiple of
+π) with a swatch in the dot's phase hue.
+
 **What you see.**
 - **GHZ**: two big antipodal dots (poles), a half-turn apart in phase if
   you add a relative phase.
@@ -1047,12 +1055,20 @@ non-trivial output by running it in the simulator before trusting.
 
 ## Selecting panels
 
-The right-rail panel selector controls which panels are visible.
-Layout state (open / closed per panel, ordering) persists per tab in
-local storage (`quantiom:panel-collapsed:v1`).
+Each panel header is a toggle — click it to expand or collapse that
+panel. The **all** / **none** buttons at the right of the right-pane bar
+(next to Record) expand or collapse *every* panel at once. Layout state
+(open / closed per panel, ordering) persists per tab in local storage
+(`quantiom:panel-collapsed:v1`).
 
 Collapsed panels cost nothing per frame — the `PanelShell` publishes
 its collapsed state via `usePanelCollapsed()`, and every expensive
 `useMemo` body short-circuits at the top when collapsed. So feel free
 to keep dozens of tabs open with many panels each; closed panels are
 free.
+
+**Plot sizing.** The data-plot panels (heatmaps, line charts, the
+space-time maps) render as responsive SVGs that scale to fill the panel
+width while preserving aspect ratio, so a wider window gives you bigger
+plots. The space-time and pairwise-correlation maps draw grid lines so the
+cell structure is visible even where a value is ~0.

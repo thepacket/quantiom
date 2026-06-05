@@ -409,27 +409,35 @@ Quantiom ships with a comprehensive automated test suite. The numeric
 core — the part where correctness actually matters — is covered
 thoroughly and verified against analytic ground truth.
 
-- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **446
-  tests** cover the statevector simulator (Bell / GHZ / rotations /
-  measurement / state-prep / big-endian), every gate's matrix unitarity
-  and algebraic identities, the parameter evaluator, the Clifford
-  tableau (cross-checked against the statevector), Pauli expectations,
-  resource counting, circuit equivalence, gate inversion (U†·U = I), the
-  OpenQASM 3 round-trip, **all eight SDK / LaTeX emitters**, the
-  transpiler / router / Trotter builder, the noisy trajectory simulator,
-  the optimiser, the KAK decomposition, and all 24 visualiser
-  substrates.
+- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **739
+  tests (~96% statement coverage)** cover the statevector simulator
+  (Bell / GHZ / rotations / measurement / the `initialize()` gate /
+  big-endian), the X/Y-basis measurement primitives, every gate's matrix
+  unitarity and algebraic identities, the parameter evaluator, the
+  Clifford tableau (cross-checked against the statevector, plus the
+  single-qubit Bloch reduction and the noisy Pauli-frame rules), Pauli
+  expectations, resource counting, circuit equivalence, gate inversion
+  (U†·U = I) and the `inverseGates` range path, the OpenQASM 3 round-trip
+  + the parser's statement / modifier-chain / error branches, **all eight
+  SDK / LaTeX emitters** (a per-gate-family suite each), the transpiler /
+  router / Trotter builder, the noisy trajectory simulator (incl.
+  post-selection + custom Kraus), the optimiser (Adam / SGD / QNG, ZNE
+  fits), probabilistic error cancellation, the noise model + IBM importer,
+  process tomography, the KAK decomposition, the editor reducers +
+  storage migration, custom-gate expand/persistence, and all 24
+  visualiser substrates. The remaining tail is the React hook bodies and
+  DOM-only `exportSvg`, which the Node-only suite can't reach.
 - **Continuous integration.** `.github/workflows/ci.yml` type-checks
   the source and the tests, runs the full suite, and builds the client
-  on **every push and pull request**. A green build means all 446 tests
+  on **every push and pull request**. A green build means all 739 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
-  **344-check** browser-side cross-section of the same engine the
-  session is using (`client/src/selftest/diagnostics.ts`), against
-  known-correct results, and reports pass/fail in ~10 ms — so a user can
-  validate the engine in their own browser without taking "it's tested"
-  on faith. It's a lazily-imported chunk: zero cost until the dialog is
-  opened.
+  **380-check** browser-side cross-section of the same engine the
+  session is using (`client/src/selftest/diagnostics.ts`) — a
+  deterministic subset of the full Vitest suite — against known-correct
+  results, and reports pass/fail in ~10 ms, so a user can validate the
+  engine in their own browser without taking "it's tested" on faith. It's
+  a lazily-imported chunk: zero cost until the dialog is opened.
 - **Commands.** `npm test` (CI mode), `npm run test:watch`,
   `npm run test:coverage`, `npm run typecheck:test`. The lockfile is
   pinned to npm 10 (see `CLAUDE.md`) so the suite installs identically

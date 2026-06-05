@@ -101,18 +101,21 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**446 tests** that run in continuous integration on **every push**
-(`.github/workflows/ci.yml`). They verify the statevector simulator, every
-gate's matrix unitarity and algebra, the Clifford tableau, Pauli
-expectations, circuit equivalence, gate inversion, the OpenQASM 3
-round-trip, all eight SDK / LaTeX emitters, the transpiler / router /
-Trotter builder, the noise simulator, the optimiser, KAK decomposition,
-and all 24 visualiser substrates — each checked against analytic ground
-truth.
+**739 tests (~96% statement coverage)** that run in continuous integration
+on **every push** (`.github/workflows/ci.yml`). They verify the statevector
+simulator (incl. the `initialize()` gate and X/Y-basis measurement), every
+gate's matrix unitarity and algebra, the Clifford tableau (with the
+single-qubit Bloch reduction and noisy Pauli-frame), Pauli expectations,
+circuit equivalence, gate inversion, the OpenQASM 3 round-trip and parser
+branches, all eight SDK / LaTeX emitters, the transpiler / router /
+Trotter builder, the noise simulator + IBM importer, the optimiser, PEC,
+process tomography, KAK decomposition, the editor reducers, and all 24
+visualiser substrates — each checked against analytic ground truth.
 
 You don't have to take that on faith: the toolbar **Self-test** button
-re-runs a **344-check** cross-section of the same engine **live in your
-browser** in ~10 ms and shows the pass/fail report. See
+re-runs a **380-check** cross-section of the same engine **live in your
+browser** in ~10 ms and shows the pass/fail report — itself a subset of
+the full **739-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 
