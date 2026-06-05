@@ -397,16 +397,24 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (446 tests): the simulator core is deeply covered —
+- **What's covered** (630 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/prep/big-endian),
   `expr`, `apply`, `expectation`, `stabilizer` (tableau correlations vs
   statevector), `measure`/RNG, `resources`, `equivalence`, `inverse`
-  (U†·U = I), the OpenQASM round-trip, all eight SDK emitters,
-  `transpile`/`router`/`trotter`, the noisy simulator, the optimiser,
-  `sample`, KAK, and all 24 visualiser substrates (the `test-vizbatch*`
-  files). `npm run test:coverage` reports ~55% statements (the core
-  modules are 90–100%; the long tail is UI-only and importer code).
+  (U†·U = I, plus the `inverseGates` range/re-pack path and every angle
+  family), the OpenQASM round-trip + the `parse.ts` statement/modifier-
+  chain/error branches, all eight SDK emitters (incl. dedicated
+  Qiskit + Cirq per-gate-family suites), `transpile`/`router`/`trotter`,
+  the noisy simulator (incl. `noisyPauliExpectation` /
+  `noisyExpectationObservable` with post-selection + custom Kraus), the
+  optimiser, PEC (all four inverse channels + uninverted reporting),
+  `sample`, KAK, the editor reducers (`state.ts` history + coalescing,
+  `tabs.ts` multi-tab `multiReducer`), custom-gate expand + persistence,
+  and all 24 visualiser substrates (the `test-vizbatch*` files).
+  `npm run test:coverage` reports ~90% statements (the core modules are
+  95–100%; the remaining tail is React/`localStorage`-bound UI code the
+  Node-only suite can't exercise without jsdom).
 - **Shared helpers**: `test/helpers.ts` (terse `circ()`/`gate()` builders +
   complex-matrix utilities); `test/check.ts` (adapter that lets the
   original `check(name, cond)` verification scripts register as Vitest
