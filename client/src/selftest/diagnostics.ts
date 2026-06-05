@@ -2,7 +2,7 @@
  * In-browser self-test: a broad, live cross-section of Quantiom's numeric
  * core, runnable from the app's "Self-test" button.
  *
- * This is a *subset* of the project's full ~360-case Vitest suite (run in
+ * This is a *subset* of the project's full ~740-case Vitest suite (run in
  * Node and in CI on every commit — see `client/test/` and
  * `.github/workflows/ci.yml`), reimplemented with plain assertions so it can
  * run in the browser against the very modules powering the user's session.
@@ -42,6 +42,13 @@ import { emitQasm2 } from "../qasm/emitQasm2";
 import { emitQuantikz } from "../qasm/emitQuantikz";
 import { transpile } from "../sim/transpile";
 import { parsePauliSum, buildTrotterCircuit } from "../sim/trotter";
+import { noisyPauliExpectation, noisyExpectationObservable } from "../sim/simulateNoisy";
+import { pecExpectation } from "../sim/pec";
+import { processTomography } from "../sim/tomography";
+import { decomposeKAK4x4 } from "../sim/kak";
+import { mutualInformationMatrix, entropyProfile } from "../sim/entanglement";
+import { DEFAULT_NOISE, type NoiseModel } from "../sim/noise";
+import type { Complex } from "../sim/complex";
 import type { Circuit, PlacedGate, GateId } from "../editor/types";
 
 export type CheckResult = { name: string; passed: boolean; detail?: string };
@@ -398,6 +405,163 @@ export function runSelfTest(): SelfTestReport {
       const r = estimateResources(circ(2, [gate("cx", [1], [0]), gate("t", [0], [], [], 1), gate("h", [0], [], [], 2)]));
       return r.tCount === 1 && r.cxCount === 1 && r.totalGates === 3;
     });
+  }
+
+  // ── Mid-circuit measurement & reset (statevector) ──────────────────
+  s.group("Measurement & reset");
+  {
+    const measured = (gates: PlacedGate[]) => simulate(circ(1, gates, 1), {});
+    s.check("X then Z-measure collapses to |1⟩", () =>
+      close(probOf(measured([gate("x", [0]), { ...gate("measure", [0], [], [], 1), clbits: [0] }]), "1"), 1));
+    s.check("reset returns any state to |0⟩", () =>
+      close(probOf(measured([gate("x", [0]), gate("reset", [0], [], [], 1)]), "0"), 1));
+    s.check("X-basis measure of |+⟩ is deterministic (outcome preserved)", () => {
+      // H|0⟩ = |+⟩; measure_x rotates to Z, measures, rotates back ⇒ stays |+⟩.
+      const r = simulate(circ(1, [gate("h", [0]), { ...gate("measure_x", [0], [], [], 1), clbits: [0] }], 1), {});
+      return close(probOf(r, "0"), 0.5) && close(probOf(r, "1"), 0.5);
+    });
+  }
+
+  // ── initialize() state-prep gate ───────────────────────────────────
+  s.group("State preparation — initialize()");
+  {
+    const init = (label: string, p = {}) => simulate(circ(1, [gate("initialize", [0], [], [label])]), p);
+    s.check("initialize |1⟩", () => close(probOf(init("|1⟩"), "1"), 1));
+    s.check("initialize |+⟩ is an equal split", () => close(probOf(init("|+⟩"), "0"), 0.5) && close(probOf(init("|+⟩"), "1"), 0.5));
+    s.check("initialize |+i⟩ puts the phase on +Y", () => {
+      const a = init("|+i⟩").amplitudes.find((x) => x.basis === "1")!;
+      return close(a.re, 0) && close(a.im, Math.SQRT1_2);
+    });
+    s.check("amplitude tuple (0,0,1,0) = |1⟩", () => close(probOf(init("(0, 0, 1, 0)"), "1"), 1));
+    s.check("amplitude tuple with a bound parameter ((cos t,0,sin t,0), t=π/2) = |1⟩", () =>
+      close(probOf(init("(cos(t), 0, sin(t), 0)", { t: Math.PI / 2 }), "1"), 1));
+    s.check("an un-normalised tuple is normalised", () => close(probOf(init("(2, 0, 0, 0)"), "0"), 1));
+  }
+
+  // ── Trajectory noise simulator (exact at zero noise) ───────────────
+  s.group("Noisy simulator — zero-noise exactness");
+  {
+    const noiseless: NoiseModel = {
+      ...DEFAULT_NOISE, enabled: true, trajectories: 1,
+      oneQubitDepolarising: 0, twoQubitDepolarising: 0, amplitudeDamping: 0,
+      phaseDamping: 0, readoutBitFlip: 0, crosstalk: 0,
+    };
+    const ry = circ(1, [gate("ry", [0], [], ["pi/3"])]); // ⟨Z⟩ = cos(π/3) = 0.5
+    s.check("noisyPauliExpectation ⟨Z⟩ matches the analytic 0.5", () =>
+      close(noisyPauliExpectation(ry, {}, [], noiseless, P("Z")), 0.5, 1e-9));
+    s.check("Pauli-sum observable H = ½Z gives ⟨H⟩ = 0.25", () =>
+      close(noisyExpectationObservable(ry, {}, [], noiseless, { kind: "sum", terms: [{ coefficient: 0.5, paulis: "Z" }] }), 0.25, 1e-9));
+    s.check("post-selection on a forced X·measure outcome conditions ⟨Z⟩ = −1", () => {
+      const c: Circuit = { numQubits: 1, numClbits: 1, gates: [gate("x", [0], [], [], 0), { ...gate("measure", [0], [], [], 1), clbits: [0] }] };
+      return close(noisyExpectationObservable(c, {}, [], noiseless, { kind: "pauli", paulis: P("Z") }, { clbit: 0, value: 1 }), -1, 1e-9);
+    });
+  }
+
+  // ── Probabilistic Error Cancellation (exact at zero noise) ─────────
+  s.group("Probabilistic Error Cancellation");
+  {
+    const noiseless: NoiseModel = {
+      ...DEFAULT_NOISE, enabled: true, trajectories: 1,
+      oneQubitDepolarising: 0, twoQubitDepolarising: 0, amplitudeDamping: 0,
+      phaseDamping: 0, readoutBitFlip: 0, crosstalk: 0,
+    };
+    const ry = circ(1, [gate("ry", [0], [], ["pi/3"])]);
+    s.check("PEC at zero noise returns the ideal ⟨Z⟩ with overhead 1", () => {
+      const r = pecExpectation(ry, {}, [], noiseless, { kind: "pauli", paulis: P("Z") }, 16);
+      return close(r.value, 0.5, 1e-9) && close(r.varianceOverhead, 1, 1e-9);
+    });
+    s.check("PEC reports the inverted-channel location counts", () => {
+      const r = pecExpectation(ry, {}, [], noiseless, { kind: "pauli", paulis: P("Z") }, 4);
+      return r.channels.oneQDepol === 1 && r.uninverted.length === 0;
+    });
+  }
+
+  // ── Process tomography ──────────────────────────────────────────────
+  s.group("Process tomography");
+  {
+    const dominant = (r: ReturnType<typeof processTomography>) => {
+      let best = 0;
+      for (let i = 1; i < r.beta.length; i++)
+        if (Math.hypot(r.beta[i].re, r.beta[i].im) > Math.hypot(r.beta[best].re, r.beta[best].im)) best = i;
+      return r.labels[best];
+    };
+    s.check("X gate decomposes onto the X Pauli", () => dominant(processTomography(circ(1, [gate("x", [0])]), {}, [])) === "X");
+    s.check("identity decomposes onto I", () => dominant(processTomography(circ(1, [gate("i", [0])]), {}, [])) === "I");
+    s.check("χ is trace-normalised (Σ|β|² = 1) for a unitary process", () => {
+      const r = processTomography(circ(1, [gate("ry", [0], [], ["0.9"])]), {}, []);
+      return close(r.beta.reduce((a, b) => a + b.re * b.re + b.im * b.im, 0), 1, 1e-8);
+    });
+    s.check("CX (2-qubit Kronecker path) spreads over II/IX/ZI/ZX", () => {
+      const r = processTomography(circ(2, [gate("cx", [1], [0])]), {}, []);
+      const big = r.labels.filter((_, i) => Math.hypot(r.beta[i].re, r.beta[i].im) > 0.4).sort();
+      return big.join(",") === "II,IX,ZI,ZX";
+    });
+  }
+
+  // ── KAK 2-qubit decomposition ───────────────────────────────────────
+  s.group("KAK decomposition (Cartan)");
+  {
+    const I_C: Complex = [1, 0], Z_C: Complex = [0, 0];
+    const eye4 = (): Complex[][] => { const m = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => Z_C)); for (let i = 0; i < 4; i++) m[i][i] = I_C; return m; };
+    const cnot = (): Complex[][] => { const m = eye4(); [m[2], m[3]] = [m[3], m[2]]; return m; };
+    const swap = (): Complex[][] => { const m = eye4(); [m[1], m[2]] = [m[2], m[1]]; return m; };
+    s.check("CNOT decomposes with machine-precision residual", () => {
+      const r = decomposeKAK4x4(cnot());
+      return r !== null && r.residual < 1e-6;
+    });
+    s.check("SWAP decomposes with machine-precision residual", () => {
+      const r = decomposeKAK4x4(swap());
+      return r !== null && r.residual < 1e-6;
+    });
+    s.check("identity decomposes cleanly", () => {
+      const r = decomposeKAK4x4(eye4());
+      return r !== null && r.residual < 1e-6;
+    });
+  }
+
+  // ── Entanglement metrics (visualiser substrates) ───────────────────
+  s.group("Entanglement metrics");
+  {
+    const bell = simulate(circ(2, [gate("h", [0]), gate("cx", [1], [0])]), {}).state;
+    const product = simulate(circ(2, [gate("h", [0]), gate("h", [1])]), {}).state;
+    s.check("Bell: each qubit's marginal entropy = 1 bit", () => {
+      const mi = mutualInformationMatrix(bell, 2)!;
+      return close(mi.single[0], 1, 1e-6) && close(mi.single[1], 1, 1e-6);
+    });
+    s.check("Bell: mutual information I(0:1) = 2 bits", () => close(mutualInformationMatrix(bell, 2)!.mi[0][1], 2, 1e-6));
+    s.check("Product state: zero mutual information", () => close(mutualInformationMatrix(product, 2)!.mi[0][1], 0, 1e-6));
+    s.check("GHZ-3: every contiguous cut carries 1 bit", () => {
+      const ghz = simulate(circ(3, [gate("h", [0]), gate("cx", [1], [0]), gate("cx", [2], [1])]), {}).state;
+      const prof = entropyProfile(ghz, 3)!;
+      return prof.entropy.every((e) => close(e, 1, 1e-6));
+    });
+  }
+
+  // ── Stabilizer single-qubit Bloch reduction ────────────────────────
+  s.group("Stabilizer Bloch vectors");
+  {
+    const bloch = (n: number, gates: PlacedGate[]) => runClifford(n, gates).tab.blochVectors();
+    const eq = (b: { x: number; y: number; z: number }, x: number, y: number, z: number) => b.x === x && b.y === y && b.z === z;
+    s.check("|0⟩ → +Z", () => eq(bloch(1, [])[0], 0, 0, 1));
+    s.check("X|0⟩ = |1⟩ → −Z", () => eq(bloch(1, [gate("x", [0])])[0], 0, 0, -1));
+    s.check("H|0⟩ = |+⟩ → +X", () => eq(bloch(1, [gate("h", [0])])[0], 1, 0, 0));
+    s.check("S·H|0⟩ = |+i⟩ → +Y", () => eq(bloch(1, [gate("h", [0]), gate("s", [0])])[0], 0, 1, 0));
+    s.check("Bell marginals are maximally mixed (Bloch 0)", () => {
+      const b = bloch(2, [gate("h", [0]), gate("cx", [1], [0])]);
+      return eq(b[0], 0, 0, 0) && eq(b[1], 0, 0, 0);
+    });
+  }
+
+  // ── SDK export content (not just the signature token) ──────────────
+  s.group("SDK export content");
+  {
+    const bell = circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+    s.check("Qiskit Bell emits qc.h(0) and qc.cx(0, 1)", () => { const o = emitQiskit(bell); return o.includes("qc.h(0)") && o.includes("qc.cx(0, 1)"); });
+    s.check("Cirq Bell emits H and CNOT", () => { const o = emitCirq(bell); return o.includes("cirq.H(qs[0])") && o.includes("cirq.CNOT(qs[0], qs[1])"); });
+    s.check("Q# Bell emits H and CNOT", () => { const o = emitQSharp(bell); return o.includes("H(qs[0]);") && o.includes("CNOT(qs[0], qs[1]);"); });
+    s.check("Braket Bell emits h and cnot", () => { const o = emitBraket(bell); return o.includes("circuit.h(0)") && o.includes("circuit.cnot(0, 1)"); });
+    s.check("OpenQASM 2 Bell emits qreg/creg-free h and cx", () => { const o = emitQasm2(bell); return o.includes("h q[0];") && o.includes("cx q[0], q[1];"); });
+    s.check("quantikz Bell emits a gate and a CNOT target", () => { const o = emitQuantikz(bell); return o.includes("\\gate{H}") && o.includes("\\targ{}"); });
   }
 
   let passed = 0, failed = 0;
