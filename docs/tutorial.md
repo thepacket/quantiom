@@ -360,9 +360,9 @@ to simulate classically."
 **Amplitude · phase**, **Wigner function**, **Husimi Q**, and
 **Magic (M₂)**.
 
-- *Amplitude · phase* shows the full state as bars (height = |amp|, hue
-  = phase) — the only view of *full-state* phase. Load `qft_3q.qasm` to
-  see the QFT's phase staircase.
+- *Amplitude · phase* shows the full state as horizontal bars (length =
+  |amp|, hue = phase), one per basis state — the only view of
+  *full-state* phase. Load `qft_3q.qasm` to see the QFT's phase staircase.
 - *Wigner function* is the discrete phase-space quasi-probability;
   **negative cells = non-classicality.** A T-state shows negativity.
 - *Husimi Q* is the always-non-negative companion — a smooth coherent-

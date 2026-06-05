@@ -46,6 +46,31 @@ expression — easier than reading a sparse 256-row dense table by eye.
 
 ---
 
+## Amplitude · phase
+
+One **horizontal bar** per computational basis state, one row each: the
+bar's **length** is the amplitude magnitude |⟨x|ψ⟩|, its **hue** is the
+phase arg⟨x|ψ⟩ (mapped around the colour wheel, −π … +π shown in the
+legend), and the basis label (or index, when there are many) sits in the
+left gutter. This is the only view that exposes the *full-state* phase —
+the Bloch and Phase-disk panels only show per-qubit phase, and the
+Statevector table shows raw numbers.
+
+**When available.** Statevector path only (not in Clifford or noise
+mode). When 2ⁿ exceeds 64 bars, the largest-magnitude basis states are
+shown (in index order) and a note reports the truncation.
+
+**What you see.**
+- **Equal superposition** (Hadamards): all bars the same length, all
+  the same hue (phase 0).
+- **Grover after the oracle**: the marked state's bar flips to the
+  opposite hue (the π sign flip) while magnitudes stay equal — the
+  interference the diffuser then amplifies.
+- **QFT / phase kickback**: a staircase of hues across the basis states
+  as the Fourier phases wind, with magnitudes flat.
+
+---
+
 ## Probabilities
 
 The same data as Statevector, but as a bar chart of measurement
@@ -109,6 +134,25 @@ strength.
 
 ---
 
+## Bloch trajectory
+
+The full 3-D path each qubit's Bloch vector traces as the `t` clock
+sweeps one period, drawn on the same axonometric sphere as the Bloch
+panel (green dot = start, warm dot = end). Where the t-sweep panel shows
+only ⟨Z⟩(t), this shows the whole curve.
+
+**When available.** Only with a free `t` symbol; statevector path,
+capped at 12 qubits.
+
+**What you see.**
+- A single-axis drive (`rx(t)`): a flat great circle.
+- An off-axis or two-frequency drive: a tilted loop or a Lissajous-like
+  figure that doesn't close on itself.
+- A qubit getting entangled as `t` advances: the vector spirals *inward*
+  (its Bloch length shrinks as it mixes with the rest).
+
+---
+
 ## Phase disk
 
 A per-basis-state miniature complex-plane disk showing each amplitude
@@ -128,29 +172,6 @@ reference. Twin to Statevector but with phases visually obvious.
 **Tip.** Open this alongside the Statevector panel — Statevector for
 exact numbers, Phase disk for an immediate visual of phase structure
 that's tedious to read from numbers.
-
----
-
-## Amplitude · phase
-
-One bar per computational basis state: **height** is the amplitude
-magnitude |⟨x|ψ⟩|, **hue** is its phase arg⟨x|ψ⟩ (mapped around the
-colour wheel, −π … +π shown in the legend). This is the only view that
-exposes the *full-state* phase — the Bloch and Phase-disk panels only
-show per-qubit phase, and the Statevector table shows raw numbers.
-
-**When available.** Statevector path only (not in Clifford or noise
-mode). When 2ⁿ exceeds 64 bars, the largest-magnitude basis states are
-shown (in index order) and a note reports the truncation.
-
-**What you see.**
-- **Equal superposition** (Hadamards): all bars the same height, all
-  the same hue (phase 0).
-- **Grover after the oracle**: the marked state's bar flips to the
-  opposite hue (the π sign flip) while magnitudes stay equal — the
-  interference the diffuser then amplifies.
-- **QFT / phase kickback**: a staircase of hues across the basis states
-  as the Fourier phases wind, with magnitudes flat.
 
 ---
 
@@ -400,25 +421,6 @@ adjacent same-colour spiders.
 **Scope.** This renders the diagram faithfully; it does **not** perform ZX
 rewriting / T-count reduction (PyZX-style) — that's a separate effort. The
 fusable-pairs hint is a count, not an applied simplification.
-
----
-
-## Bloch trajectory
-
-The full 3-D path each qubit's Bloch vector traces as the `t` clock
-sweeps one period, drawn on the same axonometric sphere as the Bloch
-panel (green dot = start, warm dot = end). Where the t-sweep panel shows
-only ⟨Z⟩(t), this shows the whole curve.
-
-**When available.** Only with a free `t` symbol; statevector path,
-capped at 12 qubits.
-
-**What you see.**
-- A single-axis drive (`rx(t)`): a flat great circle.
-- An off-axis or two-frequency drive: a tilted loop or a Lissajous-like
-  figure that doesn't close on itself.
-- A qubit getting entangled as `t` advances: the vector spirals *inward*
-  (its Bloch length shrinks as it mixes with the rest).
 
 ---
 
