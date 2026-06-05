@@ -4,6 +4,10 @@ import type { SelfTestReport } from "../selftest/diagnostics";
 const ACTIONS_URL = "https://github.com/thepacket/quantiom/actions";
 const PASS = "#3fb950";
 const FAIL = "#f85149";
+/** Size of the full Vitest suite (run in Node/CI). The in-app dialog runs a
+ *  deterministic, synchronous subset of it — keep this in step with
+ *  `client/test/` when the suite grows. */
+const FULL_SUITE_TESTS = 739;
 
 /**
  * Self-test dialog — surfaced from the toolbar's "Self-test" button.
@@ -75,7 +79,10 @@ export function SelfTestModal({ onClose }: { onClose: () => void }) {
           <p style={{ margin: "0 0 12px", color: "var(--muted)" }}>
             These checks validate Quantiom's simulator, gate matrices, OpenQASM
             round-trip, code exports, transpiler, and more — live, in your
-            browser, against known-correct results.
+            browser, against known-correct results. Only the deterministic
+            subset that can run in-browser executes here; the full suite is{" "}
+            {FULL_SUITE_TESTS} automated tests (the rest need a Node
+            environment and run in CI).
           </p>
 
           {running && (
@@ -103,6 +110,10 @@ export function SelfTestModal({ onClose }: { onClose: () => void }) {
                   {report.durationMs.toFixed(0)} ms
                 </span>
               </div>
+              <p style={{ margin: "-6px 0 14px", color: "var(--muted)", fontSize: 11 }}>
+                {report.total} in-browser checks — a subset of the full {FULL_SUITE_TESTS}-test
+                suite (the remainder run in Node/CI).
+              </p>
 
               {report.groups.map((g) => {
                 const gFail = g.checks.filter((c) => !c.passed).length;
@@ -132,8 +143,8 @@ export function SelfTestModal({ onClose }: { onClose: () => void }) {
 
         <div style={{ borderTop: "1px solid var(--border)", padding: "10px 18px", color: "var(--muted)", fontSize: 11, lineHeight: 1.5 }}>
           A live, in-browser subset of the engine's validation. The full
-          suite — 739 automated tests — runs in continuous integration on
-          every commit:{" "}
+          suite — {FULL_SUITE_TESTS} automated tests — runs in continuous
+          integration on every commit:{" "}
           <a href={ACTIONS_URL} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>github.com/thepacket/quantiom/actions</a>.
         </div>
       </div>
