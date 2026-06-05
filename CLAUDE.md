@@ -397,24 +397,30 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (630 tests): the simulator core is deeply covered —
+- **What's covered** (739 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
-  `simulate` (Bell/GHZ/rotations/measurement/prep/big-endian),
-  `expr`, `apply`, `expectation`, `stabilizer` (tableau correlations vs
-  statevector), `measure`/RNG, `resources`, `equivalence`, `inverse`
-  (U†·U = I, plus the `inverseGates` range/re-pack path and every angle
-  family), the OpenQASM round-trip + the `parse.ts` statement/modifier-
-  chain/error branches, all eight SDK emitters (incl. dedicated
-  Qiskit + Cirq per-gate-family suites), `transpile`/`router`/`trotter`,
-  the noisy simulator (incl. `noisyPauliExpectation` /
+  `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
+  `initialize()` gate: basis labels, amplitude tuples, failure paths),
+  `expr`, `apply`, `expectation`, `measure` (Z/X/Y bases + reset),
+  `stabilizer` (tableau correlations vs statevector, the GF(2)
+  single-qubit Bloch reduction, and the noisy Pauli-frame rules),
+  `resources`, `equivalence`, `inverse` (U†·U = I, the `inverseGates`
+  range/re-pack path, every angle family), the OpenQASM round-trip +
+  the `parse.ts` statement/modifier-chain/error branches, all eight SDK
+  emitters (a dedicated per-gate-family suite each), `transpile`/`router`/
+  `trotter`, the noisy simulator (incl. `noisyPauliExpectation` /
   `noisyExpectationObservable` with post-selection + custom Kraus), the
-  optimiser, PEC (all four inverse channels + uninverted reporting),
-  `sample`, KAK, the editor reducers (`state.ts` history + coalescing,
-  `tabs.ts` multi-tab `multiReducer`), custom-gate expand + persistence,
-  and all 24 visualiser substrates (the `test-vizbatch*` files).
-  `npm run test:coverage` reports ~90% statements (the core modules are
-  95–100%; the remaining tail is React/`localStorage`-bound UI code the
-  Node-only suite can't exercise without jsdom).
+  optimiser (Adam/SGD/QNG, zneFit linear/quadratic/exponential, landscape,
+  plateau), PEC (all four inverse channels + uninverted reporting), `noise`
+  (load/save/sanitise + the IBM importer), `tomography` (incl. the
+  multi-qubit Kronecker path + noise mode), `sample`, KAK, the editor
+  reducers + storage (`state.ts` history/coalescing/`loadFromStorage`,
+  `tabs.ts` `multiReducer` + `buildInitial` migration), custom-gate expand
+  + persistence, and all 24 visualiser substrates (the `test-vizbatch*`
+  files). `npm run test:coverage` reports ~96% statements (core modules are
+  95–100%; the remaining tail is the React `useReducer`/`useEffect` hook
+  bodies and DOM-only `exportSvg`, which the Node-only suite can't exercise
+  without jsdom).
 - **Shared helpers**: `test/helpers.ts` (terse `circ()`/`gate()` builders +
   complex-matrix utilities); `test/check.ts` (adapter that lets the
   original `check(name, cond)` verification scripts register as Vitest
