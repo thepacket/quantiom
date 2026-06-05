@@ -179,8 +179,8 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .palette__tile[data-cat="non-unitary"]         { --tile-color: #c47878; }
 .palette__tile[data-cat="control-flow"]        { --tile-color: #d4c267; }
 .palette__tile[data-cat="marker"]              { --tile-color: #6e7888; }
-.palette__symbol { font-family: ui-monospace, monospace; font-size: 14px; font-weight: 700; color: #111; }
-.palette__id { font-size: 14px; font-weight: 700; color: rgba(0,0,0,0.72); }
+.palette__symbol { font-family: ui-monospace, monospace; font-size: 16px; font-weight: 700; color: #111; }
+.palette__id { font-size: 16px; font-weight: 700; color: rgba(0,0,0,0.72); }
 
 /* ─── Canvas ────────────────────────────────────────────────────────── */
 .canvas { position: relative; padding: 16px; }
@@ -243,7 +243,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .gate__cross { stroke: var(--cat-color); stroke-width: 1.5; }
 .gate__meter { stroke: #111; stroke-width: 1.4; fill: none; }
 .gate__barrier { stroke: var(--cat-color); stroke-width: 1.5; stroke-dasharray: 3 3; }
-.gate__label { fill: #111; font-family: ui-monospace, monospace; font-size: 13px; font-weight: 700; user-select: none; }
+.gate__label { fill: #111; font-family: ui-monospace, monospace; font-size: 15px; font-weight: 700; user-select: none; }
 .gate__cl-link { stroke: var(--cl-wire); stroke-width: 1; }
 .gate--selected .gate__box,
 .gate--selected .gate__box--target,
