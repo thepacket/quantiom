@@ -154,11 +154,11 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .palette__group-header:hover { color: var(--fg); background: transparent; }
 .palette__chevron { display: inline-block; width: 10px; color: var(--border-strong); }
 .palette__count { margin-left: auto; color: var(--border-strong); font-variant-numeric: tabular-nums; }
-.palette__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 2px 8px 6px; }
+.palette__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 2px 8px 6px; }
 .palette__tile {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   background: var(--tile-color, var(--panel-2)); border: 1.5px solid var(--tile-color, var(--border)); border-radius: 4px;
-  height: 44px; cursor: grab; user-select: none; color: #111;
+  height: 44px; cursor: grab; user-select: none; color: #111; overflow: hidden;
   transition: filter 80ms, transform 80ms, box-shadow 80ms;
 }
 .palette__tile:hover { filter: brightness(1.12); box-shadow: 0 0 0 2px rgba(0,0,0,0.28) inset; }
@@ -179,8 +179,8 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .palette__tile[data-cat="non-unitary"]         { --tile-color: #c47878; }
 .palette__tile[data-cat="control-flow"]        { --tile-color: #d4c267; }
 .palette__tile[data-cat="marker"]              { --tile-color: #6e7888; }
-.palette__symbol { font-family: ui-monospace, monospace; font-size: 16px; font-weight: 700; color: #111; }
-.palette__id { font-size: 16px; font-weight: 700; color: rgba(0,0,0,0.72); }
+.palette__symbol { font-family: ui-monospace, monospace; font-size: 16px; font-weight: 700; color: #111; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.palette__id { font-size: 16px; font-weight: 700; color: rgba(0,0,0,0.72); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
 
 /* ─── Canvas ────────────────────────────────────────────────────────── */
 .canvas { position: relative; padding: 16px; }
