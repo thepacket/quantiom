@@ -110,8 +110,19 @@ function projector(view: View) {
   };
 }
 
+/** Probability (= |amp|²) as a clean-but-precise decimal, trimming the
+ *  floating-point dust a raw toString would show. */
+function fmtProb(prob: number): string {
+  if (prob <= 0) return "0";
+  if (prob >= 1 - 1e-12) return "1";
+  return parseFloat(prob.toPrecision(6)).toString();
+}
+
+type Hover = { point: QSpherePoint; sx: number; sy: number };
+
 function Sphere({ points, n }: { points: QSpherePoint[]; n: number }) {
   const [view, setView] = useState<View>(DEFAULT_VIEW);
+  const [hover, setHover] = useState<Hover | null>(null);
   const drag = useRef<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -130,6 +141,7 @@ function Sphere({ points, n }: { points: QSpherePoint[]; n: number }) {
 
   const onDown = (e: React.PointerEvent) => {
     drag.current = { x: e.clientX, y: e.clientY };
+    setHover(null); // hide the tooltip while orbiting
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onMove = (e: React.PointerEvent) => {
@@ -188,8 +200,11 @@ function Sphere({ points, n }: { points: QSpherePoint[]; n: number }) {
     [...drawn].filter(({ p }) => p.mag >= labelThreshold).sort((a, b) => b.p.mag - a.p.mag).slice(0, 12).map(({ p }) => p.index),
   );
 
+  const onLeaveSvg = () => { if (!drag.current) setHover(null); };
+
   return (
     <div className="qsphere">
+      <div className="qsphere__stage" style={{ width: SIZE, height: SIZE }}>
       <svg
         ref={svgRef}
         width={SIZE}
@@ -200,6 +215,7 @@ function Sphere({ points, n }: { points: QSpherePoint[]; n: number }) {
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
+        onPointerLeave={onLeaveSvg}
         onDoubleClick={() => setView(DEFAULT_VIEW)}
       >
         <circle cx={cx} cy={cy} r={R0 * view.zoom} className="qsphere__outline" />
@@ -210,12 +226,17 @@ function Sphere({ points, n }: { points: QSpherePoint[]; n: number }) {
           const r = 2 + p.mag * 9;
           const show = labelled.has(p.index);
           const right = pr.sx >= cx;
+          const hit = Math.max(r + 4, 7); // generous hover target for small dots
           return (
-            <g key={p.index}>
+            <g
+              key={p.index}
+              onPointerEnter={() => { if (!drag.current) setHover({ point: p, sx: pr.sx, sy: pr.sy }); }}
+              onPointerLeave={() => { if (!drag.current) setHover(null); }}
+              style={{ cursor: "pointer" }}
+            >
               <line x1={cx} y1={cy} x2={pr.sx} y2={pr.sy} className="qsphere__stem" />
-              <circle cx={pr.sx} cy={pr.sy} r={r} fill={hueFor(p.phase)} className="qsphere__dot">
-                <title>|{p.basis}⟩ (weight {p.weight}): |amp|={p.mag.toFixed(4)}, phase={(p.phase * 180 / Math.PI).toFixed(0)}°</title>
-              </circle>
+              <circle cx={pr.sx} cy={pr.sy} r={r} fill={hueFor(p.phase)} className="qsphere__dot" />
+              <circle cx={pr.sx} cy={pr.sy} r={hit} fill="transparent" className="qsphere__hit" />
               {show && (
                 <text
                   x={pr.sx + (right ? r + 3 : -(r + 3))}
@@ -230,6 +251,24 @@ function Sphere({ points, n }: { points: QSpherePoint[]; n: number }) {
           );
         })}
       </svg>
+      {hover && (
+        <div
+          className="qsphere__tip"
+          style={{
+            left: hover.sx,
+            top: hover.sy,
+            transform: `translate(${hover.sx > cx ? "calc(-100% - 12px)" : "12px"}, -50%)`,
+          }}
+        >
+          <div className="qsphere__tip-state">State |{hover.point.basis}⟩</div>
+          <div className="qsphere__tip-row">Probability: <b>{fmtProb(hover.point.mag * hover.point.mag)}</b></div>
+          <div className="qsphere__tip-row">
+            Phase angle: <b>{fmtPhase(hover.point.phase)}</b>
+            <span className="qsphere__tip-dot" style={{ background: hueFor(hover.point.phase) }} />
+          </div>
+        </div>
+      )}
+      </div>
       <div className="qsphere__legend">
         <span>top = |0…0⟩ · bottom = |1…1⟩ · size = |amp|</span>
         <span className="ampphase__hue" />

@@ -873,6 +873,20 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .qsphere__dot { stroke: rgba(0,0,0,0.4); stroke-width: 0.5; }
 .qsphere__label { fill: var(--muted); font-size: 9px; font-family: ui-monospace, monospace; pointer-events: none; }
 .qsphere__label-phase { fill: var(--muted); opacity: 0.65; }
+.qsphere__stage { position: relative; }
+.qsphere__tip {
+  position: absolute; z-index: 5; pointer-events: none; white-space: nowrap;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  font-size: 12px; line-height: 1.5; color: var(--fg);
+}
+.qsphere__tip-state { font-weight: 600; margin-bottom: 2px; }
+.qsphere__tip-row { color: var(--muted); font-variant-numeric: tabular-nums; }
+.qsphere__tip-row b { color: var(--fg); font-weight: 600; }
+.qsphere__tip-dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  margin-left: 6px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.4);
+}
 .qsphere__legend { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: var(--muted); width: 100%; }
 .qsphere__hint { opacity: 0.7; font-style: italic; }
 .qsphere__legend .ampphase__hue { width: 80%; }
