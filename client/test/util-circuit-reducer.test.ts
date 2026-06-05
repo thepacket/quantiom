@@ -1,7 +1,8 @@
-import { describe, test, expect, vi, afterEach } from "vitest";
+import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   historyReducerExport as hr,
   initialVersioned,
+  loadFromStorage,
   qubitSpan,
   buildPlacedGate,
   newGateId,
@@ -345,5 +346,42 @@ describe("history wrapper — undo/redo & coalescing", () => {
     let v = initialVersioned;
     for (let i = 0; i < 130; i++) v = hr(v, { type: "add-qubit" });
     expect(v.past.length).toBeLessThanOrEqual(100);
+  });
+});
+
+describe("loadFromStorage", () => {
+  let store: Record<string, string>;
+  beforeEach(() => {
+    store = {};
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: (k: string) => (k in store ? store[k] : null),
+      setItem: (k: string, v: string) => { store[k] = v; },
+      removeItem: (k: string) => { delete store[k]; },
+      clear: () => { store = {}; },
+    };
+  });
+  afterEach(() => {
+    delete (globalThis as { localStorage?: unknown }).localStorage;
+  });
+
+  test("empty storage returns the initial versioned state", () => {
+    const v = loadFromStorage();
+    expect(v.present.numQubits).toBe(initialVersioned.present.numQubits);
+    expect(v.past).toEqual([]);
+  });
+
+  test("a well-formed stored circuit becomes the present state", () => {
+    store["quantiom:circuit:v1"] = JSON.stringify({ numQubits: 4, numClbits: 1, gates: [] });
+    expect(loadFromStorage().present.numQubits).toBe(4);
+  });
+
+  test("a malformed stored value falls back to the initial state", () => {
+    store["quantiom:circuit:v1"] = JSON.stringify({ numQubits: "x" }); // no gates array
+    expect(loadFromStorage().present.numQubits).toBe(initialVersioned.present.numQubits);
+  });
+
+  test("corrupted JSON falls back to the initial state", () => {
+    store["quantiom:circuit:v1"] = "{not json";
+    expect(loadFromStorage().present.numQubits).toBe(initialVersioned.present.numQubits);
   });
 });

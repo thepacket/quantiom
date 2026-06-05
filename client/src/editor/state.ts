@@ -260,7 +260,7 @@ export const historyReducerExport = historyReducer;
 
 const STORAGE_KEY = "quantiom:circuit:v1";
 
-function loadFromStorage(): Versioned {
+export function loadFromStorage(): Versioned {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return INITIAL_VERSIONED;

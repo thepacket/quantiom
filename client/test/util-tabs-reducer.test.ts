@@ -1,8 +1,9 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import {
   multiReducer,
   blankTab,
   sanitiseTab,
+  buildInitial,
   type MultiState,
   type Tab,
 } from "../src/editor/tabs";
@@ -173,5 +174,63 @@ describe("sanitiseTab", () => {
     expect(typeof out.id).toBe("string");
     expect(out.ui.paramValues).toEqual({});
     expect(out.versioned.past).toEqual([]);
+  });
+});
+
+describe("buildInitial — storage load & migration", () => {
+  let store: Record<string, string>;
+  beforeEach(() => {
+    store = {};
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: (k: string) => (k in store ? store[k] : null),
+      setItem: (k: string, v: string) => { store[k] = v; },
+      removeItem: (k: string) => { delete store[k]; },
+      clear: () => { store = {}; },
+    };
+  });
+  afterEach(() => {
+    delete (globalThis as { localStorage?: unknown }).localStorage;
+  });
+
+  const TABS_KEY = "quantiom:tabs:v1";
+  const LEGACY_KEY = "quantiom:circuit:v1";
+
+  test("no storage yields a single blank tab", () => {
+    const s = buildInitial();
+    expect(s.tabs).toHaveLength(1);
+    expect(s.activeId).toBe(s.tabs[0].id);
+  });
+
+  test("restores multi-tab storage including the active id", () => {
+    store[TABS_KEY] = JSON.stringify({
+      activeId: "tab-b",
+      tabs: [
+        { id: "tab-a", versioned: { present: { numQubits: 2, numClbits: 0, gates: [] } }, ui: {} },
+        { id: "tab-b", versioned: { present: { numQubits: 3, numClbits: 0, gates: [] } }, ui: {} },
+      ],
+    });
+    const s = buildInitial();
+    expect(s.tabs.map((t) => t.id)).toEqual(["tab-a", "tab-b"]);
+    expect(s.activeId).toBe("tab-b");
+  });
+
+  test("an unknown activeId falls back to the first tab", () => {
+    store[TABS_KEY] = JSON.stringify({
+      activeId: "ghost",
+      tabs: [{ id: "tab-a", versioned: { present: { numQubits: 1, numClbits: 0, gates: [] } }, ui: {} }],
+    });
+    expect(buildInitial().activeId).toBe("tab-a");
+  });
+
+  test("migrates a legacy single-circuit entry into one tab", () => {
+    store[LEGACY_KEY] = JSON.stringify({ numQubits: 4, numClbits: 1, gates: [] });
+    const s = buildInitial();
+    expect(s.tabs).toHaveLength(1);
+    expect(s.tabs[0].versioned.present.numQubits).toBe(4);
+  });
+
+  test("corrupted tabs storage falls through to a blank tab", () => {
+    store[TABS_KEY] = "{not json";
+    expect(buildInitial().tabs).toHaveLength(1);
   });
 });

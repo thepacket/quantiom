@@ -181,7 +181,7 @@ function mapActive(state: MultiState, id: string, f: (t: Tab) => Tab): MultiStat
 
 // ─── Initial / persistence ─────────────────────────────────────────────
 
-function buildInitial(): MultiState {
+export function buildInitial(): MultiState {
   // Prefer multi-tab storage; fall back to legacy single-circuit.
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
