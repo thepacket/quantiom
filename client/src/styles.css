@@ -645,9 +645,9 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 /* ─── Mutual-information map ────────────────────────────────────────── */
 .mutinfo { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
 .mutinfo__svg { display: block; }
-.mutinfo__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.mutinfo__axis { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .mutinfo__bg { fill: var(--bg-2); }
-.mutinfo__val { fill: var(--fg); font-size: 8px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.mutinfo__val { fill: var(--fg); font-size: 11px; font-variant-numeric: tabular-nums; pointer-events: none; }
 .mutinfo__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
 .mutinfo__legend span { display: inline-flex; align-items: center; gap: 4px; }
 .mutinfo__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
@@ -657,7 +657,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 /* ─── Space–time ⟨Z⟩ map ───────────────────────────────────────────── */
 .spacetime { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
 .spacetime__svg { display: block; }
-.spacetime__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.spacetime__axis { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .spacetime__cell { stroke: var(--border); stroke-width: 0.5; vector-effect: non-scaling-stroke; }
 .spacetime__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
 .spacetime__legend span { display: inline-flex; align-items: center; gap: 4px; }
@@ -680,9 +680,9 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 /* ─── ZZ correlation map ───────────────────────────────────────────── */
 .corr { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
 .corr__svg { display: block; }
-.corr__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.corr__axis { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .corr__bg { fill: var(--bg-2); }
-.corr__val { fill: var(--fg); font-size: 8px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.corr__val { fill: var(--fg); font-size: 11px; font-variant-numeric: tabular-nums; pointer-events: none; }
 .corr__legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 10px; color: var(--muted); align-items: center; }
 .corr__legend span { display: inline-flex; align-items: center; gap: 4px; }
 .corr__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
