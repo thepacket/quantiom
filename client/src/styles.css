@@ -180,7 +180,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .palette__tile[data-cat="control-flow"]        { --tile-color: #d4c267; }
 .palette__tile[data-cat="marker"]              { --tile-color: #6e7888; }
 .palette__symbol { font-family: ui-monospace, monospace; font-size: 14px; font-weight: 700; color: #111; }
-.palette__id { font-size: 11px; color: rgba(0,0,0,0.62); }
+.palette__id { font-size: 12px; font-weight: 700; color: rgba(0,0,0,0.72); }
 
 /* ─── Canvas ────────────────────────────────────────────────────────── */
 .canvas { position: relative; padding: 16px; }
