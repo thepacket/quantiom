@@ -73,7 +73,7 @@ function newTabId(): string {
   return `tab-${Date.now().toString(36)}-${nextTabSeq++}`;
 }
 
-function blankTab(circuit?: Circuit, name?: string): Tab {
+export function blankTab(circuit?: Circuit, name?: string): Tab {
   const tab: Tab = {
     id: newTabId(),
     versioned: circuit
@@ -88,7 +88,7 @@ function isTabAction(a: TabsAction): a is Exclude<TabsAction, HistoryAction> {
   return a.type.startsWith("tab:") || a.type.startsWith("ui:");
 }
 
-function multiReducer(state: MultiState, action: TabsAction): MultiState {
+export function multiReducer(state: MultiState, action: TabsAction): MultiState {
   if (isTabAction(action)) {
     switch (action.type) {
       case "tab:new": {
@@ -214,7 +214,7 @@ function buildInitial(): MultiState {
   return { tabs: [t], activeId: t.id };
 }
 
-function sanitiseTab(raw: unknown): Tab | null {
+export function sanitiseTab(raw: unknown): Tab | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   const v = o.versioned as Versioned | undefined;
