@@ -58,7 +58,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__toggle { padding: 2px 8px; }
 .chat__title { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .chat__btn { padding: 2px 8px; }
-.chat__tagline { flex: 1 1 0; min-width: 0; text-align: right; color: var(--muted); font-size: 11px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat__tagline { flex: 1 1 0; min-width: 0; text-align: right; color: var(--muted); font-size: 13px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat__attach { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 15px; }
 .chat__settings { padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--bg); }
 .chat__settings-row { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--muted); }

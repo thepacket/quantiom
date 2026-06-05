@@ -202,7 +202,7 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
         <button className="chat__btn" onClick={clearChat} disabled={streaming || history.length === 0} title="Clear chat history">
           clear
         </button>
-        <span className="chat__tagline">Analyze, create, optimize, transform circuits.</span>
+        <span className="chat__tagline">Analyze, create, optimize and transform circuits.</span>
       </div>
       {showSettings && (
         <div className="chat__settings">
