@@ -157,29 +157,30 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .palette__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 2px 8px 6px; }
 .palette__tile {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  background: var(--panel-2); border: 1.5px solid var(--border); border-radius: 4px;
-  height: 44px; cursor: grab; user-select: none;
-  transition: border-color 80ms, background 80ms, transform 80ms, box-shadow 80ms;
+  background: var(--tile-color, var(--panel-2)); border: 1.5px solid var(--tile-color, var(--border)); border-radius: 4px;
+  height: 44px; cursor: grab; user-select: none; color: #111;
+  transition: filter 80ms, transform 80ms, box-shadow 80ms;
 }
-.palette__tile:hover { background: #1f2530; box-shadow: 0 0 0 1px currentColor inset; }
+.palette__tile:hover { filter: brightness(1.12); box-shadow: 0 0 0 2px rgba(0,0,0,0.28) inset; }
 .palette__tile:active { cursor: grabbing; transform: scale(0.97); }
 
-/* Category border colors — applied via data-cat attribute. */
-.palette__tile[data-cat="identity-pauli"]      { border-color: #7a8fa8; }
-.palette__tile[data-cat="clifford-t"]          { border-color: #5fa8c5; }
-.palette__tile[data-cat="phase-rotation"]      { border-color: #9fa3ff; }
-.palette__tile[data-cat="general-u"]           { border-color: #c98aff; }
-.palette__tile[data-cat="two-qubit-clifford"]  { border-color: #c4a96d; }
-.palette__tile[data-cat="controlled-rotation"] { border-color: #d99a55; }
-.palette__tile[data-cat="ising-native"]        { border-color: #d97560; }
-.palette__tile[data-cat="three-qubit"]         { border-color: #d97fb8; }
-.palette__tile[data-cat="multi-controlled"]    { border-color: #b85ec7; }
-.palette__tile[data-cat="state-prep"]          { border-color: #6dc4a4; }
-.palette__tile[data-cat="non-unitary"]         { border-color: #c47878; }
-.palette__tile[data-cat="control-flow"]        { border-color: #d4c267; }
-.palette__tile[data-cat="marker"]              { border-color: #6e7888; }
-.palette__symbol { font-family: ui-monospace, monospace; font-size: 14px; color: var(--fg); }
-.palette__id { font-size: 11px; color: var(--muted); }
+/* Category fill/border colors — applied via data-cat attribute. The tile is
+   filled with its category colour and the glyph is black for contrast. */
+.palette__tile[data-cat="identity-pauli"]      { --tile-color: #7a8fa8; }
+.palette__tile[data-cat="clifford-t"]          { --tile-color: #5fa8c5; }
+.palette__tile[data-cat="phase-rotation"]      { --tile-color: #9fa3ff; }
+.palette__tile[data-cat="general-u"]           { --tile-color: #c98aff; }
+.palette__tile[data-cat="two-qubit-clifford"]  { --tile-color: #c4a96d; }
+.palette__tile[data-cat="controlled-rotation"] { --tile-color: #d99a55; }
+.palette__tile[data-cat="ising-native"]        { --tile-color: #d97560; }
+.palette__tile[data-cat="three-qubit"]         { --tile-color: #d97fb8; }
+.palette__tile[data-cat="multi-controlled"]    { --tile-color: #b85ec7; }
+.palette__tile[data-cat="state-prep"]          { --tile-color: #6dc4a4; }
+.palette__tile[data-cat="non-unitary"]         { --tile-color: #c47878; }
+.palette__tile[data-cat="control-flow"]        { --tile-color: #d4c267; }
+.palette__tile[data-cat="marker"]              { --tile-color: #6e7888; }
+.palette__symbol { font-family: ui-monospace, monospace; font-size: 14px; color: #111; }
+.palette__id { font-size: 11px; color: rgba(0,0,0,0.62); }
 
 /* ─── Canvas ────────────────────────────────────────────────────────── */
 .canvas { position: relative; padding: 16px; }
@@ -227,22 +228,22 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .gate[data-cat="control-flow"]        { --cat-color: #d4c267; }
 .gate[data-cat="marker"]              { --cat-color: #6e7888; }
 .gate--custom { --cat-color: #ff9bd2; }
-.gate__box--custom { fill: rgba(255, 155, 210, 0.08); stroke: #ff9bd2; stroke-width: 1.6; }
-.palette__tile--custom { border-color: #ff9bd2; border-style: dashed; }
+.gate__box--custom { fill: var(--cat-color); stroke: #ff9bd2; stroke-width: 1.6; }
+.palette__tile--custom { --tile-color: #ff9bd2; border-style: dashed; border-color: rgba(0,0,0,0.45); }
 
 .gate__connector { stroke: var(--cat-color); stroke-width: 1.4; }
 .gate__control { fill: var(--cat-color); stroke: none; }
 .gate__control--anti { fill: var(--panel); stroke: var(--cat-color); stroke-width: 1.6; }
-.gate__box { fill: var(--panel-2); stroke: var(--cat-color); stroke-width: 1.4; }
+.gate__box { fill: var(--cat-color); stroke: var(--cat-color); stroke-width: 1.4; }
 .gate__box--target { fill: transparent; stroke: var(--cat-color); stroke-width: 1.4; }
-.gate__box--measure { fill: var(--panel-2); stroke: var(--cat-color); }
-.gate__box--reset { fill: var(--panel-2); stroke: var(--cat-color); }
-.gate__box--state { fill: var(--panel-2); stroke: var(--cat-color); }
-.gate__box--delay { fill: var(--panel-2); stroke: var(--cat-color); }
+.gate__box--measure { fill: var(--cat-color); stroke: var(--cat-color); }
+.gate__box--reset { fill: var(--cat-color); stroke: var(--cat-color); }
+.gate__box--state { fill: var(--cat-color); stroke: var(--cat-color); }
+.gate__box--delay { fill: var(--cat-color); stroke: var(--cat-color); }
 .gate__cross { stroke: var(--cat-color); stroke-width: 1.5; }
-.gate__meter { stroke: var(--cat-color); stroke-width: 1.4; fill: none; }
+.gate__meter { stroke: #111; stroke-width: 1.4; fill: none; }
 .gate__barrier { stroke: var(--cat-color); stroke-width: 1.5; stroke-dasharray: 3 3; }
-.gate__label { fill: var(--fg); font-family: ui-monospace, monospace; font-size: 13px; user-select: none; }
+.gate__label { fill: #111; font-family: ui-monospace, monospace; font-size: 13px; user-select: none; }
 .gate__cl-link { stroke: var(--cl-wire); stroke-width: 1; }
 .gate--selected .gate__box,
 .gate--selected .gate__box--target,
