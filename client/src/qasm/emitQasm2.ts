@@ -1,4 +1,20 @@
 import type { Circuit, PlacedGate } from "../editor/types";
+import { evalExpr } from "../sim/expr";
+
+type ParamValues = Record<string, number>;
+
+/** Evaluate a symbolic parameter expression to a clean numeric literal.
+ *  OpenQASM 2 has no symbolic/free parameters, so every gate argument must
+ *  be a number — free symbols (e.g. `delta`) are bound to their current
+ *  value from `paramValues`. */
+function numParam(expr: string, params: ParamValues): string {
+  const v = evalExpr(expr, params);
+  if (!Number.isFinite(v)) return "0";
+  if (Number.isInteger(v)) return String(v);
+  // Trim floating-point noise (e.g. pi/2 → 1.570796327) without scientific
+  // notation that some QASM 2 parsers reject.
+  return String(Number(v.toPrecision(10)));
+}
 
 /**
  * Emit OpenQASM 2.0 text from a Circuit IR.
@@ -103,7 +119,7 @@ function hasAntiControls(g: PlacedGate): boolean {
   return false;
 }
 
-function emitGate(g: PlacedGate): string[] {
+function emitGate(g: PlacedGate, params: ParamValues): string[] {
   if (g.gateId === "barrier") {
     return [`barrier ${g.targets.map(qref).join(", ")};`];
   }
@@ -166,9 +182,9 @@ function emitGate(g: PlacedGate): string[] {
   if (!name) {
     return [`// ${g.gateId}: not in qelib1.inc`];
   }
-  const params = g.params.length > 0 ? `(${g.params.map(asciify).join(", ")})` : "";
+  const paramStr = g.params.length > 0 ? `(${g.params.map((p) => numParam(p, params)).join(", ")})` : "";
   const args = [...g.controls, ...g.targets].map(qref).join(", ");
-  return [`${name}${params} ${args};`];
+  return [`${name}${paramStr} ${args};`];
 }
 
 function collectFreeSymbols(circuit: Circuit): string[] {
@@ -185,15 +201,18 @@ function collectFreeSymbols(circuit: Circuit): string[] {
   return [...found].sort();
 }
 
-export function emitQasm2(circuit: Circuit): string {
+export function emitQasm2(circuit: Circuit, paramValues: ParamValues = {}): string {
   const out: string[] = [];
   out.push("OPENQASM 2.0;");
   out.push('include "qelib1.inc";');
   out.push("");
 
+  // OpenQASM 2 has no symbolic parameters, so free symbols are bound to their
+  // current numeric values at export time. Record which, for transparency.
   const symbols = collectFreeSymbols(circuit);
   if (symbols.length > 0) {
-    out.push(`// free parameters (no symbolic input in QASM 2): ${symbols.join(", ")}`);
+    const bound = symbols.map((s) => `${s}=${numParam(s, paramValues)}`).join(", ");
+    out.push(`// free parameters bound to current values: ${bound}`);
     out.push("");
   }
 
@@ -207,7 +226,7 @@ export function emitQasm2(circuit: Circuit): string {
     (a, b) => a.column - b.column || a.id.localeCompare(b.id),
   );
   for (const g of sorted) {
-    const lines = emitGate(g);
+    const lines = emitGate(g, paramValues);
     if (g.condition) {
       // QASM 2 if() compares whole creg to an integer. When the creg width
       // is 1, a single-bit condition translates directly; otherwise the

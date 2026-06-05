@@ -3,6 +3,7 @@ import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { sampleShots } from "../sim/sample";
+import { useEndianness, displayAmplitudes, displayProbabilities } from "./endianness";
 
 type Props = {
   state: SimState;
@@ -51,6 +52,7 @@ function loadInitialShots(): number {
 
 export function ProbabilityPanel({ state, gpuProbabilities, sampledProbabilities, sampledShots, shotsTick }: Props) {
   const collapsed = usePanelCollapsed();
+  const { endian } = useEndianness();
   const data = dataOf(state);
   const [mode, setMode] = useState<Mode>(loadInitialMode);
   const [shots, setShots] = useState<number>(loadInitialShots);
@@ -103,14 +105,17 @@ export function ProbabilityPanel({ state, gpuProbabilities, sampledProbabilities
 
   const copy = () => {
     if (!data || !effectiveProbs) return "";
+    const amps = displayAmplitudes(data.amplitudes, data.numQubits, endian);
+    const dProbs = displayProbabilities(effectiveProbs, data.numQubits, endian);
     if (mode === "exact" || !counts) {
-      return data.amplitudes
-        .map((a, i) => `|${a.basis}>  ${(effectiveProbs[i] * 100).toFixed(2)}%`)
+      return amps
+        .map((a, i) => `|${a.basis}>  ${(dProbs[i] * 100).toFixed(2)}%`)
         .join("\n");
     }
+    const dCounts = displayProbabilities(counts, data.numQubits, endian);
     return [
       `shots: ${shots}`,
-      ...data.amplitudes.map((a, i) => `|${a.basis}>  ${counts[i]}  (${((counts[i] / shots) * 100).toFixed(2)}%)`),
+      ...amps.map((a, i) => `|${a.basis}>  ${dCounts[i]}  (${((dCounts[i] / shots) * 100).toFixed(2)}%)`),
     ].join("\n");
   };
 
@@ -230,12 +235,17 @@ function ProbabilityChart({
   onToggleShowAll: () => void;
   showAll: boolean;
 }) {
-  const exactProbs = probs.map((p) => p ?? 0);
-  const empirical = mode === "shots" && counts
-    ? counts.map((c) => c / Math.max(1, shots))
+  const { endian } = useEndianness();
+  // Relabel / re-order for the chosen display endianness (display only).
+  const amps = displayAmplitudes(data.amplitudes, data.numQubits, endian);
+  const dProbs = displayProbabilities(probs, data.numQubits, endian);
+  const dCounts = counts ? displayProbabilities(counts, data.numQubits, endian) : null;
+  const exactProbs = dProbs.map((p) => p ?? 0);
+  const empirical = mode === "shots" && dCounts
+    ? dCounts.map((c) => c / Math.max(1, shots))
     : exactProbs;
   // Build display ordering: by basis index (canonical) or by descending probability.
-  let order = data.amplitudes.map((_, i) => i);
+  let order = amps.map((_, i) => i);
   if (sortDesc) {
     order = order.slice().sort((a, b) => empirical[b] - empirical[a]);
   }
@@ -249,7 +259,7 @@ function ProbabilityChart({
     <>
       <svg width={width} height={visibleOrder.length * (BAR_H + 4) + 8} className="prob__svg">
         {visibleOrder.map((i, row) => {
-          const a = data.amplitudes[i];
+          const a = amps[i];
           const p = empirical[i];
           const exactP = exactProbs[i];
           const barW = (width - labelW - 60) * (p / maxBar);
@@ -280,8 +290,8 @@ function ProbabilityChart({
                 rx={2}
               />
               <text x={labelW + Math.max(barW, exactW) + 4} y={y + BAR_H / 2 + 4} className="prob__pct">
-                {mode === "shots" && counts
-                  ? `${counts[i]}`
+                {mode === "shots" && dCounts
+                  ? `${dCounts[i]}`
                   : `${(p * 100).toFixed(1)}%`}
               </text>
             </g>

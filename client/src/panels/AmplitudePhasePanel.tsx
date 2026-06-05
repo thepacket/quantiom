@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
+import { useEndianness, displayAmplitudes } from "./endianness";
 
 type Props = { state: SimState };
 
@@ -30,12 +31,13 @@ type Bar = { basis: string; index: number; mag: number; phase: number };
 
 function Body({ state }: Props) {
   const collapsed = usePanelCollapsed();
+  const { endian } = useEndianness();
   const data = dataOf(state);
 
   const bars = useMemo<Bar[] | null>(() => {
     if (collapsed || !data) return null;
     if (data.isStabilizer || data.isNoisy) return null;
-    const all = data.amplitudes.map((a) => ({
+    const all = displayAmplitudes(data.amplitudes, data.numQubits, endian).map((a) => ({
       basis: a.basis,
       index: a.index,
       mag: Math.hypot(a.re, a.im),
@@ -47,7 +49,7 @@ function Body({ state }: Props) {
       .sort((p, q) => q.mag - p.mag)
       .slice(0, MAX_BARS)
       .sort((p, q) => p.index - q.index);
-  }, [collapsed, data]);
+  }, [collapsed, data, endian]);
 
   if (!data) return <div className="panel__placeholder">building circuit…</div>;
   if (data.isStabilizer) {

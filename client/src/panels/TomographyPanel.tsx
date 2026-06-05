@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PanelShell } from "./PanelShell";
+import { useEndianness, reversePauliIndex } from "./endianness";
 import { processTomography, MAX_TOMOGRAPHY_QUBITS, type ProcessResult } from "../sim/tomography";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
@@ -20,13 +21,14 @@ type Props = {
  */
 export function TomographyPanel(props: Props) {
   return (
-    <PanelShell id="tomography" title="Process tomography (χ matrix)" defaultCollapsed>
+    <PanelShell id="tomography" title="Process tomography (χ matrix)" defaultCollapsed unverified>
       <Body {...props} />
     </PanelShell>
   );
 }
 
 function Body({ circuit, customGates, paramValues, noise }: Props) {
+  const { endian } = useEndianness();
   const [result, setResult] = useState<ProcessResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -46,6 +48,18 @@ function Body({ circuit, customGates, paramValues, noise }: Props) {
       }
     }, 0);
   };
+
+  // Little-endian: permute χ (both axes) and β by per-qubit Pauli reversal so
+  // the Pauli labels read q0 on the right (display only; canonical labels stay).
+  const displayResult = useMemo(() => {
+    if (!result || endian === "big") return result;
+    const nq = circuit.numQubits;
+    const m = result.chi.length;
+    const chi = Array.from({ length: m }, (_, i) =>
+      Array.from({ length: m }, (_, j) => result.chi[reversePauliIndex(i, nq)][reversePauliIndex(j, nq)]));
+    const beta = result.beta.map((_, i) => result.beta[reversePauliIndex(i, nq)]);
+    return { ...result, chi, beta };
+  }, [result, endian, circuit.numQubits]);
 
   if (circuit.numQubits > MAX_TOMOGRAPHY_QUBITS) {
     return (
@@ -84,7 +98,7 @@ function Body({ circuit, customGates, paramValues, noise }: Props) {
         </div>
       </div>
       {err && <div className="panel__error">{err}</div>}
-      {result && (view === "heatmap" ? <ChiTable result={result} /> : <HintonView result={result} />)}
+      {displayResult && (view === "heatmap" ? <ChiTable result={displayResult} /> : <HintonView result={displayResult} />)}
     </div>
   );
 }

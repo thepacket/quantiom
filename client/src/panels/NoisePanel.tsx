@@ -65,7 +65,7 @@ export function NoisePanel({ noise, onChange }: Props) {
   const clearPerQubit = () => set({ perQubit: undefined, source: undefined });
 
   return (
-    <PanelShell id="noise" title="Noise model" defaultCollapsed>
+    <PanelShell id="noise" title="Noise model" defaultCollapsed unverified>
       <div className="noise">
         <label className="noise__enable">
           <input

@@ -50,6 +50,7 @@ import { optimiseCircuit } from "../sim/optimisePasses";
 import { randomCliffordCircuit } from "../sim/randomClifford";
 import { compileForDevice } from "../sim/compile";
 import { recordAnimationWebM } from "./recordAnimation";
+import { EndiannessToggle } from "../panels/endianness";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -767,9 +768,12 @@ export function CircuitEditor() {
           <h1>Quantiom</h1>
           <span className="app__version">v{APP_VERSION}.{__GIT_COMMITS__} ({__GIT_SHA__})</span>
           <span className="app__tagline">circuit editor · simulator · visualizer</span>
+          <EndiannessToggle />
         </div>
         <div className="app__title">{circuit.name ?? "Untitled"}</div>
-        <div className="app__header-right" />
+        <div className="app__header-right">
+          <span className="app__trust-note">{"The panels with a red dot can't be trusted in presence of noise"}</span>
+        </div>
       </header>
       <GatePalette customGates={customGates} onRemoveCustomGate={removeCustomGate} />
       <div className="editor__center">
@@ -784,7 +788,7 @@ export function CircuitEditor() {
         />
         <div className="editor__toolbar">
           <div className="editor__actions">
-            <FileMenu circuit={circuit} dispatch={dispatch} onLoadInNewTab={(c, name) => t.newTab(c, name)} />
+            <FileMenu circuit={circuit} dispatch={dispatch} paramValues={paramValues} onLoadInNewTab={(c, name) => t.newTab(c, name)} />
             <EditMenu
               canUndo={undoState.canUndo}
               canRedo={undoState.canRedo}

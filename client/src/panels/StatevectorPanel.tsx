@@ -3,6 +3,7 @@ import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
 import { Tex } from "./Tex";
 import { PanelShell } from "./PanelShell";
+import { useEndianness, displayAmplitudes } from "./endianness";
 
 type Props = { state: SimState };
 
@@ -25,12 +26,15 @@ export function StatevectorPanel({ state }: Props) {
   const [hideZeros, setHideZeros] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
+  const { endian } = useEndianness();
   const data = dataOf(state);
+  // Relabel/re-order amplitudes for the chosen display endianness (display only).
+  const amps = data ? displayAmplitudes(data.amplitudes, data.numQubits, endian) : [];
   const error = state.kind === "error" ? state.message : null;
 
   const copy = () => {
     if (!data) return "";
-    const terms = data.amplitudes
+    const terms = amps
       .filter((a) => !a.isZero)
       .map((a) => `(${formatComplex(a.re, a.im)}) |${a.basis}>`);
     return terms.length ? "|psi> = " + terms.join(" + ") : "|psi> = 0";
@@ -43,7 +47,7 @@ export function StatevectorPanel({ state }: Props) {
    */
   const downloadStatevector = (fmt: "csv" | "json") => {
     if (!data || data.isStabilizer || data.isNoisy) return;
-    const rows = data.amplitudes;
+    const rows = amps;
     let blob: Blob;
     let filename: string;
     if (fmt === "csv") {
@@ -120,7 +124,7 @@ export function StatevectorPanel({ state }: Props) {
         </div>
       )}
       {data && !data.isNoisy && !data.isStabilizer && (() => {
-        const visible = data.amplitudes.filter((a) => !hideZeros || !a.isZero);
+        const visible = amps.filter((a) => !hideZeros || !a.isZero);
         const total = visible.length;
         const cap = showAll ? Infinity : STATEVECTOR_DEFAULT_LIMIT;
         const overflowed = total > cap;

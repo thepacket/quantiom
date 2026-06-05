@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { buildUnitary } from "../sim/unitary";
+import { useEndianness, reverseBits } from "./endianness";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 import type { ParameterValues } from "../sim/simulate";
@@ -36,14 +37,30 @@ export function UnitaryHeatmapPanel(props: Props) {
 
 function Body({ circuit, customGates, paramValues }: Props) {
   const collapsed = usePanelCollapsed();
+  const { endian } = useEndianness();
   const n = circuit.numQubits;
   const hasNonUnitary = circuit.gates.some((g) => NON_UNITARY.has(g.gateId));
 
   const result = useMemo(() => {
     if (collapsed) return null;
     if (n < 1 || n > MAX_QUBITS) return null;
-    return buildUnitary(circuit, paramValues, customGates, MAX_QUBITS);
-  }, [collapsed, n, circuit, paramValues, customGates]);
+    const u = buildUnitary(circuit, paramValues, customGates, MAX_QUBITS);
+    if (!u || endian === "big") return u;
+    // Little-endian display: permute rows and columns by bit-reversal so the
+    // operator is shown in Qiskit's basis ordering (display only).
+    const { mag, phase, dim } = u;
+    const m2 = new Float64Array(mag.length);
+    const p2 = new Float64Array(phase.length);
+    for (let i = 0; i < dim; i++) {
+      const si = reverseBits(i, n);
+      for (let j = 0; j < dim; j++) {
+        const sj = reverseBits(j, n);
+        m2[i * dim + j] = mag[si * dim + sj];
+        p2[i * dim + j] = phase[si * dim + sj];
+      }
+    }
+    return { mag: m2, phase: p2, dim };
+  }, [collapsed, n, circuit, paramValues, customGates, endian]);
 
   if (n === 0) return <div className="panel__placeholder">place some gates to see the operator</div>;
   if (n > MAX_QUBITS) {

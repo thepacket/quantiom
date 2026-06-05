@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { pauliTransferMatrix } from "../sim/ptm";
+import { useEndianness, reversePauliIndex } from "./endianness";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 import type { ParameterValues } from "../sim/simulate";
@@ -33,13 +34,21 @@ export function PTMPanel(props: Props) {
 
 function Body({ circuit, customGates, paramValues }: Props) {
   const collapsed = usePanelCollapsed();
+  const { endian } = useEndianness();
   const n = circuit.numQubits;
   const hasNonUnitary = circuit.gates.some((g) => NON_UNITARY.has(g.gateId));
 
   const result = useMemo(() => {
     if (collapsed || n < 1 || n > MAX_QUBITS) return null;
-    return pauliTransferMatrix(circuit, paramValues, customGates, MAX_QUBITS);
-  }, [collapsed, n, circuit, paramValues, customGates]);
+    const r = pauliTransferMatrix(circuit, paramValues, customGates, MAX_QUBITS);
+    if (!r || endian === "big") return r;
+    // Little-endian: permute the Pauli axes by per-qubit reversal (canonical
+    // labels stay; the data moves) so the Pauli strings read q0 on the right.
+    const m = r.R.length;
+    const R2 = Array.from({ length: m }, (_, i) =>
+      Array.from({ length: m }, (_, j) => r.R[reversePauliIndex(i, n)][reversePauliIndex(j, n)]));
+    return { ...r, R: R2 };
+  }, [collapsed, n, circuit, paramValues, customGates, endian]);
 
   if (n === 0) return <div className="panel__placeholder">place some gates to see the Pauli action</div>;
   if (n > MAX_QUBITS) {

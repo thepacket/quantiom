@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanelShell } from "./PanelShell";
+import { useEndianness, reverseLabel } from "./endianness";
 import { sampleMeasurementShots } from "../sim/measurementShots";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
@@ -106,6 +107,7 @@ function Body({ circuit, customGates, paramValues, shotsTick }: Props) {
 }
 
 function Hist({ counts, numClbits }: { counts: Map<string, number>; numClbits: number }) {
+  const { endian } = useEndianness();
   const total = useMemo(() => {
     let s = 0;
     for (const c of counts.values()) s += c;
@@ -126,7 +128,7 @@ function Hist({ counts, numClbits }: { counts: Map<string, number>; numClbits: n
             const pct = total > 0 ? (c / total) * 100 : 0;
             return (
               <tr key={bits}>
-                <td className="syndromes__bits">|{bits.padStart(numClbits, "0")}⟩</td>
+                <td className="syndromes__bits">|{endian === "little" ? reverseLabel(bits.padStart(numClbits, "0")) : bits.padStart(numClbits, "0")}⟩</td>
                 <td className="syndromes__bar-cell">
                   <div className="syndromes__bar-bg">
                     <div className="syndromes__bar-fg" style={{ width: `${(c / max) * 100}%` }} />

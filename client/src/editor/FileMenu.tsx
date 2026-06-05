@@ -21,6 +21,9 @@ type Props = {
   /** When provided, "Open" and Examples create a new tab instead of
    *  replacing the current circuit. Used by the multi-tab editor. */
   onLoadInNewTab?: (circuit: Circuit, name?: string) => void;
+  /** Current parameter values, used to bind free symbols when exporting to
+   *  OpenQASM 2 (which has no symbolic parameters). */
+  paramValues?: Record<string, number>;
 };
 
 /** Slugify a name into something safe for a file system download. */
@@ -29,7 +32,7 @@ function toFilename(name: string | undefined): string {
   return (base || "circuit") + ".qasm";
 }
 
-export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
+export function FileMenu({ circuit, dispatch, onLoadInNewTab, paramValues }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "failed">("idle");
 
@@ -81,7 +84,7 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab }: Props) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 100);
   };
-  const onDownloadQasm2 = () => downloadText(emitQasm2(circuit), "_qasm2.qasm", "text/plain;charset=utf-8");
+  const onDownloadQasm2 = () => downloadText(emitQasm2(circuit, paramValues ?? {}), "_qasm2.qasm", "text/plain;charset=utf-8");
   const onDownloadQiskit = () => downloadText(emitQiskit(circuit), ".py", "text/x-python;charset=utf-8");
   const onDownloadCirq = () => downloadText(emitCirq(circuit), "_cirq.py", "text/x-python;charset=utf-8");
   const onDownloadBraket = () => downloadText(emitBraket(circuit), "_braket.py", "text/x-python;charset=utf-8");

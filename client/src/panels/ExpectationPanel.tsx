@@ -35,7 +35,7 @@ export function ExpectationPanel({ state, noisyContext }: Props) {
   // Compute the copy text outside the body so PanelShell's toolbar can use it.
   // Light cost; the body's heavy memo skips when collapsed.
   return (
-    <PanelShell id="expectation" title="Expectation ⟨P⟩" getCopyText={() => "(open panel to compute)"}>
+    <PanelShell id="expectation" title="Expectation ⟨P⟩" getCopyText={() => "(open panel to compute)"} unverified>
       <ExpectationBody state={state} noisyContext={noisyContext} />
     </PanelShell>
   );

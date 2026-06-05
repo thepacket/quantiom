@@ -3,6 +3,7 @@ import type { SimState } from "./useSimulation";
 import { dataOf } from "./useSimulation";
 import { PanelShell, usePanelCollapsed } from "./PanelShell";
 import { purity, reducedDensityMatrix, type Complex } from "../sim/density";
+import { useEndianness, reverseBits } from "./endianness";
 
 type Props = { state: SimState };
 
@@ -28,6 +29,7 @@ export function DensityPanel({ state }: Props) {
 
 function DensityBody({ state }: Props) {
   const collapsed = usePanelCollapsed();
+  const { endian } = useEndianness();
   const data = dataOf(state);
   const n = data?.numQubits ?? 0;
   const [kept, setKept] = useState<boolean[]>([]);
@@ -53,6 +55,14 @@ function DensityBody({ state }: Props) {
   }, [data, keptIndices, n, tooMany, collapsed]);
 
   const tr2 = useMemo(() => (rho ? purity(rho) : null), [rho]);
+
+  // Little-endian display: permute rows/cols by bit-reversal over the kept
+  // subset so labels match Qiskit (purity is permutation-invariant).
+  const drho = useMemo(() => {
+    if (!rho || endian === "big") return rho;
+    const k = Math.round(Math.log2(rho.length));
+    return rho.map((row, i) => row.map((_, j) => rho[reverseBits(i, k)][reverseBits(j, k)]));
+  }, [rho, endian]);
 
   const toggle = (q: number) => {
     setKept((prev) => {
@@ -98,11 +108,11 @@ function DensityBody({ state }: Props) {
         <div className="panel__placeholder">pick at least one qubit</div>
       ) : tooMany ? (
         <div className="panel__placeholder">choose at most {MAX_KEPT} qubits (matrix is 2ⁿ × 2ⁿ)</div>
-      ) : rho ? (
+      ) : drho ? (
         <>
           <table className="density__matrix">
             <tbody>
-              {rho.map((row, i) => (
+              {drho.map((row, i) => (
                 <tr key={i}>
                   <th className="density__rowlabel">
                     |{i.toString(2).padStart(keptIndices.length, "0")}⟩

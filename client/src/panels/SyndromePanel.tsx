@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanelShell } from "./PanelShell";
+import { useEndianness, reverseLabel } from "./endianness";
 import { isCliffordOnly, sampleSyndromes } from "../sim/stabilizer";
 import { expandCustomGates, type CustomGate } from "../editor/customGates";
 import type { Circuit } from "../editor/types";
@@ -25,7 +26,7 @@ const SHOT_PRESETS = [10, 50, 100, 500, 1_000, 5_000, 10_000, 50_000, 100_000];
  */
 export function SyndromePanel({ circuit, customGates, noise, shotsTick }: Props) {
   return (
-    <PanelShell id="syndromes" title="Syndromes (Clifford shots)" defaultCollapsed>
+    <PanelShell id="syndromes" title="Syndromes (Clifford shots)" defaultCollapsed unverified>
       <SyndromeBody circuit={circuit} customGates={customGates} noise={noise} shotsTick={shotsTick} />
     </PanelShell>
   );
@@ -124,6 +125,7 @@ function SyndromeBody({ circuit, customGates, noise, shotsTick }: Props) {
 }
 
 function SyndromeHistogram({ counts, numClbits }: { counts: Map<string, number>; numClbits: number }) {
+  const { endian } = useEndianness();
   const total = useMemo(() => {
     let s = 0;
     for (const c of counts.values()) s += c;
@@ -144,7 +146,7 @@ function SyndromeHistogram({ counts, numClbits }: { counts: Map<string, number>;
             const pct = total > 0 ? (c / total) * 100 : 0;
             return (
               <tr key={bits}>
-                <td className="syndromes__bits">|{bits.padStart(numClbits, "0")}⟩</td>
+                <td className="syndromes__bits">|{endian === "little" ? reverseLabel(bits.padStart(numClbits, "0")) : bits.padStart(numClbits, "0")}⟩</td>
                 <td className="syndromes__bar-cell">
                   <div className="syndromes__bar-bg">
                     <div className="syndromes__bar-fg" style={{ width: `${(c / max) * 100}%` }} />
