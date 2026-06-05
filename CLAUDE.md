@@ -286,8 +286,8 @@ host plus `/api/health`.
     `CorrelationPanel` (connected ⟨Z_iZ_j⟩ heatmap), `SpaceTimePanel`
     (⟨Z_q⟩ vs column), `SpaceTimeEntropyPanel` (S(ρ_q) vs column),
     `TSweepPanel` (⟨Z_q⟩(t) traces), `TSweepFFTPanel` (DFT of those
-    traces), `AmplitudePhasePanel` (full-state bars: height = |amp|,
-    hue = phase), `UnitaryHeatmapPanel` (2ⁿ×2ⁿ operator, mag + phase,
+    traces), `AmplitudePhasePanel` (full-state horizontal bars: length =
+    |amp|, hue = phase), `UnitaryHeatmapPanel` (2ⁿ×2ⁿ operator, mag + phase,
     n ≤ 6), `InteractionGraphPanel` (logical connectivity node-link),
     `WignerPanel` (discrete Wigner phase-space, n ≤ 4),
     `MagicPanel` (stabilizer-Rényi M₂ + Pauli-weight bars, n ≤ 6),
