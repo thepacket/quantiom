@@ -1127,6 +1127,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="measurement-counts">
           <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} shotsTick={shotsTick} />
         </ErrorBoundary>
+        <ErrorBoundary label="amp-phase"><AmplitudePhasePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="probabilities">
           <ProbabilityPanel
             state={simState}
@@ -1137,8 +1138,10 @@ export function CircuitEditor() {
           />
         </ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} gpuBlochVectors={gpuBloch} /></ErrorBoundary>
+        <ErrorBoundary label="bloch-trajectory">
+          <BlochTrajectoryPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="amp-phase"><AmplitudePhasePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="qsphere"><QSpherePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="wigner"><WignerPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="husimi"><HusimiPanel state={simState} /></ErrorBoundary>
@@ -1182,9 +1185,6 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="loschmidt">
           <LoschmidtPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
-        </ErrorBoundary>
-        <ErrorBoundary label="bloch-trajectory">
-          <BlochTrajectoryPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
         <ErrorBoundary label="otoc">
           <OtocPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
