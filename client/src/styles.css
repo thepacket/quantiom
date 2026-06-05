@@ -730,7 +730,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 /* ─── Amplitude · phase plot ───────────────────────────────────────── */
 .ampphase { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; overflow-x: auto; }
 .ampphase__svg { display: block; }
-.ampphase__axis { fill: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
+.ampphase__axis { fill: var(--muted); font-size: 10px; font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 .ampphase__axis-line { stroke: var(--border); stroke-width: 1; }
 .ampphase__legend { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--muted); }
 .ampphase__hue { flex: 1; height: 8px; border-radius: 2px; min-width: 80px;

@@ -9,8 +9,9 @@ type Props = { state: SimState };
 const MAX_BARS = 64;
 
 /**
- * Amplitude–phase plot. One bar per computational basis state: height is
- * the amplitude magnitude |⟨x|ψ⟩|, colour (hue) is its phase arg⟨x|ψ⟩. This
+ * Amplitude–phase plot. One horizontal bar per computational basis state:
+ * length is the amplitude magnitude |⟨x|ψ⟩|, colour (hue) is its phase
+ * arg⟨x|ψ⟩. This
  * is the one view that shows the *full-state* phase — the Bloch / phase-disk
  * panels only show per-qubit phase, and the statevector table shows raw
  * numbers. Here interference is visible at a glance: Grover's sign flip on
@@ -70,33 +71,35 @@ function hueFor(phase: number): string {
   return `hsl(${deg.toFixed(0)}, 70%, 58%)`;
 }
 
-const H = 96;
-const PAD_T = 6;
+const ROW_H = 16;       // height per basis-state row
+const BAR_H = 11;       // bar thickness within a row
+const LABEL_W = 42;     // left gutter for the basis / index label
+const PAD = 6;
+const TARGET_W = 300;   // design width; the SVG scales to fill the panel
 
 function Plot({ bars, truncated, total }: { bars: Bar[]; truncated: boolean; total: number }) {
-  const labelEvery = bars.length <= 16 ? 1 : Math.ceil(bars.length / 16);
-  const bw = Math.max(3, Math.min(18, Math.floor(300 / bars.length) - 1));
-  const W = Math.max(120, bars.length * (bw + 1) + 2);
-  const plotH = H - PAD_T - 12;
+  const useBasis = bars.length <= 16; // full basis labels when few; indices when many
+  const barArea = TARGET_W - LABEL_W - 6;
+  const W = TARGET_W;
+  const H = PAD * 2 + bars.length * ROW_H;
   const maxMag = Math.max(1e-9, ...bars.map((b) => b.mag));
 
   return (
     <div className="ampphase">
-      <svg width={W} height={H} className="ampphase__svg" role="img">
-        <line x1={0} y1={PAD_T + plotH} x2={W} y2={PAD_T + plotH} className="ampphase__axis-line" />
+      <svg viewBox={`0 0 ${W} ${H}`} className="ampphase__svg plot-fill" role="img">
+        {/* magnitude baseline (left edge of the bars) */}
+        <line x1={LABEL_W} y1={PAD} x2={LABEL_W} y2={H - PAD} className="ampphase__axis-line" />
         {bars.map((b, k) => {
-          const h = (b.mag / maxMag) * plotH;
-          const x = 1 + k * (bw + 1);
+          const y = PAD + k * ROW_H;
+          const len = (b.mag / maxMag) * barArea;
           return (
             <g key={b.index}>
-              <rect x={x} y={PAD_T + plotH - h} width={bw} height={h} fill={hueFor(b.phase)}>
+              <text x={LABEL_W - 4} y={y + ROW_H / 2 + 3} textAnchor="end" className="ampphase__axis">
+                {useBasis ? b.basis : b.index}
+              </text>
+              <rect x={LABEL_W} y={y + (ROW_H - BAR_H) / 2} width={Math.max(0, len)} height={BAR_H} fill={hueFor(b.phase)}>
                 <title>|{b.basis}⟩: |amp| = {b.mag.toFixed(4)}, arg = {(b.phase * 180 / Math.PI).toFixed(0)}°</title>
               </rect>
-              {k % labelEvery === 0 && (
-                <text x={x + bw / 2} y={H - 2} textAnchor="middle" className="ampphase__axis">
-                  {bars.length <= 16 ? b.basis : b.index}
-                </text>
-              )}
             </g>
           );
         })}
