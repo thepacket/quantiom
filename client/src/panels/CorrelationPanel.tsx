@@ -56,10 +56,11 @@ function Body({ state }: Props) {
   return <Heatmap conn={result.conn} n={n} />;
 }
 
-const CELL = 26;
 const PAD = 22;
+const TARGET_W = 300; // fill the panel width so the px fonts aren't magnified
 
 function Heatmap({ conn, n }: { conn: number[][]; n: number }) {
+  const CELL = Math.max(16, Math.floor((TARGET_W - PAD) / n));
   // Scale to the largest off-diagonal magnitude (diagonal variance is
   // usually largest and would wash out the off-diagonals otherwise).
   let scale = 0;

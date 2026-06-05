@@ -76,10 +76,11 @@ function MutualInfoBody({ state }: Props) {
   return <MutualInfoHeatmap mi={result.mi} single={result.single} n={n} />;
 }
 
-const CELL = 26;
 const PAD = 22; // room for axis labels
+const TARGET_W = 300; // fill the panel width so the px fonts aren't magnified
 
 function MutualInfoHeatmap({ mi, single, n }: { mi: number[][]; single: number[]; n: number }) {
+  const CELL = Math.max(16, Math.floor((TARGET_W - PAD) / n));
   const grid = n * CELL;
   const W = grid + PAD;
   const H = grid + PAD;

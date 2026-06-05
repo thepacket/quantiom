@@ -66,7 +66,9 @@ const LABEL_W = 22;
 const MAX_GRID_W = 320;
 
 function SpaceTimeGrid({ z, numCols, n }: { z: number[][]; numCols: number; n: number }) {
-  const colW = Math.max(3, Math.min(16, Math.floor((MAX_GRID_W - LABEL_W) / numCols)));
+  // Fill the panel width so the viewBox ≈ the rendered size (px fonts stay
+  // readable); cells shrink toward a minimum only when there are many columns.
+  const colW = Math.max(6, Math.floor((MAX_GRID_W - LABEL_W) / numCols));
   const grid = numCols * colW;
   const W = LABEL_W + grid;
   const H = n * ROW_H + 16;
@@ -101,6 +103,7 @@ function SpaceTimeGrid({ z, numCols, n }: { z: number[][]; numCols: number; n: n
                 height={ROW_H - 2}
                 fill={fillFor(v)}
                 fillOpacity={Math.min(1, Math.abs(v))}
+                className="spacetime__cell"
               >
                 <title>q{q}, step {c}: ⟨Z⟩ = {v.toFixed(3)}</title>
               </rect>

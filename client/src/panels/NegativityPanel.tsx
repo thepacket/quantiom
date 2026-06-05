@@ -58,10 +58,11 @@ function Body({ state }: Props) {
   return <Heatmap neg={result.neg} maxNeg={result.maxNeg} n={n} />;
 }
 
-const CELL = 26;
 const PAD = 22;
+const TARGET_W = 300; // fill the panel width so the px fonts aren't magnified
 
 function Heatmap({ neg, maxNeg, n }: { neg: number[][]; maxNeg: number; n: number }) {
+  const CELL = Math.max(16, Math.floor((TARGET_W - PAD) / n));
   const grid = n * CELL;
   const W = grid + PAD;
   const H = grid + PAD;

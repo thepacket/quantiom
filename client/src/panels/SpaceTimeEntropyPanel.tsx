@@ -66,7 +66,10 @@ const LABEL_W = 22;
 const MAX_GRID_W = 320;
 
 function EntropyGrid({ s, numCols, n }: { s: number[][]; numCols: number; n: number }) {
-  const colW = Math.max(3, Math.min(16, Math.floor((MAX_GRID_W - LABEL_W) / numCols)));
+  // Fill the panel width: cells grow when there are few columns (so the
+  // viewBox ≈ the rendered size and the px fonts aren't magnified), and shrink
+  // toward a readable minimum when there are many.
+  const colW = Math.max(6, Math.floor((MAX_GRID_W - LABEL_W) / numCols));
   const grid = numCols * colW;
   const W = LABEL_W + grid;
   const H = n * ROW_H + 16;
@@ -94,6 +97,7 @@ function EntropyGrid({ s, numCols, n }: { s: number[][]; numCols: number; n: num
                 height={ROW_H - 2}
                 fill="var(--accent)"
                 fillOpacity={Math.min(1, Math.max(0, v))}
+                className="spacetime__cell"
               >
                 <title>q{q}, step {c}: S(ρ) = {v.toFixed(3)} bit</title>
               </rect>
