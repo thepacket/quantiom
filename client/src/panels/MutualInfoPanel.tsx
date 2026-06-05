@@ -97,7 +97,7 @@ function MutualInfoHeatmap({ mi, single, n }: { mi: number[][]; single: number[]
 
   return (
     <div className="mutinfo">
-      <svg width={W} height={H} className="mutinfo__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="mutinfo__svg plot-fill" role="img">
         {/* column labels */}
         {Array.from({ length: n }, (_, j) => (
           <text

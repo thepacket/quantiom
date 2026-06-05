@@ -110,7 +110,7 @@ function Levels({
         <span>gap = <b>{gap.toFixed(4)}</b></span>
         <span>{energies.length} levels</span>
       </div>
-      <svg width={W} height={H} className="hamspec__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="hamspec__svg plot-fill" role="img">
         {/* energy axis */}
         <line x1={PAD} y1={PAD} x2={PAD} y2={H - PAD} className="hamspec__axis-line" />
         <text x={PAD - 4} y={yOf(emax) + 3} textAnchor="end" className="hamspec__axis">{emax.toFixed(2)}</text>

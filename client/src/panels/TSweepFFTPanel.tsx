@@ -90,7 +90,7 @@ function Spectrum({ mag }: { mag: number[][] }) {
 
   return (
     <div className="tsweepfft">
-      <svg width={W} height={H} className="tsweepfft__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="tsweepfft__svg plot-fill" role="img">
         <line x1={PAD_L} y1={yOf(0)} x2={W - 4} y2={yOf(0)} className="tsweepfft__grid" />
         <line x1={PAD_L} y1={yOf(yMax)} x2={W - 4} y2={yOf(yMax)} className="tsweepfft__grid" />
         <text x={PAD_L - 4} y={yOf(yMax) + 3} textAnchor="end" className="tsweepfft__axis">{yMax.toFixed(2)}</text>

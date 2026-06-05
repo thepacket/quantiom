@@ -489,6 +489,10 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 
 /* ─── Panels ────────────────────────────────────────────────────────── */
 .panel { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+/* Responsive data plots: a fixed-coordinate <svg> (with viewBox) scales up to
+ * fill its panel, preserving aspect ratio, instead of sitting at its small
+ * design width. Applied to the static heatmap / line-chart / diagram panels. */
+.plot-fill { display: block; width: 100%; height: auto; margin: 0 auto; }
 .panel__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .panel__collapse { display: flex; align-items: center; gap: 6px; background: transparent; border: none; padding: 0; cursor: pointer; flex: 1; min-width: 0; }
 .panel__collapse:hover { background: transparent; }

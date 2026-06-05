@@ -86,7 +86,7 @@ function Graph({
         <span><b>{totalEdges}</b> interactions</span>
         <span>max <b>{maxWeight}</b>×</span>
       </div>
-      <svg width={SIZE} height={SIZE} className="intgraph__svg" role="img">
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="intgraph__svg plot-fill" role="img">
         <rect width={SIZE} height={SIZE} fill="var(--bg)" />
         {edges.map(([a, b, w], i) => (
           <line

@@ -82,7 +82,7 @@ function Traces({ z }: { z: number[][] }) {
 
   return (
     <div className="tsweep">
-      <svg width={W} height={H} className="tsweep__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="tsweep__svg plot-fill" role="img">
         {/* axes: 0 line, ±1 bounds */}
         <line x1={PAD_L} y1={yOf(1)} x2={W - 4} y2={yOf(1)} className="tsweep__grid" />
         <line x1={PAD_L} y1={yOf(0)} x2={W - 4} y2={yOf(0)} className="tsweep__grid tsweep__grid--zero" />

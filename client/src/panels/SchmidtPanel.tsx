@@ -113,7 +113,7 @@ function Spectrum({
         <span>Schmidt rank <b>{rank}</b></span>
         <span>λ²<sub>max</sub> = {max.toFixed(3)}</span>
       </div>
-      <svg width={W} height={H} className="schmidt__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="schmidt__svg plot-fill" role="img">
         <line x1={0} y1={H - 12} x2={W} y2={H - 12} className="schmidt__axis-line" />
         {bars.map((p, k) => {
           const h = (p / max) * (H - 16);

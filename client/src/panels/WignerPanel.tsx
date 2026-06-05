@@ -74,7 +74,7 @@ function Grid({ result }: { result: { W: number[][]; dim: number; negativity: nu
           {negativity > 1e-6 ? "non-classical" : "non-negative"}
         </span>
       </div>
-      <svg width={size} height={size} className="wigner__svg" role="img">
+      <svg viewBox={`0 0 ${size} ${size}`} className="wigner__svg plot-fill" role="img">
         <rect width={size} height={size} className="wigner__bg" />
         {W.map((rowArr, r) =>
           rowArr.map((v, c) => (

@@ -69,7 +69,7 @@ function Heatmap({ neg, maxNeg, n }: { neg: number[][]; maxNeg: number; n: numbe
 
   return (
     <div className="mutinfo">
-      <svg width={W} height={H} className="mutinfo__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="mutinfo__svg plot-fill" role="img">
         {Array.from({ length: n }, (_, j) => (
           <text key={`cl-${j}`} x={PAD + j * CELL + CELL / 2} y={PAD - 8} textAnchor="middle" className="mutinfo__axis">{j}</text>
         ))}

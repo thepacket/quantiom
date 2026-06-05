@@ -74,7 +74,7 @@ function EntropyGrid({ s, numCols, n }: { s: number[][]; numCols: number; n: num
 
   return (
     <div className="spacetime">
-      <svg width={W} height={H} className="spacetime__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="spacetime__svg plot-fill" role="img">
         {Array.from({ length: n }, (_, q) => (
           <text key={`r-${q}`} x={LABEL_W - 4} y={q * ROW_H + ROW_H / 2 + 3} textAnchor="end" className="spacetime__axis">
             {q}

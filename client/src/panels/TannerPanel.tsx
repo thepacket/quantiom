@@ -62,7 +62,7 @@ function Graph({ checks, n }: { checks: ReturnType<typeof tannerGraph>["checks"]
         <span><b>{m}</b> checks</span>
         <span>max weight <b>{Math.max(...checks.map((c) => c.support.length))}</b></span>
       </div>
-      <svg width={W} height={H} className="tanner__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="tanner__svg plot-fill" role="img">
         {/* edges */}
         {checks.map((c, k) =>
           c.support.map((q) => (

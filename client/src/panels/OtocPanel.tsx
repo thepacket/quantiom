@@ -103,7 +103,7 @@ function Plot({ C }: { C: number[] }) {
   return (
     <>
       <div className="otoc__stats"><span>peak C = <b>{peak.toFixed(3)}</b></span></div>
-      <svg width={W} height={H} className="otoc__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="otoc__svg plot-fill" role="img">
         <line x1={PAD_L} y1={yOf(0)} x2={W - 4} y2={yOf(0)} className="otoc__grid" />
         <line x1={PAD_L} y1={yOf(yMax)} x2={W - 4} y2={yOf(yMax)} className="otoc__grid" />
         <text x={PAD_L - 4} y={yOf(yMax) + 3} textAnchor="end" className="otoc__axis">{yMax.toFixed(1)}</text>

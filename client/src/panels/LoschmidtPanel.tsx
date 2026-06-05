@@ -85,7 +85,7 @@ function Plot({ L, rate }: { L: number[]; rate: number[] }) {
         <span>min L = <b>{minL.toFixed(3)}</b></span>
         {minL < 1e-3 && <span className="loschmidt__tag">DQPT: L→0</span>}
       </div>
-      <svg width={W} height={H} className="loschmidt__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="loschmidt__svg plot-fill" role="img">
         <line x1={PAD_L} y1={yL(1)} x2={W - 4} y2={yL(1)} className="loschmidt__grid" />
         <line x1={PAD_L} y1={yL(0)} x2={W - 4} y2={yL(0)} className="loschmidt__grid" />
         <text x={PAD_L - 4} y={yL(1) + 3} textAnchor="end" className="loschmidt__axis">1</text>

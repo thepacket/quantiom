@@ -67,7 +67,7 @@ function HeatMap({ Q, nTheta, nPhi, max }: { Q: number[][]; nTheta: number; nPhi
 
   return (
     <div className="husimi">
-      <svg width={W} height={H} className="husimi__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="husimi__svg plot-fill" role="img">
         {Q.map((row, it) =>
           row.map((v, ip) => {
             const o = v * scale;

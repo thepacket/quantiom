@@ -82,7 +82,7 @@ function Heatmap({ R, labels, n }: { R: number[][]; labels: string[]; n: number 
   const H = pad + size * cell;
 
   return (
-    <svg width={W} height={H} className="ptm__svg" role="img">
+    <svg viewBox={`0 0 ${W} ${H}`} className="ptm__svg plot-fill" role="img">
       <rect x={pad} y={pad} width={size * cell} height={size * cell} className="ptm__bg" />
       {showLabels && labels.map((lab, k) => (
         <g key={`l-${k}`}>

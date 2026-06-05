@@ -66,7 +66,7 @@ function Diagram({ result, n }: { result: ReturnType<typeof zxDiagram>; n: numbe
         {fusableHint > 0 && <span><b>{fusableHint}</b> fusable spider pair{fusableHint === 1 ? "" : "s"}</span>}
       </div>
       <div className="zx__scroll">
-        <svg width={W} height={H} className="zx__svg" role="img">
+        <svg viewBox={`0 0 ${W} ${H}`} className="zx__svg plot-fill" role="img">
           {/* qubit wires */}
           {Array.from({ length: n }, (_, q) => (
             <g key={`w-${q}`}>

@@ -79,7 +79,7 @@ function Profile({ result, n }: { result: { entropy: number[]; maxEntropy: numbe
         <span>peak S = <b>{peak.toFixed(3)}</b> bit</span>
         <span>cuts <b>{cuts}</b></span>
       </div>
-      <svg width={W} height={H} className="entprof__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="entprof__svg plot-fill" role="img">
         {/* y grid: 0 and yMax */}
         <line x1={PAD_L} y1={yOf(0)} x2={W - 6} y2={yOf(0)} className="entprof__grid" />
         <line x1={PAD_L} y1={yOf(yMax)} x2={W - 6} y2={yOf(yMax)} className="entprof__grid" />

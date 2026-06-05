@@ -78,7 +78,7 @@ function View({ m2, weightDist, n }: { m2: number; weightDist: number[]; n: numb
           {stabiliser ? "stabilizer state" : "has magic"}
         </span>
       </div>
-      <svg width={W} height={H} className="magic__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="magic__svg plot-fill" role="img">
         <line x1={PAD_L} y1={PAD_T + plotH} x2={W - 6} y2={PAD_T + plotH} className="magic__axis-line" />
         {bars.map((v, w) => {
           const h = (v / max) * plotH;

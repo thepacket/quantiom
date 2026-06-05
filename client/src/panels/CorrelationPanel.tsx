@@ -72,7 +72,7 @@ function Heatmap({ conn, n }: { conn: number[][]; n: number }) {
 
   return (
     <div className="corr">
-      <svg width={W} height={H} className="corr__svg" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className="corr__svg plot-fill" role="img">
         {Array.from({ length: n }, (_, j) => (
           <text key={`cl-${j}`} x={PAD + j * CELL + CELL / 2} y={PAD - 8} textAnchor="middle" className="corr__axis">{j}</text>
         ))}
