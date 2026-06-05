@@ -115,7 +115,10 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .editor__right { border-left: 1px solid var(--border); background: var(--panel); overflow: auto; min-width: 0; }
 .editor__right-bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg-2); font-size: 11px; color: var(--muted); position: sticky; top: 0; z-index: 5; }
 .editor__right-bar-toggle { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
-.editor__right-bar-tick { color: var(--accent); font-variant-numeric: tabular-nums; margin-left: auto; }
+.editor__right-bar-tick { color: var(--accent); font-variant-numeric: tabular-nums; }
+.editor__right-bar-end { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+.editor__panels-btn { padding: 2px 8px; background: transparent; border: 1px solid var(--border); border-radius: 4px; color: var(--fg); cursor: pointer; font-size: 11px; }
+.editor__panels-btn:hover { background: var(--bg-3, var(--bg-2)); }
 /* Seven grid rows for editor__center's children:
    TabStrip (auto) · toolbar (auto) · StepBar (auto) · canvas (1fr — grows
    to fill remaining vertical space) · splitter (auto) · Inspector

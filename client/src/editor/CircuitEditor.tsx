@@ -51,6 +51,7 @@ import { randomCliffordCircuit } from "../sim/randomClifford";
 import { compileForDevice } from "../sim/compile";
 import { recordAnimationWebM } from "./recordAnimation";
 import { EndiannessToggle } from "../panels/endianness";
+import { setAllPanelsCollapsed } from "../panels/PanelShell";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -1087,33 +1088,37 @@ export function CircuitEditor() {
               <option key={r} value={r}>{r}/s</option>
             ))}
           </select>
-          {autoShots && (
-            <span className="editor__right-bar-tick" title={`tick ${shotsTick}`}>● {shotsTick}</span>
-          )}
-          {simState.kind === "ready" && simState.data.freeSymbols.includes("t") && (
-            <RecordButton
-              onRecord={async () => {
-                const baseName = (circuit.name ?? "circuit").toLowerCase().replace(/[^a-z0-9]+/g, "_") || "circuit";
-                const target = document.querySelector(".editor__right");
-                if (!target) {
-                  window.alert("Right panel column not found.");
-                  return;
-                }
-                try {
-                  await recordAnimationWebM({
-                    target,
-                    setParamValues,
-                    currentParams: paramValues,
-                    duration_ms: 3000,
-                    fps: 30,
-                    filename: `${baseName}.webm`,
-                  });
-                } catch (e) {
-                  window.alert(`Recording failed: ${e instanceof Error ? e.message : String(e)}`);
-                }
-              }}
-            />
-          )}
+          <span className="editor__right-bar-end">
+            {autoShots && (
+              <span className="editor__right-bar-tick" title={`tick ${shotsTick}`}>● {shotsTick}</span>
+            )}
+            {simState.kind === "ready" && simState.data.freeSymbols.includes("t") && (
+              <RecordButton
+                onRecord={async () => {
+                  const baseName = (circuit.name ?? "circuit").toLowerCase().replace(/[^a-z0-9]+/g, "_") || "circuit";
+                  const target = document.querySelector(".editor__right");
+                  if (!target) {
+                    window.alert("Right panel column not found.");
+                    return;
+                  }
+                  try {
+                    await recordAnimationWebM({
+                      target,
+                      setParamValues,
+                      currentParams: paramValues,
+                      duration_ms: 3000,
+                      fps: 30,
+                      filename: `${baseName}.webm`,
+                    });
+                  } catch (e) {
+                    window.alert(`Recording failed: ${e instanceof Error ? e.message : String(e)}`);
+                  }
+                }}
+              />
+            )}
+            <button className="editor__panels-btn" onClick={() => setAllPanelsCollapsed(false)} title="Expand all panels">all</button>
+            <button className="editor__panels-btn" onClick={() => setAllPanelsCollapsed(true)} title="Collapse all panels">none</button>
+          </span>
         </div>
         <ErrorBoundary label="parameters">
           <ParameterPanel state={simState} values={paramValues} onChange={setParamValues} />

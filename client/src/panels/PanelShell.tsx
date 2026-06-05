@@ -34,6 +34,14 @@ type Props = {
 };
 
 const STORAGE_KEY = "quantiom:panel-collapsed:v1";
+const SET_ALL_EVENT = "quantiom:set-all-panels";
+
+/** Expand (collapsed=false) or collapse (collapsed=true) every mounted panel.
+ *  Broadcast to all PanelShell instances via a window event, so callers don't
+ *  need a shared store. */
+export function setAllPanelsCollapsed(collapsed: boolean): void {
+  window.dispatchEvent(new CustomEvent(SET_ALL_EVENT, { detail: { collapsed } }));
+}
 
 function loadCollapsedMap(): Record<string, boolean> {
   try {
@@ -65,6 +73,16 @@ export function PanelShell({ id, title, children, toolbar, getCopyText, defaultC
   useEffect(() => {
     persistCollapsed(id, collapsed);
   }, [id, collapsed]);
+
+  // Respond to a global "expand all / collapse all" broadcast.
+  useEffect(() => {
+    const onSetAll = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && typeof detail.collapsed === "boolean") setCollapsed(detail.collapsed);
+    };
+    window.addEventListener(SET_ALL_EVENT, onSetAll);
+    return () => window.removeEventListener(SET_ALL_EVENT, onSetAll);
+  }, []);
 
   const onCopy = async () => {
     if (!getCopyText) return;
