@@ -184,6 +184,9 @@ function Sphere({ points, n }: { points: QSpherePoint[]; n: number }) {
 
   const latitudes = useMemo(() => Array.from({ length: n - 1 }, (_, i) => ring(Math.PI * (i + 1) / n)), [view, n]);
   const meridians = useMemo(() => [0, 1, 2, 3].map((k) => meridian((k * Math.PI) / 4)), [view]);
+  // The equatorial plane (z = 0 great circle) — drawn as a faint translucent
+  // disk plus a crisper ring outline, echoing IBM Composer's Q-sphere.
+  const equator = useMemo(() => ring(Math.PI / 2), [view]);
 
   const axTop = proj(0, 0, 1), axBot = proj(0, 0, -1);
 
@@ -219,8 +222,10 @@ function Sphere({ points, n }: { points: QSpherePoint[]; n: number }) {
         onDoubleClick={() => setView(DEFAULT_VIEW)}
       >
         <circle cx={cx} cy={cy} r={R0 * view.zoom} className="qsphere__outline" />
+        <polygon points={equator} className="qsphere__plane" />
         {latitudes.map((d, i) => <polyline key={`lat-${i}`} points={d} className="qsphere__wire" />)}
         {meridians.map((d, i) => <polyline key={`mer-${i}`} points={d} className="qsphere__wire" />)}
+        <polyline points={equator} className="qsphere__equator" />
         <line x1={axTop.sx} y1={axTop.sy} x2={axBot.sx} y2={axBot.sy} className="qsphere__axis" />
         {drawn.map(({ p, pr }) => {
           const r = 2 + p.mag * 9;

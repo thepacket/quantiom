@@ -867,6 +867,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .qsphere__svg:active { cursor: grabbing; }
 .qsphere__outline { fill: none; stroke: var(--border); stroke-width: 1; }
 .qsphere__equator { fill: none; stroke: var(--border); stroke-width: 1; opacity: 0.5; }
+.qsphere__plane { fill: var(--fg); opacity: 0.05; stroke: none; }
 .qsphere__wire { fill: none; stroke: var(--border); stroke-width: 1; opacity: 0.16; }
 .qsphere__axis { stroke: var(--border); stroke-width: 1; opacity: 0.5; }
 .qsphere__stem { stroke: var(--muted); stroke-width: 0.6; opacity: 0.5; }
