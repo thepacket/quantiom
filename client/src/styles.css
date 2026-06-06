@@ -1020,6 +1020,21 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .bt__leaf-lbl { fill: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
 .bt__legend { font-size: 10px; color: var(--muted); }
 
+/* Participation / IPR panel */
+.part { display: flex; flex-direction: column; gap: 6px; }
+.part__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.part__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.part__gauge { display: flex; align-items: center; gap: 6px; }
+.part__end { font-size: 9px; color: var(--muted); white-space: nowrap; }
+.part__bar { position: relative; flex: 1 1 0; height: 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.part__fill { position: absolute; top: 0; left: 0; height: 100%; background: var(--accent); }
+.part__svg { display: block; }
+.part__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.part__axis-line { stroke: var(--border); stroke-width: 1; }
+.part__dim { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.7; }
+.part__curve { fill: none; stroke: var(--accent-2); stroke-width: 1.4; }
+.part__legend { font-size: 10px; color: var(--muted); }
+
 /* Symmetry sectors panel */
 .sym { display: flex; flex-direction: column; gap: 6px; }
 .sym__badges { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; }
