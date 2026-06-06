@@ -94,6 +94,7 @@ import { EquivalencePanel } from "../panels/EquivalencePanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
 import { MeasurementCountsPanel } from "../panels/MeasurementCountsPanel";
 import { DecoherencePanel } from "../panels/DecoherencePanel";
+import { FidelityPanel } from "../panels/FidelityPanel";
 import { sampleAveragedAmplitudeProbabilities } from "../sim/measurementShots";
 import { TomographyPanel } from "../panels/TomographyPanel";
 import { HamiltonianPanel } from "../panels/HamiltonianPanel";
@@ -1133,6 +1134,9 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="decoherence">
           <DecoherencePanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
+        </ErrorBoundary>
+        <ErrorBoundary label="fidelity">
+          <FidelityPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
         </ErrorBoundary>
         <ErrorBoundary label="amp-phase"><AmplitudePhasePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="probabilities">

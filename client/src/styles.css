@@ -900,6 +900,17 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .hamspec__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
 .hamspec__legend span { display: inline-flex; align-items: center; gap: 4px; }
 
+/* ─── Fidelity & purity ────────────────────────────────────────────── */
+.fid { display: flex; flex-direction: column; gap: 8px; padding: 2px 0; }
+.fid__row { display: flex; flex-direction: column; gap: 3px; }
+.fid__head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; }
+.fid__label { color: var(--muted); }
+.fid__val { color: var(--fg); font-variant-numeric: tabular-nums; }
+.fid__bar { position: relative; height: 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.fid__fill { position: absolute; top: 0; left: 0; height: 100%; }
+.fid__marker { position: absolute; top: -2px; width: 1px; height: 12px; background: var(--muted); opacity: 0.7; }
+.fid__note { font-size: 10px; color: var(--muted); font-style: italic; }
+
 /* ─── Spectral form factor ─────────────────────────────────────────── */
 .sff { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
 .sff__presets { display: flex; flex-wrap: wrap; gap: 4px; }

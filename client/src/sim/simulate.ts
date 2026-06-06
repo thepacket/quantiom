@@ -61,6 +61,10 @@ export type SimResult = {
    *  Only present when `isStabilizer` is true. The panel falls back to
    *  null when undefined. */
   pauliExpectation?: (paulis: ReadonlyArray<"I" | "X" | "Y" | "Z">) => -1 | 0 | 1;
+  /** Trajectory-averaged density matrix ρ = (1/T) Σ |ψ⟩⟨ψ|, interleaved
+   *  re/im row-major (2·2ⁿ·2ⁿ floats). Only present when `simulateNoisy` is
+   *  called with `{ density: true }` (used by the Fidelity panel). */
+  densityMatrix?: Float64Array;
 };
 
 export type ParameterValues = Record<string, number>;

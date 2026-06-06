@@ -31,7 +31,7 @@ export function simulateNoisy(
   paramValues: ParameterValues,
   customGates: CustomGate[],
   noise: NoiseModel,
-  options?: { startIndex?: number },
+  options?: { startIndex?: number; density?: boolean },
 ): SimResult {
   const n = circuit.numQubits;
   if (n <= 0) throw new Error("numQubits must be ≥ 1");
@@ -84,6 +84,11 @@ export function simulateNoisy(
   if (startIndex < 0 || startIndex >= dim) {
     throw new Error(`startIndex ${startIndex} out of range [0, ${dim})`);
   }
+
+  // Opt-in trajectory-averaged density matrix ρ = (1/T) Σ |ψ⟩⟨ψ|, interleaved
+  // re/im, row-major (2·dim·dim floats). Only allocated when requested, so the
+  // hot path is untouched for every other caller.
+  const rho = options?.density ? new Float64Array(2 * dim * dim) : null;
 
   for (let t = 0; t < T; t++) {
     const state = new Float64Array(2 * dim);
@@ -165,8 +170,23 @@ export function simulateNoisy(
     }
     accumulateBloch(state, n, blochSum);
 
+    if (rho) {
+      // ρ_ij += ψ_i · ψ_j*  (ψ_i = a+bi, ψ_j = c+di ⇒ (ac+bd) + (bc−ad)i).
+      for (let i = 0; i < dim; i++) {
+        const a = state[2 * i], b = state[2 * i + 1];
+        if (a === 0 && b === 0) continue;
+        for (let j = 0; j < dim; j++) {
+          const c = state[2 * j], d = state[2 * j + 1];
+          const o = 2 * (i * dim + j);
+          rho[o] += a * c + b * d;
+          rho[o + 1] += b * c - a * d;
+        }
+      }
+    }
+
     if (t === T - 1) lastState = state;
   }
+  if (rho) for (let k = 0; k < rho.length; k++) rho[k] /= T;
 
   const probabilities = new Array<number>(dim);
   for (let i = 0; i < dim; i++) probabilities[i] = probsSum[i] / T;
@@ -210,6 +230,7 @@ export function simulateNoisy(
     skipped,
     isNoisy: true,
     trajectories: T,
+    densityMatrix: rho ?? undefined,
   };
 }
 
