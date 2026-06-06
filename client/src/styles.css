@@ -983,6 +983,31 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .qfi__dot { fill: var(--accent-2); }
 .qfi__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
 
+/* Coherence panel */
+.coh { display: flex; flex-direction: column; gap: 8px; }
+.coh__row { display: flex; flex-direction: column; gap: 3px; }
+.coh__head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; }
+.coh__label { color: var(--muted); }
+.coh__val { color: var(--fg); font-variant-numeric: tabular-nums; }
+.coh__bar { position: relative; height: 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.coh__fill { position: absolute; top: 0; left: 0; height: 100%; background: var(--accent-2); }
+.coh__sub { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.coh__note { font-size: 10px; color: var(--muted); font-style: italic; }
+
+/* Dynamic branch tree panel */
+.bt { display: flex; flex-direction: column; gap: 4px; }
+.bt__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.bt__trunc { color: #ffd24f; }
+.bt__svg { display: block; }
+.bt__edge { stroke: var(--border); stroke-width: 1.4; }
+.bt__edge--one { stroke: var(--accent-2); }
+.bt__edge-lbl { fill: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
+.bt__node { fill: var(--accent); }
+.bt__leaf { fill: var(--accent-2); }
+.bt__node-lbl { fill: var(--fg); font-size: 9px; }
+.bt__leaf-lbl { fill: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
+.bt__legend { font-size: 10px; color: var(--muted); }
+
 /* Symmetry sectors panel */
 .sym { display: flex; flex-direction: column; gap: 6px; }
 .sym__badges { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; }

@@ -97,8 +97,10 @@ import { ChatPanel } from "../panels/ChatPanel";
 import { EquivalencePanel } from "../panels/EquivalencePanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
 import { MeasurementCountsPanel } from "../panels/MeasurementCountsPanel";
+import { BranchTreePanel } from "../panels/BranchTreePanel";
 import { DecoherencePanel } from "../panels/DecoherencePanel";
 import { FidelityPanel } from "../panels/FidelityPanel";
+import { CoherencePanel } from "../panels/CoherencePanel";
 import { sampleAveragedAmplitudeProbabilities } from "../sim/measurementShots";
 import { TomographyPanel } from "../panels/TomographyPanel";
 import { HamiltonianPanel } from "../panels/HamiltonianPanel";
@@ -1136,11 +1138,17 @@ export function CircuitEditor() {
         <ErrorBoundary label="measurement-counts">
           <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} shotsTick={shotsTick} />
         </ErrorBoundary>
+        <ErrorBoundary label="branch-tree">
+          <BranchTreePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="decoherence">
           <DecoherencePanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
         </ErrorBoundary>
         <ErrorBoundary label="fidelity">
           <FidelityPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
+        </ErrorBoundary>
+        <ErrorBoundary label="coherence">
+          <CoherencePanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
         </ErrorBoundary>
         <ErrorBoundary label="amp-phase"><AmplitudePhasePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="probabilities">
