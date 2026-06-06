@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PanelShell } from "./PanelShell";
 import { CouplingMapView } from "./CouplingMapView";
+import { IbmBackendPicker } from "./IbmBackendPicker";
 import { importIbmBackend, NOISE_PRESETS, type NoiseModel, type NoisePresetId, type PerQubitRates } from "../sim/noise";
 import { isWebGPUAvailable, getWebGPUDevice, webGPUAdapterInfo } from "../sim/webgpuTraj";
 
@@ -22,6 +23,13 @@ type Props = {
 export function NoisePanel({ noise, onChange }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<{ kind: "idle" } | { kind: "ok"; msg: string } | { kind: "err"; msg: string }>({ kind: "idle" });
+  const [showPicker, setShowPicker] = useState(false);
+
+  const applyImported = (imported: NoiseModel) => {
+    onChange(imported);
+    setImportStatus({ kind: "ok", msg: `${imported.source ?? "imported"} · ${imported.perQubit?.length ?? 0} qubits` });
+    setTimeout(() => setImportStatus({ kind: "idle" }), 4000);
+  };
 
   const set = (patch: Partial<NoiseModel>) => onChange({ ...noise, ...patch });
   const fmt = (v: number) =>
@@ -228,14 +236,23 @@ export function NoisePanel({ noise, onChange }: Props) {
             style={{ display: "none" }}
             onChange={onFile}
           />
+          <button className="noise__import" onClick={() => setShowPicker(true)}>
+            Import IBM BackendProperties from Qiskit
+          </button>
           <button className="noise__import" onClick={onImport}>
             Import IBM BackendProperties .json
           </button>
           <p className="noise__hint">
-            Loads T1, T2, sx error, cx error, and readout error per qubit.
-            Get one with <code>backend.properties().to_dict()</code> in Qiskit
-            and save as JSON.
+            Pick a device from Qiskit's catalog, or load your own
+            <code>backend.properties().to_dict()</code> JSON. Either way: T1, T2,
+            sx error, cx error, and readout error per qubit.
           </p>
+          {showPicker && (
+            <IbmBackendPicker
+              onPick={(n) => { applyImported(n); setShowPicker(false); }}
+              onClose={() => setShowPicker(false)}
+            />
+          )}
           {importStatus.kind === "ok" && (
             <div className="noise__import-ok">✓ {importStatus.msg}</div>
           )}

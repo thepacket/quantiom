@@ -752,6 +752,25 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
     hsl(180,70%,58%), hsl(240,70%,58%), hsl(300,70%,58%), hsl(360,70%,58%)); }
 .ampphase__more { font-size: 10px; color: var(--muted); }
 
+/* ─── IBM backend picker (modal) ───────────────────────────────────── */
+.ibmpick__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+.ibmpick__card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; width: min(460px, 94vw); max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+.ibmpick__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.ibmpick__x { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
+.ibmpick__note { margin: 8px 12px; font-size: 11px; color: var(--muted); line-height: 1.5; }
+.ibmpick__err { margin: 0 12px 8px; padding: 6px 8px; border-radius: 5px; background: rgba(248,81,73,0.12); border: 1px solid #f85149; color: #f85149; font-size: 11px; }
+.ibmpick__scroll { overflow: auto; flex: 1; }
+.ibmpick__table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ibmpick__table th { position: sticky; top: 0; background: var(--bg-2); text-align: left; padding: 5px 12px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+.ibmpick__row td { padding: 6px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.ibmpick__row:hover td { background: var(--bg-3, var(--bg-2)); }
+.ibmpick__row--loading td { opacity: 0.6; cursor: default; }
+.ibmpick__num { text-align: right; font-variant-numeric: tabular-nums; width: 56px; }
+.ibmpick__fam { color: var(--muted); }
+.ibmpick__foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-top: 1px solid var(--border); font-size: 11px; }
+.ibmpick__foot a { color: var(--accent); }
+.ibmpick__cancel { padding: 3px 12px; background: transparent; border: 1px solid var(--border); border-radius: 4px; color: var(--fg); cursor: pointer; font-size: 12px; }
+
 /* ─── Decoherence movie ────────────────────────────────────────────── */
 .decoh { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
 .decoh__bar { display: flex; align-items: center; gap: 8px; }
