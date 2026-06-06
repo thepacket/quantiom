@@ -22,6 +22,19 @@ const MIN_COLS = 16;
  * layout can grow to accommodate wide labels like `RY(π/2 * t)` without
  * letting adjacent columns overlap.
  */
+/** The hover-tooltip text for a placed gate — identical to its palette tile
+ *  (gate name + description; custom gates show name + qubit count). */
+function gateTooltip(gate: PlacedGate, customGates: CustomGate[]): string {
+  if (gate.gateId.startsWith(CUSTOM_PREFIX)) {
+    const cd = customGates.find((c) => c.id === gate.gateId.slice(CUSTOM_PREFIX.length));
+    const n = cd?.numQubits ?? gate.controls.length + gate.targets.length;
+    return `${cd?.name ?? "custom gate"} — ${n} qubit${n === 1 ? "" : "s"}`;
+  }
+  const def = GATES_BY_ID[gate.gateId];
+  if (!def) return gate.gateId;
+  return `${def.name}${def.description ? " — " + def.description : ""}`;
+}
+
 function estimateGateWidth(gate: PlacedGate, customGates: CustomGate[]): number {
   const isCustom = gate.gateId.startsWith(CUSTOM_PREFIX);
   if (isCustom) {
@@ -499,7 +512,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
                 e.stopPropagation();
                 onSelect(g.id);
               }}
-              title="drag to move"
+              data-tip={gateTooltip(g, customGates)}
             />
           );
         })}
@@ -524,7 +537,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
               e.stopPropagation();
               onSelect(g.id);
             }}
-            title={`drag to reassign ${role === "controls" ? "control" : "target"}`}
+            data-tip={gateTooltip(g, customGates)}
           />
         ))}
       </div>
