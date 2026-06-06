@@ -170,7 +170,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .palette__tile {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   background: var(--tile-color, var(--panel-2)); border: 1.5px solid var(--tile-color, var(--border)); border-radius: 4px;
-  height: 44px; cursor: grab; user-select: none; color: #111; overflow: hidden;
+  height: 40px; cursor: grab; user-select: none; color: #111; overflow: hidden;
   transition: filter 80ms, transform 80ms, box-shadow 80ms;
 }
 .palette__tile:hover { filter: brightness(1.12); box-shadow: 0 0 0 2px rgba(0,0,0,0.28) inset; }
