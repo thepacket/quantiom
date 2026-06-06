@@ -752,6 +752,21 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
     hsl(180,70%,58%), hsl(240,70%,58%), hsl(300,70%,58%), hsl(360,70%,58%)); }
 .ampphase__more { font-size: 10px; color: var(--muted); }
 
+/* ─── Decoherence movie ────────────────────────────────────────────── */
+.decoh { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.decoh__bar { display: flex; align-items: center; gap: 8px; }
+.decoh__play { padding: 1px 9px; font-size: 12px; line-height: 1.4; }
+.decoh__scrub { flex: 1; min-width: 0; }
+.decoh__col { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.decoh__svg { display: block; }
+.decoh__prob { fill: var(--accent-2); }
+.decoh__uniform { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.75; }
+.decoh__axis { stroke: var(--border); stroke-width: 1; }
+.decoh__legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 10px; color: var(--muted); align-items: center; }
+.decoh__swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--accent-2); vertical-align: middle; margin-right: 3px; }
+.decoh__uniform-key { opacity: 0.85; }
+.decoh__hint { opacity: 0.8; font-style: italic; margin-left: auto; }
+
 /* ─── Unitary heatmap ──────────────────────────────────────────────── */
 .unimap { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
 .unimap__svg { display: block; border: 1px solid var(--border); border-radius: 3px; }
