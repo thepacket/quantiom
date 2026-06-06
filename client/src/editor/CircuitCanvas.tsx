@@ -623,7 +623,7 @@ function PlacedGateView({
     return (
       <g
         className={"gate gate--custom" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "")}
-        data-tip={`${customDef?.name ?? "custom gate"} (custom · ${hi - lo + 1} qubit${hi - lo === 0 ? "" : "s"})`}
+        data-tip={`${customDef?.name ?? "custom gate"} — ${customDef?.numQubits ?? hi - lo + 1} qubit${(customDef?.numQubits ?? hi - lo + 1) === 1 ? "" : "s"}`}
         onClick={(e) => { e.stopPropagation(); onClick(); }}
       >
         <rect x={x - w / 2} y={yTop} width={w} height={boxH} rx={6} className="gate__box gate__box--custom" />
@@ -636,9 +636,8 @@ function PlacedGateView({
 
   if (!def) return null;
 
-  const tooltip = `${def.name} (${def.id})
-qubits: ${all.join(", ")}
-column ${gate.column}${gate.params.length > 0 ? `\nparams: ${gate.params.join(", ")}` : ""}${gate.condition ? `\nif c[${gate.condition.clbit}] == ${gate.condition.value}` : ""}`;
+  // Match the palette tooltip: gate name + description.
+  const tooltip = `${def.name}${def.description ? " — " + def.description : ""}`;
   return (
     <g
       className={"gate" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "")}
