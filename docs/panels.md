@@ -123,6 +123,25 @@ Hadamards spread the weight binomially across all sectors.
 
 ---
 
+## Entanglement asymmetry
+
+How much a subsystem **breaks a symmetry**, swept over circuit depth:
+ΔS_A = S(ρ_{A,Q}) − S(ρ_A), where ρ_{A,Q} is the reduced state of the first
+⌈n/2⌉ qubits projected onto its U(1) charge (excitation-number) sectors.
+ΔS_A ≥ 0 is zero exactly when ρ_A is block-diagonal in the charge
+(symmetric) and grows as cross-charge coherences develop. Plotted as a curve
+of ΔS_A vs column.
+
+**When available.** Statevector path; n ≤ 12, subsystem capped at 5 qubits,
+≤ 96 columns.
+
+**What you see.** A symmetric (number-conserving) state stays at ΔS = 0. A
+circuit that builds cross-sector superposition raises it; a **rise then fall**
+is symmetry *restoration* — the recently discovered quantum Mpemba effect,
+where a more-asymmetric initial state can re-symmetrise faster.
+
+---
+
 ## Participation / IPR
 
 Localization in the computational basis: the **inverse participation ratio**
@@ -518,6 +537,25 @@ fusable-pairs hint is a count, not an applied simplification.
 
 ---
 
+## Operator entanglement
+
+The **entangling power** of the circuit unitary U itself, independent of any
+input state. Viewing U as a state in the doubled Hilbert space and taking its
+Schmidt decomposition across the middle qubit cut gives the operator-Schmidt
+spectrum (a bar chart) and the **operator entanglement entropy**
+E_op = −Σ λ_i log₂ λ_i.
+
+**When available.** Builds the dense 2ⁿ × 2ⁿ unitary, so capped at 6 qubits.
+
+**What you see.** A product circuit U = U_A ⊗ U_B is a single bar (E_op = 0,
+non-entangling). A **CNOT across the cut** gives E_op = 1 ebit; a **SWAP** is
+maximal (2 ebits for one qubit each side). A flat spectrum means a maximally
+entangling operation. Unlike the state-entanglement panels, this characterises
+the *gate sequence* — two circuits preparing the same state can have very
+different operator entanglement.
+
+---
+
 ## OTOC (scrambling)
 
 The out-of-time-order correlator C(t) = 1 − Re⟨W(t)·V·W(t)·V⟩ over the
@@ -731,6 +769,24 @@ excitations as you step the circuit.
 **Note.** Off-diagonal cells are scaled to the largest |C| so the
 correlation structure stays visible even when the diagonal variance
 dominates.
+
+---
+
+## Structure factor S(k)
+
+The **static structure factor** S(k) = (1/N) Σ_{j,l} cos(k(j−l)) C(j,l) — the
+spatial Fourier transform of the connected ⟨Z_jZ_l⟩ correlator along the
+qubit chain — as a curve over momentum k ∈ [0, π]. A **Bragg peak** is the
+signature of spatial order.
+
+**When available.** Statevector path; n ≤ 16.
+
+**What you see.** A peak at **k = 0** is ferromagnetic / uniform order; a peak
+at **k = π** is antiferromagnetic (Néel) order; an intermediate peak is a
+density wave. Because it uses the *connected* (fluctuation) correlator, a
+plain product state like |0101⟩ reads flat — genuine order shows up in
+*superpositions* (e.g. an antiferromagnetic cat peaks sharply at k = π). The
+panel reports the dominant k and its peak height.
 
 ---
 
@@ -979,6 +1035,25 @@ n ≤ 6.
 (d_eff = 1, ΔE = 0); a state that spreads over many eigenstates in a narrow
 energy window (large d_eff) thermalizes. ⟨H⟩ is conserved under H-evolution,
 so it pins where on the energy axis the dynamics live.
+
+---
+
+## Krylov complexity
+
+Operator growth and **spread complexity** of state evolution under a Pauli-sum
+H. Lanczos on the Krylov space {|ψ⟩, H|ψ⟩, H²|ψ⟩, …} produces the Lanczos
+coefficients bₙ (top bar chart — the operator-growth profile) and the spread
+complexity C(t) = Σₙ n |⟨Kₙ|ψ(t)⟩|² (bottom curve), which tracks how far the
+evolving state has spread along the Krylov chain.
+
+**When available.** Pauli-sum H input + presets; n ≤ 6 (dense diagonalisation),
+on demand.
+
+**What you see.** **Linearly growing bₙ** is the chaotic / maximal-growth
+signature; saturating or oscillating bₙ is integrable. C(t) rises from 0,
+peaks, and settles to a late-time plateau (the chain's centre of mass) — the
+scrambling story in one curve. An eigenstate of H gives a one-dimensional
+Krylov space and flat C(t) = 0.
 
 ---
 

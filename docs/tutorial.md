@@ -461,6 +461,14 @@ question matches yours:
 - **Dynamic branch tree** — for circuits with mid-circuit measurement, the
   full outcome tree with per-edge Born probabilities (load the dynamic
   teleportation example: two measurements → four 25 % branches).
+- **Structure factor S(k)** & **Krylov complexity** — the momentum-space
+  order parameter (Fourier transform of ⟨ZⱼZₗ⟩; peak at k = π ⇒ Néel order)
+  and operator growth / spread complexity under a Pauli-sum H (Lanczos bₙ
+  plus the C(t) curve — linear bₙ growth is the chaotic signature).
+- **Operator entanglement** & **Entanglement asymmetry** — the entangling
+  power of the circuit *unitary* across the middle cut (product → 0, CNOT →
+  1, SWAP → 2 ebits) and the depth-swept ΔS_A symmetry-breaking curve, where
+  a rise-then-fall is the quantum Mpemba effect.
 
 See [`panels.md`](panels.md) for the per-panel reference on each.
 

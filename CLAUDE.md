@@ -319,7 +319,12 @@ host plus `/api/health`.
     participation entropy + per-column sweep; localization), `ConcurrencePanel`
     (pairwise Wootters concurrence — entanglement-of-formation, monogamy-aware
     complement to negativity), `DiagonalEnsemblePanel` (energy-basis populations
-    pₖ = |⟨Eₖ|ψ⟩|² + ⟨H⟩ / ΔE / d_eff — ETH).
+    pₖ = |⟨Eₖ|ψ⟩|² + ⟨H⟩ / ΔE / d_eff — ETH), `StructureFactorPanel` (S(k) = FT of the connected ⟨ZⱼZₗ⟩ correlator;
+    k=0 ferro / k=π Néel), `KrylovPanel` (Lanczos bₙ operator-growth bars +
+    spread-complexity C(t) curve under a Pauli-sum H), `OperatorEntanglementPanel`
+    (operator-Schmidt spectrum of the circuit unitary across the mid-cut —
+    entangling power; CNOT→1, SWAP→2 ebits), `AsymmetryPanel` (depth-swept
+    entanglement asymmetry ΔS_A — U(1)-symmetry breaking / quantum Mpemba).
   - `CouplingMapView.tsx`: shared SVG render of an adjacency list as
     a node-link graph (circular layout ≤ 24 qubits, grid above).
 - `server/` — FastAPI shell: `/api/health` + static-file mount.
@@ -415,7 +420,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (832 tests): the simulator core is deeply covered —
+- **What's covered** (845 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
@@ -438,7 +443,9 @@ host plus `/api/health`.
   the newer analysis helpers — `participation`, `concurrence` (incl. the
   degeneracy-safe √ρ), `qfi`, `qgt`, `symmetrySectors`, `coherence`,
   `spectralFormFactor`, `levelStatistics`, `diagonalEnsemble`, `branchTree`,
-  `noiseImpact`, `decoherence` — each against analytic ground truth.
+  `noiseImpact`, `decoherence`, `structureFactor`, `krylov`,
+  `operatorEntanglement` (product 0 / CNOT 1 / SWAP 2 ebits), `entanglementAsymmetry`
+  — each against analytic ground truth.
   `npm run test:coverage` reports ~96% statements (core modules are
   95–100%; the remaining tail is the React `useReducer`/`useEffect` hook
   bodies and DOM-only `exportSvg`, which the Node-only suite can't exercise
