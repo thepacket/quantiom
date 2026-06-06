@@ -52,6 +52,7 @@ import { compileForDevice } from "../sim/compile";
 import { recordAnimationWebM } from "./recordAnimation";
 import { EndiannessToggle } from "../panels/endianness";
 import { setAllPanelsCollapsed } from "../panels/PanelShell";
+import { HoverTip } from "./HoverTip";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
 import { ProbabilityPanel } from "../panels/ProbabilityPanel";
@@ -724,6 +725,7 @@ export function CircuitEditor() {
 
   return (
     <div className="editor">
+      <HoverTip />
       {showDocs !== null && <DocsModal initialTab={showDocs} onClose={() => setShowDocs(null)} />}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
       {showSelfTest && <SelfTestModal onClose={() => setShowSelfTest(false)} />}

@@ -109,7 +109,7 @@ export function GatePalette({ customGates = [], onRemoveCustomGate }: Props) {
                         onRemoveCustomGate(g.id);
                       }
                     }}
-                    title={`${g.name} — ${g.numQubits} qubit${g.numQubits === 1 ? "" : "s"} · right-click to delete`}
+                    data-tip={`${g.name} — ${g.numQubits} qubit${g.numQubits === 1 ? "" : "s"} · right-click to delete`}
                   >
                     <span className="palette__symbol">{g.name.slice(0, 4)}</span>
                     <span className="palette__id">{g.numQubits}q</span>
@@ -139,7 +139,7 @@ export function GatePalette({ customGates = [], onRemoveCustomGate }: Props) {
                       data-cat={g.category}
                       draggable
                       onDragStart={(e) => onDragStart(e, g.id, g.symbol)}
-                      title={`${g.name}${g.description ? " — " + g.description : ""}`}
+                      data-tip={`${g.name}${g.description ? " — " + g.description : ""}`}
                     >
                       <span className="palette__symbol">{g.symbol}</span>
                       <span className="palette__id">{g.id}</span>

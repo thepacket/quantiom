@@ -623,6 +623,7 @@ function PlacedGateView({
     return (
       <g
         className={"gate gate--custom" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "")}
+        data-tip={`${customDef?.name ?? "custom gate"} (custom · ${hi - lo + 1} qubit${hi - lo === 0 ? "" : "s"})`}
         onClick={(e) => { e.stopPropagation(); onClick(); }}
       >
         <rect x={x - w / 2} y={yTop} width={w} height={boxH} rx={6} className="gate__box gate__box--custom" />
@@ -642,12 +643,12 @@ column ${gate.column}${gate.params.length > 0 ? `\nparams: ${gate.params.join(",
     <g
       className={"gate" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "")}
       data-cat={def.category}
+      data-tip={tooltip}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
       }}
     >
-      <title>{tooltip}</title>
       {/* vertical connector for multi-qubit gates */}
       {lo !== hi && (
         <line x1={x} y1={rowY(lo)} x2={x} y2={rowY(hi)} className="gate__connector" />

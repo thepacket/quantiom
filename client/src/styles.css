@@ -145,6 +145,16 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .editor__canvas-scroll { overflow: auto; background: var(--bg); }
 
 /* ─── Palette ───────────────────────────────────────────────────────── */
+/* Instant hover tooltip (no native-title delay), shown via HoverTip. */
+.hovertip {
+  position: fixed; z-index: 3000; pointer-events: none;
+  background: var(--panel); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: 5px 8px; font-size: 11px; line-height: 1.4;
+  white-space: pre-line; max-width: 280px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+}
+
 .palette { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-right: 1px solid var(--border); }
 .palette__search { padding: 8px; border-bottom: 1px solid var(--border); }
 .palette__search input { width: 100%; }
