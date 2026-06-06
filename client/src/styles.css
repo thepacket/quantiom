@@ -941,6 +941,21 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .sff__heis { stroke: #ffd24f; stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.7; }
 .sff__legend { font-size: 10px; color: var(--muted); }
 
+/* Diagonal ensemble (ETH) panel */
+.dens__presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.dens__preset { font-size: 9px; padding: 1px 5px; color: var(--muted); }
+.dens__input { width: 100%; box-sizing: border-box; font-family: var(--mono, monospace); font-size: 11px; resize: vertical; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 4px; }
+.dens__out { display: flex; flex-direction: column; gap: 4px; }
+.dens__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.dens__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.dens__svg { display: block; }
+.dens__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.dens__axis-line { stroke: var(--border); stroke-width: 1; }
+.dens__stem { stroke: var(--accent); stroke-width: 1.2; opacity: 0.7; }
+.dens__dot { fill: var(--accent-2); }
+.dens__mean { stroke: #ffd24f; stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.8; }
+.dens__legend { font-size: 10px; color: var(--muted); }
+
 /* Level statistics (gap-ratio) panel */
 .lvl__presets { display: flex; flex-wrap: wrap; gap: 4px; }
 .lvl__preset { font-size: 9px; padding: 1px 5px; color: var(--muted); }

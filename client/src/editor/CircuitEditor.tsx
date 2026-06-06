@@ -83,6 +83,7 @@ import { PTMPanel } from "../panels/PTMPanel";
 import { BlochTrajectoryPanel } from "../panels/BlochTrajectoryPanel";
 import { OtocPanel } from "../panels/OtocPanel";
 import { HamSpectrumPanel } from "../panels/HamSpectrumPanel";
+import { DiagonalEnsemblePanel } from "../panels/DiagonalEnsemblePanel";
 import { SpectralFormFactorPanel } from "../panels/SpectralFormFactorPanel";
 import { LevelStatisticsPanel } from "../panels/LevelStatisticsPanel";
 import { TannerPanel } from "../panels/TannerPanel";
@@ -1266,6 +1267,7 @@ export function CircuitEditor() {
           <HamiltonianPanel onLoadInNewTab={(c, n) => t.newTab(c, n)} />
         </ErrorBoundary>
         <ErrorBoundary label="ham-spectrum"><HamSpectrumPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="diagonal-ensemble"><DiagonalEnsemblePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="spectral-form-factor"><SpectralFormFactorPanel /></ErrorBoundary>
         <ErrorBoundary label="level-statistics"><LevelStatisticsPanel /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
