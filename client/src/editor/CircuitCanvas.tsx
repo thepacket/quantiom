@@ -13,7 +13,7 @@ const REASSIGN_TARGET_MIME = "application/x-quantiom-reassign-target";
 const COL_W = 68;
 const COL_PAD = 8;
 const ROW_H = 56;
-const LABEL_W = 60;
+const LABEL_W = 30;
 const MIN_COLS = 16;
 
 /**
@@ -102,15 +102,45 @@ type Props = {
   onSelectionChange?: (ids: Set<string>) => void;
   /** When set, gates NOT in this set are dimmed (causal light-cone view). */
   coneIds?: Set<string> | null;
+  /** Map gate-id → reason for gates the simulator skipped; drawn with a red
+   *  ring + reason in the tooltip so invalid gates are visible on the canvas. */
+  skipped?: Map<string, string>;
+  /** Folded column ranges (UI-only); gates inside collapse into a labeled box. */
+  folds?: Array<{ from: number; to: number }>;
+  /** Remove the fold covering this column range. */
+  onUnfold?: (fold: { from: number; to: number }) => void;
 };
+
+/** Per-gate dagger-able id map for the context menu's Invert action. */
+const DAGGER: Record<string, string> = {
+  s: "sdg", sdg: "s", t: "tdg", tdg: "t", sx: "sxdg", sxdg: "sx",
+  sy: "sydg", sydg: "sy", sqrtswap: "sqrtswapdg", sqrtswapdg: "sqrtswap",
+  v: "vdg", vdg: "v",
+};
+const SELF_INVERSE = new Set(["h", "x", "y", "z", "cx", "cy", "cz", "ccx", "swap", "cswap", "i", "ecr"]);
+// Adding a control must also promote the gate to its controlled variant so the
+// matrix size matches (a bare H with an extra control qubit would be invalid).
+const ADD_CONTROL: Record<string, string> = {
+  x: "cx", y: "cy", z: "cz", h: "ch", sx: "csx", sxdg: "csxdg",
+  rx: "crx", ry: "cry", rz: "crz", p: "cp", swap: "cswap",
+  cx: "ccx", cz: "ccz", ccx: "c3x", c3x: "c4x",
+};
+const REMOVE_CONTROL: Record<string, string> = {
+  cx: "x", cy: "y", cz: "z", ch: "h", csx: "sx", csxdg: "sxdg",
+  crx: "rx", cry: "ry", crz: "rz", cp: "p", cswap: "swap",
+  ccx: "cx", ccz: "cz", c3x: "ccx", c4x: "c3x",
+};
+
+type ContextMenu = { x: number; y: number; gate: PlacedGate } | null;
 
 type HoverState =
   | { kind: "new"; col: number; row: number; gateId: string }
   | { kind: "move"; col: number; row: number; gateId: string; placedId: string }
   | null;
 
-export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep, customGates = [], highlightedIds, selectedIds, onSelectionChange, coneIds }: Props) {
+export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep, customGates = [], highlightedIds, selectedIds, onSelectionChange, coneIds, skipped, folds, onUnfold }: Props) {
   const [hover, setHover] = useState<HoverState>(null);
+  const [ctxMenu, setCtxMenu] = useState<ContextMenu>(null);
   // Tracks the in-flight move-gate drag so dragOver (which can't read payload) knows the gate.
   const dragMove = useRef<{ placedId: string; gateId: string } | null>(null);
   // Rubber-band rectangle drag for multi-gate selection. Coords are in
@@ -129,6 +159,9 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
   const colWidths = layout.widths;
   const width = colOffsets[numCols];
   const height = totalRows * ROW_H + 16;
+
+  const foldRanges = (folds ?? []).map((f) => ({ from: Math.min(f.from, f.to), to: Math.max(f.from, f.to) }));
+  const isFolded = (col: number) => foldRanges.some((f) => col >= f.from && col <= f.to);
 
   const onCellDragOver = (e: React.DragEvent, col: number, row: number) => {
     const types = e.dataTransfer.types;
@@ -239,6 +272,57 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
     dragMove.current = null;
     setHover(null);
   };
+
+  // Right-click a placed gate → context menu of quick edits.
+  const firstFreeQubit = (g: PlacedGate): number | null => {
+    const used = new Set([...g.controls, ...g.targets]);
+    for (let q = 0; q < circuit.numQubits; q++) if (!used.has(q)) return q;
+    return null;
+  };
+  const ctxAction = (g: PlacedGate, action: string) => {
+    setCtxMenu(null);
+    if (action === "delete") { dispatch({ type: "remove-gate", id: g.id }); onSelect(null); return; }
+    if (action === "edit") { onSelect(g.id); return; }
+    if (action === "duplicate") {
+      dispatch({ type: "place-gate", gate: { ...g, id: `g_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, column: g.column + 1, controls: [...g.controls], targets: [...g.targets], clbits: [...g.clbits], params: [...g.params], controlStates: g.controlStates ? [...g.controlStates] : undefined } });
+      return;
+    }
+    if (action === "invert") {
+      const dag = DAGGER[g.gateId];
+      if (dag) dispatch({ type: "update-gate", id: g.id, patch: { gateId: dag as PlacedGate["gateId"] } });
+      return; // self-inverse gates: no-op
+    }
+    if (action === "add-control") {
+      const promoted = ADD_CONTROL[g.gateId];
+      if (!promoted) return;
+      const q = firstFreeQubit(g);
+      if (q === null) return;
+      dispatch({ type: "update-gate", id: g.id, patch: { gateId: promoted as PlacedGate["gateId"], controls: [...g.controls, q], controlStates: [...(g.controlStates ?? g.controls.map(() => true)), true] } });
+      return;
+    }
+    if (action === "remove-control") {
+      const demoted = REMOVE_CONTROL[g.gateId];
+      if (!demoted || g.controls.length === 0) return;
+      const controls = g.controls.slice(0, -1);
+      dispatch({ type: "update-gate", id: g.id, patch: { gateId: demoted as PlacedGate["gateId"], controls, controlStates: controls.length ? (g.controlStates ?? g.controls.map(() => true)).slice(0, -1) : undefined } });
+      return;
+    }
+    if (action === "toggle-anti") {
+      if (g.controls.length === 0) return;
+      const cs = (g.controlStates ?? g.controls.map(() => true)).slice();
+      cs[cs.length - 1] = !cs[cs.length - 1];
+      dispatch({ type: "update-gate", id: g.id, patch: { controlStates: cs } });
+      return;
+    }
+  };
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    window.addEventListener("mousedown", close);
+    window.addEventListener("scroll", close, true);
+    return () => { window.removeEventListener("mousedown", close); window.removeEventListener("scroll", close, true); };
+  }, [ctxMenu]);
 
   const onReassignDragStart = (
     e: React.DragEvent<HTMLDivElement>,
@@ -365,7 +449,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
           return (
             <g key={`wire-${q}`}>
               <text
-                x={LABEL_W - 12}
+                x={LABEL_W - 6}
                 y={y + 4}
                 className="canvas__label"
                 textAnchor="end"
@@ -383,7 +467,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
         {circuit.numClbits > 0 && (
           <g>
             <text
-              x={LABEL_W - 12}
+              x={LABEL_W - 6}
               y={rowY(circuit.numQubits) + 4}
               className="canvas__label canvas__label--cl"
               textAnchor="end"
@@ -420,8 +504,8 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
             className="canvas__step-cursor"
           />
         )}
-        {/* placed gates */}
-        {circuit.gates.map((g) => (
+        {/* placed gates (folded columns are hidden) */}
+        {circuit.gates.filter((g) => !isFolded(g.column)).map((g) => (
           <PlacedGateView
             key={g.id}
             gate={g}
@@ -431,9 +515,23 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
             customGates={customGates}
             matched={highlightedIds?.has(g.id) ?? false}
             dimmed={!!coneIds && !coneIds.has(g.id)}
+            skippedReason={skipped?.get(g.id)}
             x={colX(g.column, colOffsets, colWidths)}
           />
         ))}
+        {/* folded-range boxes — click to expand */}
+        {foldRanges.map((f, i) => {
+          const left = colOffsets[Math.min(f.from, numCols)] ?? colOffsets[numCols];
+          const right = colOffsets[Math.min(f.to + 1, numCols)] ?? colOffsets[numCols];
+          const count = circuit.gates.filter((gg) => gg.column >= f.from && gg.column <= f.to).length;
+          return (
+            <g key={`fold-${i}`} className="gate gate--fold" onClick={(e) => { e.stopPropagation(); onUnfold?.(f); }}>
+              <rect x={left + 3} y={8} width={Math.max(20, right - left - 6)} height={height - 24} rx={6} className="gate__box gate__box--fold" />
+              <text x={(left + right) / 2} y={height / 2} textAnchor="middle" className="gate__label">⊞ {count}</text>
+              <title>Folded columns {f.from}–{f.to} ({count} gates) — click to expand</title>
+            </g>
+          );
+        })}
         {/* rubber-band selection highlight rings */}
         {selectedIds && selectedIds.size > 0 && circuit.gates.map((g) => {
           if (!selectedIds.has(g.id)) return null;
@@ -490,7 +588,7 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
           )),
         )}
         {/* Per-gate draggable overlays for move gesture. Sit above cells. */}
-        {circuit.gates.map((g) => {
+        {circuit.gates.filter((g) => !isFolded(g.column)).map((g) => {
           const all = [...g.controls, ...g.targets];
           if (all.length === 0) return null;
           const lo = Math.min(...all);
@@ -512,12 +610,18 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
                 e.stopPropagation();
                 onSelect(g.id);
               }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onSelect(g.id);
+                setCtxMenu({ x: e.clientX, y: e.clientY, gate: g });
+              }}
               data-tip={gateTooltip(g, customGates)}
             />
           );
         })}
         {/* Per-control and per-target reassign handles. Higher in DOM = on top. */}
-        {circuit.gates.flatMap((g) => [
+        {circuit.gates.filter((g) => !isFolded(g.column)).flatMap((g) => [
           ...g.controls.map((q, i) => ({ g, role: "controls" as const, index: i, row: q })),
           ...g.targets.map((q, i) => ({ g, role: "targets" as const, index: i, row: q })),
         ]).map(({ g, role, index, row }) => (
@@ -537,10 +641,37 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
               e.stopPropagation();
               onSelect(g.id);
             }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelect(g.id);
+              setCtxMenu({ x: e.clientX, y: e.clientY, gate: g });
+            }}
             data-tip={gateTooltip(g, customGates)}
           />
         ))}
       </div>
+      {ctxMenu && (
+        <div
+          className="gate-ctx"
+          style={{ position: "fixed", left: ctxMenu.x, top: ctxMenu.y, zIndex: 1000 }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button onClick={() => ctxAction(ctxMenu.gate, "edit")}>Edit…</button>
+          <button onClick={() => ctxAction(ctxMenu.gate, "duplicate")}>Duplicate</button>
+          {(DAGGER[ctxMenu.gate.gateId] || SELF_INVERSE.has(ctxMenu.gate.gateId)) && (
+            <button disabled={!DAGGER[ctxMenu.gate.gateId]} onClick={() => ctxAction(ctxMenu.gate, "invert")}>
+              Invert (†){SELF_INVERSE.has(ctxMenu.gate.gateId) ? " — self-inverse" : ""}
+            </button>
+          )}
+          <div className="gate-ctx__sep" />
+          <button disabled={!ADD_CONTROL[ctxMenu.gate.gateId]} onClick={() => ctxAction(ctxMenu.gate, "add-control")}>Add control</button>
+          <button disabled={!REMOVE_CONTROL[ctxMenu.gate.gateId] || ctxMenu.gate.controls.length === 0} onClick={() => ctxAction(ctxMenu.gate, "remove-control")}>Remove control</button>
+          <button disabled={ctxMenu.gate.controls.length === 0} onClick={() => ctxAction(ctxMenu.gate, "toggle-anti")}>Toggle anti-control</button>
+          <div className="gate-ctx__sep" />
+          <button className="gate-ctx__danger" onClick={() => ctxAction(ctxMenu.gate, "delete")}>Delete</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -606,6 +737,7 @@ function PlacedGateView({
   customGates,
   matched,
   dimmed,
+  skippedReason,
   x,
 }: {
   gate: PlacedGate;
@@ -615,6 +747,7 @@ function PlacedGateView({
   customGates: CustomGate[];
   matched?: boolean;
   dimmed?: boolean;
+  skippedReason?: string;
   x: number;
 }) {
   const isCustom = gate.gateId.startsWith(CUSTOM_PREFIX);
@@ -635,8 +768,8 @@ function PlacedGateView({
     const w = Math.max(40, Math.ceil(label.length * 9.6 + 14));
     return (
       <g
-        className={"gate gate--custom" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "")}
-        data-tip={`${customDef?.name ?? "custom gate"} — ${customDef?.numQubits ?? hi - lo + 1} qubit${(customDef?.numQubits ?? hi - lo + 1) === 1 ? "" : "s"}`}
+        className={"gate gate--custom" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "") + (skippedReason ? " gate--skipped" : "")}
+        data-tip={`${customDef?.name ?? "custom gate"} — ${customDef?.numQubits ?? hi - lo + 1} qubit${(customDef?.numQubits ?? hi - lo + 1) === 1 ? "" : "s"}${skippedReason ? ` · ⚠ skipped: ${skippedReason}` : ""}`}
         onClick={(e) => { e.stopPropagation(); onClick(); }}
       >
         <rect x={x - w / 2} y={yTop} width={w} height={boxH} rx={6} className="gate__box gate__box--custom" />
@@ -650,10 +783,10 @@ function PlacedGateView({
   if (!def) return null;
 
   // Match the palette tooltip: gate name + description.
-  const tooltip = `${def.name}${def.description ? " — " + def.description : ""}`;
+  const tooltip = `${def.name}${def.description ? " — " + def.description : ""}${skippedReason ? ` · ⚠ skipped: ${skippedReason}` : ""}`;
   return (
     <g
-      className={"gate" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "")}
+      className={"gate" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "") + (skippedReason ? " gate--skipped" : "")}
       data-cat={def.category}
       data-tip={tooltip}
       onClick={(e) => {

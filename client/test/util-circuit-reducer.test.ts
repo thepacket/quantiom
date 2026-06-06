@@ -203,6 +203,42 @@ describe("circuit reducer — bulk column ops", () => {
     const ids = new Set(out.gates.map((g) => g.id));
     expect(ids.size).toBe(4);
   });
+
+  test("repeat-range appends N contiguous copies of the range", () => {
+    const c: Circuit = {
+      numQubits: 1,
+      numClbits: 0,
+      gates: [
+        { ...gate("h", [0]), column: 0 },
+        { ...gate("x", [0]), column: 1 },
+      ],
+    };
+    const out = reduce(c, { type: "repeat-range", fromColumn: 0, toColumn: 1, times: 3 });
+    expect(out.gates).toHaveLength(2 + 2 * 3);
+    const clones = out.gates.slice(2);
+    // 3 copies of [h,x] at columns 2,3 | 4,5 | 6,7.
+    expect(clones.map((g) => g.column)).toEqual([2, 3, 4, 5, 6, 7]);
+    expect(clones.map((g) => g.gateId)).toEqual(["h", "x", "h", "x", "h", "x"]);
+    expect(new Set(out.gates.map((g) => g.id)).size).toBe(8);
+  });
+
+  test("repeat-range with times < 1 is a no-op", () => {
+    const c: Circuit = { numQubits: 1, numClbits: 0, gates: [{ ...gate("h", [0]), column: 0 }] };
+    expect(reduce(c, { type: "repeat-range", fromColumn: 0, toColumn: 0, times: 0 }).gates).toHaveLength(1);
+  });
+
+  test("insert-gates appends a block after the last column with its relative layout", () => {
+    const c: Circuit = { numQubits: 2, numClbits: 0, gates: [{ ...gate("h", [0]), column: 0 }] };
+    const block: PlacedGate[] = [
+      { ...gate("h", [0]), id: "", column: 0 },
+      { ...gate("cx", [1], [0]), id: "", column: 1 },
+    ];
+    const out = reduce(c, { type: "insert-gates", gates: block });
+    expect(out.gates).toHaveLength(3);
+    const added = out.gates.slice(1);
+    expect(added.map((g) => g.column)).toEqual([1, 2]); // base = maxCol+1 = 1
+    expect(added.every((g) => g.id !== "")).toBe(true);
+  });
 });
 
 describe("circuit reducer — qubit names & misc", () => {

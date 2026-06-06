@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Tip = { text: string; x: number; y: number };
 
+const SHOW_DELAY_MS = 500;
+
 /**
- * Instant hover tooltip. A single document-level listener shows a
- * fixed-position tooltip for any element carrying a `data-tip` attribute —
- * with *no* delay (unlike the native `title` attribute, which waits ~1 s) and
+ * Hover tooltip with a 500 ms delay. A single document-level listener shows a
+ * fixed-position tooltip for any element carrying a `data-tip` attribute,
  * without being clipped by scroll containers or SVG bounds. Works for both
  * HTML (the gate palette) and SVG (the canvas gates).
  *
@@ -13,28 +14,37 @@ type Tip = { text: string; x: number; y: number };
  */
 export function HoverTip() {
   const [tip, setTip] = useState<Tip | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const closestTip = (t: EventTarget | null): Element | null =>
       t instanceof Element ? t.closest("[data-tip]") : null;
+    const clearTimer = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } };
 
     const onOver = (e: MouseEvent) => {
       const el = closestTip(e.target);
       const text = el?.getAttribute("data-tip");
+      clearTimer();
       if (!el || !text) { setTip(null); return; }
       const r = el.getBoundingClientRect();
-      setTip({ text, x: r.left, y: r.bottom + 6 });
+      const pending: Tip = { text, x: r.left, y: r.bottom + 6 };
+      // Wait SHOW_DELAY_MS before showing — a brief pass-over shouldn't pop a tip.
+      timer.current = setTimeout(() => setTip(pending), SHOW_DELAY_MS);
     };
     const onOut = (e: MouseEvent) => {
-      if (closestTip(e.target) && closestTip(e.target) !== closestTip(e.relatedTarget)) setTip(null);
+      if (closestTip(e.target) && closestTip(e.target) !== closestTip(e.relatedTarget)) {
+        clearTimer();
+        setTip(null);
+      }
     };
-    const hide = () => setTip(null);
+    const hide = () => { clearTimer(); setTip(null); };
 
     document.addEventListener("mouseover", onOver);
     document.addEventListener("mouseout", onOut);
     document.addEventListener("mousedown", hide);
     window.addEventListener("scroll", hide, true);
     return () => {
+      clearTimer();
       document.removeEventListener("mouseover", onOver);
       document.removeEventListener("mouseout", onOut);
       document.removeEventListener("mousedown", hide);

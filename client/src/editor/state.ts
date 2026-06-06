@@ -22,6 +22,8 @@ export type Action =
   | { type: "compact-columns" }
   | { type: "delete-range"; fromColumn: number; toColumn: number }
   | { type: "duplicate-range"; fromColumn: number; toColumn: number }
+  | { type: "repeat-range"; fromColumn: number; toColumn: number; times: number }
+  | { type: "insert-gates"; gates: PlacedGate[] }
   | { type: "rename-qubit"; index: number; name: string }
   | { type: "clear" };
 
@@ -149,6 +151,58 @@ function reducer(state: Circuit, action: Action): Circuit {
       }));
       void span;
       return { ...state, gates: [...state.gates, ...cloned] };
+    }
+    case "repeat-range": {
+      // Append `times` copies of the [lo,hi] column range contiguously after
+      // the circuit — the ansatz/Trotter "layer" builder. Parameters stay
+      // tied (shared free symbols); rename per-layer in the Inspector if you
+      // want them independent.
+      const lo = Math.min(action.fromColumn, action.toColumn);
+      const hi = Math.max(action.fromColumn, action.toColumn);
+      const span = hi - lo + 1;
+      const times = Math.max(0, Math.floor(action.times));
+      const selected = state.gates
+        .filter((g) => g.column >= lo && g.column <= hi)
+        .sort((a, b) => a.column - b.column);
+      if (selected.length === 0 || times < 1) return state;
+      const maxCol = state.gates.reduce((m, g) => Math.max(m, g.column), -1);
+      const base = maxCol + 1;
+      const clones: PlacedGate[] = [];
+      for (let k = 0; k < times; k++) {
+        for (const g of selected) {
+          clones.push({
+            ...g,
+            id: newGateId(),
+            column: base + k * span + (g.column - lo),
+            controls: [...g.controls],
+            targets: [...g.targets],
+            clbits: [...g.clbits],
+            params: [...g.params],
+            controlStates: g.controlStates ? [...g.controlStates] : undefined,
+            condition: g.condition ? { ...g.condition } : undefined,
+          });
+        }
+      }
+      return { ...state, gates: [...state.gates, ...clones] };
+    }
+    case "insert-gates": {
+      // Append a snippet block after the current max column, preserving the
+      // block's internal (0-based) column layout. Each gate gets a fresh id.
+      if (action.gates.length === 0) return state;
+      const maxCol = state.gates.reduce((m, g) => Math.max(m, g.column), -1);
+      const base = maxCol + 1;
+      const added = action.gates.map((g) => ({
+        ...g,
+        id: newGateId(),
+        column: base + g.column,
+        controls: [...g.controls],
+        targets: [...g.targets],
+        clbits: [...g.clbits],
+        params: [...g.params],
+        controlStates: g.controlStates ? [...g.controlStates] : undefined,
+        condition: g.condition ? { ...g.condition } : undefined,
+      }));
+      return { ...state, gates: [...state.gates, ...added] };
     }
     case "rename-qubit": {
       if (action.index < 0 || action.index >= state.numQubits) return state;
