@@ -11,6 +11,22 @@ const SECONDARY_ID: Record<string, string> = {
   cx: "CNOT",
 };
 
+/** Friendlier display labels for a few gates, overriding the uppercase id. */
+const DISPLAY_ID: Record<string, string> = {
+  xx_plus_yy: "XX + YY",
+  xx_minus_yy: "XX - YY",
+  sqrtswap: "SSWAP",
+  sqrtswapdg: "SSWAPDG",
+  sqrtiswap: "SISWAP",
+};
+
+/** Shrink the tile font for long labels so they fit the button width. */
+function labelFontSize(label: string): string | undefined {
+  if (label.length <= 5) return undefined; // default (16px)
+  if (label.length <= 7) return "13px";
+  return "11px";
+}
+
 type Props = {
   customGates?: CustomGate[];
   onRemoveCustomGate?: (id: string) => void;
@@ -146,7 +162,10 @@ export function GatePalette({ customGates = [], onRemoveCustomGate }: Props) {
                       onDragStart={(e) => onDragStart(e, g.id, g.symbol)}
                       data-tip={`${g.name}${g.description ? " — " + g.description : ""}`}
                     >
-                      <span className="palette__symbol">{g.id.toUpperCase()}</span>
+                      {(() => {
+                        const label = DISPLAY_ID[g.id] ?? g.id.toUpperCase();
+                        return <span className="palette__symbol" style={{ fontSize: labelFontSize(label) }}>{label}</span>;
+                      })()}
                       {SECONDARY_ID[g.id] && <span className="palette__id">{SECONDARY_ID[g.id]}</span>}
                     </div>
                   ))}
