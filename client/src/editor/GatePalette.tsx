@@ -13,6 +13,9 @@ const SECONDARY_ID: Record<string, string> = {
 
 /** Friendlier display labels for a few gates, overriding the uppercase id. */
 const DISPLAY_ID: Record<string, string> = {
+  measure: "MZ",
+  measure_x: "MX",
+  measure_y: "MY",
   xx_plus_yy: "XX+YY",
   xx_minus_yy: "XX-YY",
   sqrtswap: "SSWAP",
