@@ -23,6 +23,8 @@ const DISPLAY_ID: Record<string, string> = {
   measure: "MZ",
   measure_x: "MX",
   measure_y: "MY",
+  u_arb: "AU2",
+  u_arb_2: "AU4",
   xx_plus_yy: "XX+YY",
   xx_minus_yy: "XX-YY",
   sqrtswap: "SSWAP",
