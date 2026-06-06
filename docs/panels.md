@@ -104,6 +104,63 @@ intuit how many shots are "enough" for a given precision target.
 
 ---
 
+## Symmetry sectors
+
+How the measurement weight splits across the **excitation-number**
+(Hamming-weight) sectors and the **Z₂ parity** of the computational basis: a
+bar chart of the total probability in each sector k = 0…n, with badges
+flagging whether the circuit **conserves particle number** (all weight in one
+k — a number-conserving ansatz) or **parity**, plus the global parity
+⟨ΠZ⟩ = P_even − P_odd.
+
+**When available.** Reads the basis probabilities, so it works in both pure
+and noise modes; capped at 16 qubits.
+
+**What you see.** A number-conserving circuit (Givens rotations, hopping
+terms, iSWAP) keeps every bar in a single excitation sector. GHZ_N occupies
+only k = 0 and k = N — parity-conserved for even N, parity-mixed for odd.
+Hadamards spread the weight binomially across all sectors.
+
+---
+
+## Participation / IPR
+
+Localization in the computational basis: the **inverse participation ratio**
+IPR = Σ pᵢ², the **participation ratio** PR = 1/IPR (the effective number of
+occupied basis states), and the **Shannon / Rényi-2 participation entropies**.
+A log-scale gauge runs from *localized* (PR = 1, one basis state) to *uniform*
+(PR = 2ⁿ), and a per-column sweep shows PR — the delocalization front — grow
+with circuit depth.
+
+**When available.** Reads the basis probabilities (works in noise mode);
+capped at 16 qubits.
+
+**What you see.** The Anderson / many-body-localization diagnostic: a
+localized state keeps PR ~ O(1) independent of size, a thermal one spreads to
+PR ∝ 2ⁿ. A Bell/GHZ state reads PR = 2; |+⟩^⊗ⁿ reads the maximum 2ⁿ. The
+sweep climbs 2 → 4 → 8 … as each superposing/entangling gate spreads weight.
+
+---
+
+## Coherence
+
+Quantum coherence in the computational basis — the off-diagonal
+"superposition" resource that powers interference and is exactly what
+decoherence destroys. Two measures: the **l₁-norm of coherence**
+C_l1 = Σ_{i≠j}|ρ_ij| (max 2ⁿ−1) and the **relative entropy of coherence**
+C_rel = S(ρ_diag) − S(ρ) (max n bits).
+
+**When available.** Pure mode reads the statevector (n ≤ 16); **noise mode
+reads the trajectory-averaged ρ** (n ≤ 6) so you watch coherence decay as the
+off-diagonals shrink.
+
+**What you see.** A basis state has zero coherence; |+⟩^⊗ⁿ saturates both
+maxima; a GHZ state reads C_l1 = 1, C_rel = 1 bit. Turn on phase damping and
+both shrink — the gap below the pure-state value is the coherence the noise
+has destroyed (the panel reports S(ρ) alongside).
+
+---
+
 ## Bloch spheres
 
 One sphere per qubit, showing the reduced single-qubit Bloch vector
@@ -327,6 +384,43 @@ back.
 
 ---
 
+## Quantum Fisher info
+
+The **quantum Fisher information** F_Q[ψ, J_α] = 4 Var(J_α) for the
+collective-spin generator J_α = ½ Σᵢ σ_α (axis X/Y/Z selectable) — the
+phase-estimation sensitivity and a multipartite-entanglement witness. F_Q is
+placed on a track from 0 to the Heisenberg limit N², with the standard
+quantum limit (SQL = N) marked.
+
+**When available.** Pure statevector path; capped at 14 qubits.
+
+**What you see.** Separable states sit at or below the SQL (F_Q ≤ N);
+**F_Q/N > 1 witnesses metrologically useful entanglement.** A GHZ cat
+saturates the Heisenberg limit F_Q = N² along its sensitive axis (and reads
+the SQL along the others), while a product |+…+⟩ sits exactly at N. The
+metrological gain F_Q/N is the headline number.
+
+---
+
+## Quantum geometric tensor
+
+The geometry of the circuit's parameter space: the **Fubini–Study metric**
+g_ij = Re Q_ij — the metric the quantum natural gradient descends — shown as
+a heatmap over the free symbols, with its determinant √det g (the local
+state-space volume) and eigenvalues (principal sensitivities). The imaginary
+part is the **Berry curvature** F_ij = −2 Im Q_ij, flagged when non-zero.
+
+**When available.** Needs at least one free symbol; statevector path,
+n ≤ 12, ≤ 8 symbols. Mid-circuit measurement disables it (the QGT needs a
+pure parameterised state ψ(θ)).
+
+**What you see.** A single RY(θ) gives g = ¼; independent rotations give a
+diagonal metric; entangling gates introduce off-diagonal cross-terms.
+Directions where g is large are the parameter combinations the state is most
+sensitive to — and 4·g equals the multi-parameter quantum Fisher information.
+
+---
+
 ## Density matrix
 
 The reduced density matrix ρ_A for a chosen subset A of qubits, via
@@ -496,6 +590,22 @@ non-zero mutual information but **zero negativity** — GHZ entanglement is
 genuinely global, not stored in any pair. A **Bell pair** reads E_N = 1; a
 product (or merely classically-correlated) pair reads 0. Open this beside
 the MI map to see the distinction directly.
+
+---
+
+## Concurrence
+
+The pairwise **Wootters concurrence** C(ρ_ij) ∈ [0, 1] of every two-qubit
+reduced state, as an n×n heatmap — a faithful **entanglement-of-formation**
+monotone (0 = separable, 1 = a Bell pair).
+
+**When available.** Statevector path; capped at 10 qubits.
+
+**Reading it vs. negativity.** Concurrence is monogamy-aware (Σⱼ C² ≤ 1 per
+qubit), so the two maps are complementary. A **W state** reads C = 2/3 on
+every pair (monogamy-saturating), while a **GHZ** state reads 0 on every pair
+(its entanglement is global). A Bell pair reads 1. Open it beside the
+negativity map for the full pairwise-entanglement picture.
 
 ---
 
@@ -818,6 +928,60 @@ a VQE ansatz's parameters and watch ⟨H⟩ descend toward E₀.
 
 ---
 
+## Spectral form factor
+
+The **spectral form factor** SFF(t) = |Σₖ e^{−iEₖt}|² / D² of a Pauli-sum
+Hamiltonian's spectrum, on log–log axes — the canonical quantum-chaos
+diagnostic. Enter H as a Pauli sum (presets provided); the panel diagonalises
+it and plots the dip → ramp → plateau, with the late-time plateau and
+Heisenberg time t_H marked.
+
+**When available.** n ≤ 6 (dense diagonalisation), on demand.
+
+**What you see.** A chaotic (random-matrix) spectrum shows a clean linear
+**ramp** between the dip and the plateau — the signature of level repulsion.
+An integrable spectrum is bumpy and ramp-less. The plateau sits at
+(Σ degeneracy²)/D².
+
+---
+
+## Level statistics
+
+The **Oganesyan–Huse gap ratio** rₙ = min(δₙ, δₙ₋₁)/max(δₙ, δₙ₋₁) of a
+Pauli-sum Hamiltonian's level spacings — the energy-domain chaos diagnostic
+that needs **no spectral unfolding**. Histograms r with the Poisson
+(⟨r⟩ ≈ 0.386, integrable) and GOE Wigner–Dyson (⟨r⟩ ≈ 0.531, chaotic)
+surmise curves overlaid, plus a verdict.
+
+**When available.** n ≤ 6, on demand.
+
+**What you see.** A chaotic Hamiltonian piles r near the GOE value (level
+repulsion); an integrable one follows Poisson. The chaotic preset uses a
+longitudinal-field **gradient** to break the chain's reflection symmetry —
+without it two symmetry sectors superpose and ⟨r⟩ collapses toward Poisson
+even for a chaotic model (the panel reports the degenerate-spacing fraction
+so you can spot when that bites).
+
+---
+
+## Diagonal ensemble (ETH)
+
+Decomposes the current state in the energy eigenbasis of a Pauli-sum H and
+plots the **populations pₖ = |⟨Eₖ|ψ⟩|²** vs energy — the weights of the
+infinite-time-averaged diagonal ensemble ρ_DE that the eigenstate-
+thermalization hypothesis says local observables relax to. Reports ⟨H⟩, the
+energy spread ΔE, and the **effective dimension** d_eff = 1/Σ pₖ².
+
+**When available.** Statevector path; H must match the circuit's qubit count;
+n ≤ 6.
+
+**What you see.** A state aligned with one eigenstate is a single spike
+(d_eff = 1, ΔE = 0); a state that spreads over many eigenstates in a narrow
+energy window (large d_eff) thermalizes. ⟨H⟩ is conserved under H-evolution,
+so it pins where on the energy axis the dynamics live.
+
+---
+
 ## Noise model
 
 The noise dial. Sliders for every channel the simulator supports:
@@ -855,6 +1019,55 @@ before applying.
 **Tip.** Toggling noise off doesn't just hide the panel — the bare
 gate-application hot path becomes byte-identical to the noiseless
 simulator. Default state is fast.
+
+---
+
+## Decoherence
+
+A depth-stepped movie of how noise drives the measurement distribution toward
+uniform. For each circuit column it shows the trajectory-averaged probability
+histogram, auto-looping forward as depth (and accumulated error) grows, with
+a dashed line at the uniform 1/2ⁿ floor.
+
+**When available.** Noise-mode only (default-collapsed); capped at 6 qubits ×
+96 columns.
+
+**What you see.** Early columns keep structure; as error accumulates the bars
+flatten toward the uniform line — decoherence in motion. It's a workflow /
+animation convenience: the Probabilities and Bloch panels already show the
+noisy state, this one shows its *progression* with depth.
+
+---
+
+## Fidelity & purity
+
+How far the noisy state ρ has drifted from the noiseless ideal ψ: the
+**fidelity** F = ⟨ψ|ρ|ψ⟩, the **trace distance** to the ideal, the **purity**
+Tr(ρ²), and the **von Neumann entropy** S(ρ) — four gauges.
+
+**When available.** Noise-mode only; capped at 6 qubits (builds the dense
+trajectory-averaged ρ).
+
+**What you see.** With noise off the equivalents are F = 1, trace distance 0,
+purity 1, S = 0. As noise rises, fidelity falls, trace distance and entropy
+climb, and purity drops toward 1/2ⁿ (maximally mixed). The one-glance "what
+is noise costing me?" readout — companion to Decoherence.
+
+---
+
+## Stabilizer generators
+
+For a Clifford circuit, the **n signed Pauli generators** ⟨g₁, …, g_n⟩ of the
+stabilizer group, read straight from the Aaronson–Gottesman tableau and
+colour-coded by Pauli letter — the compact description of a stabilizer state
+the statevector can't show past ~16 qubits.
+
+**When available.** Clifford-only circuits (H/S/√X/CNOT/CZ/SWAP/Pauli +
+measure/reset); works far past the statevector cap (up to 24 qubits shown).
+
+**What you see.** |0…0⟩ is stabilized by +Zᵢ on each qubit; GHZ-4 reads
++XXXX / +ZZII / +IZZI / +IIZZ. A bit-flip turns the relevant sign negative.
+The generators always commute pairwise — a valid stabilizer group.
 
 ---
 
@@ -946,6 +1159,26 @@ feedback (the dynamic kind that `if (c[k] == v) …` enables), this is
 the only panel that gives you the right outcome statistics — the
 Probabilities panel would show the trajectory average over both
 measurement outcomes, which isn't what you want.
+
+---
+
+## Dynamic branch tree
+
+The probabilistic outcome tree a circuit traces through its **mid-circuit
+measurements and resets** — the dynamic-circuit counterpart of the
+probability histogram. Each node is a measurement event, each edge an outcome
+(0/1) carrying its conditional Born probability, each leaf a final classical
+record with its cumulative probability.
+
+**When available.** Any circuit with a measurement or reset; n ≤ 12, capped
+at 8 branching events / 256 leaves with low-probability pruning.
+
+**What you see.** A forking simulator clones and projects the state at each
+measurement (rather than sampling one outcome), so conditional gates
+downstream act per-branch. A Bell pair's two measurements collapse to only
+the matching 00/11 leaves; the teleportation protocol shows two measurements
+→ four equally-likely (25 %) branches — the signature that Alice's outcomes
+reveal nothing about the teleported state.
 
 ---
 

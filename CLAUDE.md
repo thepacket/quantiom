@@ -302,6 +302,24 @@ host plus `/api/health`.
     `ZXPanel` (ZX-calculus diagram), `LightConePanel` (causal-cone
     selector → canvas dimming via `CircuitCanvas` coneIds prop). The
     statevector-only ones show a notice under Clifford / noise mode.
+  - Analysis / diagnostics added since (all default-collapsed, each with a
+    pure tested `sim/` helper): `DecoherencePanel` (depth-stepped
+    trajectory-averaged histogram → uniform; noise-mode movie),
+    `SpectralFormFactorPanel` (SFF(t) dip→ramp→plateau chaos diagnostic),
+    `FidelityPanel` (fidelity / trace distance / purity / S(ρ) vs the ideal;
+    noise-mode), `StabilizerTableauPanel` (signed Pauli generators from the
+    AG tableau; Clifford-only, past the statevector cap), `LevelStatisticsPanel`
+    (Oganesyan–Huse gap ratio vs Poisson/GOE surmise), `QfiPanel` (quantum
+    Fisher info F_Q = 4 Var(J_α); SQL/Heisenberg witness), `SymmetrySectorsPanel`
+    (excitation-number + Z₂-parity decomposition; pure & noisy), `CoherencePanel`
+    (l₁ / relative-entropy coherence; pure statevector + noisy ρ),
+    `BranchTreePanel` (mid-circuit-measurement outcome tree via a self-contained
+    forking simulator), `QgtPanel` (Fubini–Study metric + Berry curvature over
+    free symbols — the QNG geometry), `ParticipationPanel` (IPR / PR /
+    participation entropy + per-column sweep; localization), `ConcurrencePanel`
+    (pairwise Wootters concurrence — entanglement-of-formation, monogamy-aware
+    complement to negativity), `DiagonalEnsemblePanel` (energy-basis populations
+    pₖ = |⟨Eₖ|ψ⟩|² + ⟨H⟩ / ΔE / d_eff — ETH).
   - `CouplingMapView.tsx`: shared SVG render of an adjacency list as
     a node-link graph (circular layout ≤ 24 qubits, grid above).
 - `server/` — FastAPI shell: `/api/health` + static-file mount.
@@ -312,7 +330,7 @@ host plus `/api/health`.
   picker.
 - `docs/` — markdown documentation: `panels.md` (per-panel
   reference), `tutorial.md` (workflow-based hands-on tour in six
-  parts, covering the full feature breadth incl. all 24 visualisers,
+  parts, covering the full feature breadth incl. the visualisers,
   cross-linked to panels.md),
   `architecture.md` (codebase map / data flow / fast paths),
   `qasm.md` (OpenQASM round-trip + the eight SDK emitters). All four
@@ -397,7 +415,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (739 tests): the simulator core is deeply covered —
+- **What's covered** (832 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
@@ -416,8 +434,12 @@ host plus `/api/health`.
   multi-qubit Kronecker path + noise mode), `sample`, KAK, the editor
   reducers + storage (`state.ts` history/coalescing/`loadFromStorage`,
   `tabs.ts` `multiReducer` + `buildInitial` migration), custom-gate expand
-  + persistence, and all 24 visualiser substrates (the `test-vizbatch*`
-  files). `npm run test:coverage` reports ~96% statements (core modules are
+  + persistence, every visualiser substrate (the `test-vizbatch*` files), and
+  the newer analysis helpers — `participation`, `concurrence` (incl. the
+  degeneracy-safe √ρ), `qfi`, `qgt`, `symmetrySectors`, `coherence`,
+  `spectralFormFactor`, `levelStatistics`, `diagonalEnsemble`, `branchTree`,
+  `noiseImpact`, `decoherence` — each against analytic ground truth.
+  `npm run test:coverage` reports ~96% statements (core modules are
   95–100%; the remaining tail is the React `useReducer`/`useEffect` hook
   bodies and DOM-only `exportSvg`, which the Node-only suite can't exercise
   without jsdom).

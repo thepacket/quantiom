@@ -55,7 +55,7 @@ client/src/
                 share links, recorder, docs modal, the main editor shell
   sim/          the simulator core (this is the brain)
   qasm/         OpenQASM 3 parse + emit + eight SDK / LaTeX emitters
-  panels/       ~40 collapsible peer panels (24 visualisers)
+  panels/       ~50 collapsible peer panels (30-plus visualisers)
   styles.css    all styles in one file
 server/         FastAPI shell — static host + health endpoint
 examples/       88 .qasm files in 10 categories, imported via Vite ?raw
@@ -183,6 +183,21 @@ sim/entanglement.ts     von Neumann entropy, mutual-information matrix,
 sim/correlations.ts     connected ⟨Z_iZ_j⟩ correlations
 sim/spacetime.ts        per-qubit ⟨Z⟩ vs circuit column
 sim/tsweep.ts           per-qubit ⟨Z⟩ vs the t clock
+sim/participation.ts    IPR / participation ratio + per-column sweep
+sim/concurrence.ts      pairwise Wootters concurrence (√ρ via the embedding)
+sim/qfi.ts              quantum Fisher information (collective-spin generator)
+sim/qgt.ts              quantum geometric tensor (Fubini–Study + Berry)
+sim/symmetrySectors.ts  excitation-number + Z₂-parity decomposition
+sim/coherence.ts        l₁ / relative-entropy coherence (pure + mixed ρ)
+sim/spectralFormFactor.ts  SFF(t) chaos diagnostic from a spectrum
+sim/levelStatistics.ts  Oganesyan–Huse gap-ratio statistics
+sim/hamSpectrum.ts      exact Pauli-sum eigenvalues
+sim/diagonalEnsemble.ts energy-basis populations (ETH); H eigenvectors
+sim/branchTree.ts       forking simulator for the mid-measurement tree
+sim/noiseImpact.ts      fidelity / trace distance / purity vs the ideal
+sim/decoherence.ts      per-column trajectory-averaged histogram
+(… plus the other visualiser substrates: magic, wigner, husimi, qsphere,
+ negativity, ptm, otoc, loschmidt, zx, tanner, unitary, interaction, …)
 ```
 
 ### The peephole optimiser
@@ -409,7 +424,7 @@ Quantiom ships with a comprehensive automated test suite. The numeric
 core — the part where correctness actually matters — is covered
 thoroughly and verified against analytic ground truth.
 
-- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **739
+- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **832
   tests (~96% statement coverage)** cover the statevector simulator
   (Bell / GHZ / rotations / measurement / the `initialize()` gate /
   big-endian), the X/Y-basis measurement primitives, every gate's matrix
@@ -424,12 +439,15 @@ thoroughly and verified against analytic ground truth.
   post-selection + custom Kraus), the optimiser (Adam / SGD / QNG, ZNE
   fits), probabilistic error cancellation, the noise model + IBM importer,
   process tomography, the KAK decomposition, the editor reducers +
-  storage migration, custom-gate expand/persistence, and all 24
-  visualiser substrates. The remaining tail is the React hook bodies and
+  storage migration, custom-gate expand/persistence, and every
+  visualiser substrate (including the participation/IPR, concurrence,
+  QFI, quantum-geometric-tensor, symmetry-sector, coherence,
+  spectral-form-factor, level-statistics, diagonal-ensemble, and
+  dynamic-branch-tree helpers). The remaining tail is the React hook bodies and
   DOM-only `exportSvg`, which the Node-only suite can't reach.
 - **Continuous integration.** `.github/workflows/ci.yml` type-checks
   the source and the tests, runs the full suite, and builds the client
-  on **every push and pull request**. A green build means all 739 tests
+  on **every push and pull request**. A green build means all 832 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
   **380-check** browser-side cross-section of the same engine the

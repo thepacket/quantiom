@@ -46,16 +46,21 @@ Process tomography reconstructs the χ matrix in a heatmap or Hinton view;
 equivalence-checking compares two open tabs by process fidelity and trace
 distance.
 
-**Visualisers.** A column of 24 entanglement-and-dynamics visualisers
-sits alongside the statevector / probability / Bloch panels: mutual
-information, entanglement spectrum and entropy profile, ZZ correlations,
-space–time ⟨Z⟩ and entropy, t-sweep traces and their Fourier spectrum,
-amplitude·phase, unitary heatmap, interaction graph, discrete-Wigner and
-spin Husimi-Q phase space, magic (stabilizer-Rényi M₂), entanglement
-negativity, Loschmidt / DQPT, the Pauli transfer matrix, Bloch
-trajectories, OTOC scrambling, exact Hamiltonian spectra, a Tanner /
-check graph, a Q-sphere, a ZX-calculus diagram, and a causal-cone
-overlay.
+**Visualisers.** A column of 30-plus entanglement, dynamics, and
+diagnostic visualisers sits alongside the statevector / probability /
+Bloch panels: mutual information, entanglement spectrum and entropy
+profile, ZZ correlations, space–time ⟨Z⟩ and entropy, t-sweep traces and
+their Fourier spectrum, amplitude·phase, unitary heatmap, interaction
+graph, discrete-Wigner and spin Husimi-Q phase space, magic
+(stabilizer-Rényi M₂), entanglement negativity and pairwise Wootters
+concurrence, Loschmidt / DQPT, the Pauli transfer matrix, Bloch
+trajectories, OTOC scrambling, exact Hamiltonian spectra with the
+spectral form factor, level-spacing statistics and the diagonal-ensemble
+(ETH) populations, the quantum Fisher information and Fubini–Study
+geometric tensor, participation / IPR, symmetry-sector and coherence
+readouts, a fidelity / purity and decoherence-movie view in noise mode, a
+dynamic-measurement branch tree, a Tanner / check graph, a Q-sphere, a
+ZX-calculus diagram, and a causal-cone overlay.
 
 **AI assistant.** An optional chat panel talks to OpenRouter (any model,
 your own key), receives the current circuit as OpenQASM 3 on every turn,
@@ -71,7 +76,7 @@ Live: **<https://quantiom.fly.dev>**
 ## Documentation
 
 - **[Tutorial walkthrough](docs/tutorial.md)** — a workflow-based tour
-  in six parts: foundations (build/edit), reading the state (all 24
+  in six parts: foundations (build/edit), reading the state (the
   visualisers by task), noise & mitigation, optimisation & algorithms
   (VQE, Trotter, the Clifford fast path), hardware & interop
   (transpile/export), and the AI assistant. Every section ends with
@@ -101,7 +106,7 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**739 tests (~96% statement coverage)** that run in continuous integration
+**832 tests (~96% statement coverage)** that run in continuous integration
 on **every push** (`.github/workflows/ci.yml`). They verify the statevector
 simulator (incl. the `initialize()` gate and X/Y-basis measurement), every
 gate's matrix unitarity and algebra, the Clifford tableau (with the
@@ -109,13 +114,16 @@ single-qubit Bloch reduction and noisy Pauli-frame), Pauli expectations,
 circuit equivalence, gate inversion, the OpenQASM 3 round-trip and parser
 branches, all eight SDK / LaTeX emitters, the transpiler / router /
 Trotter builder, the noise simulator + IBM importer, the optimiser, PEC,
-process tomography, KAK decomposition, the editor reducers, and all 24
-visualiser substrates — each checked against analytic ground truth.
+process tomography, KAK decomposition, the editor reducers, and every
+visualiser / analysis substrate — including participation/IPR, concurrence,
+QFI, the quantum geometric tensor, symmetry sectors, coherence, the spectral
+form factor, level statistics, the diagonal ensemble, and the dynamic branch
+tree — each checked against analytic ground truth.
 
 You don't have to take that on faith: the toolbar **Self-test** button
 re-runs a **380-check** cross-section of the same engine **live in your
 browser** in ~10 ms and shows the pass/fail report — itself a subset of
-the full **739-test** suite that runs in CI on every commit. See
+the full **832-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 

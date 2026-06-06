@@ -139,7 +139,7 @@ interference (`H·H`). Everything else is combinations of these.
 ## 0.7 What to ignore (for now)
 
 Quantiom is a research tool, so most of what you see is built for people
-doing serious work — the 24 visualisers, the noise model, the
+doing serious work — the 30-plus visualisers, the noise model, the
 optimisers, transpilation. **You don't need any of it to play and
 learn.** Stick to the editor + the three beginner panels. Come back to
 the rest when a question makes you curious about it.
@@ -433,6 +433,37 @@ cones — with no simulation at all.
 See [`panels.md`](panels.md) → Interaction graph / Tanner / Causal cone /
 ZX diagram.
 
+## 8b. More analysis panels (a quick tour)
+
+Beyond the panels above, several focused diagnostics are each one
+default-collapsed panel away. They follow the same patterns (a pure tested
+helper, capped, zero-cost until opened), so just expand the one whose
+question matches yours:
+
+- **Concurrence** & **Participation / IPR** — pairwise entanglement-of-
+  formation (the monogamy-aware complement to negativity: W → 2/3 on every
+  pair, GHZ → 0) and computational-basis localization (PR = effective # of
+  occupied basis states; the Anderson/MBL diagnostic, with a per-column
+  delocalization sweep).
+- **Coherence** & **Symmetry sectors** — l₁ / relative-entropy coherence
+  (watch it decay under phase damping in noise mode) and how the weight
+  splits across excitation-number / Z₂-parity sectors (does your ansatz
+  conserve particle number?).
+- **Quantum Fisher info** & **Quantum geometric tensor** — metrology and
+  parameter-space geometry: F_Q = 4 Var(J_α) (GHZ saturates the Heisenberg
+  limit N²; F_Q/N > 1 witnesses useful entanglement) and the Fubini–Study
+  metric the natural-gradient optimiser descends.
+- **Spectral form factor**, **Level statistics** & **Diagonal ensemble** —
+  quantum-chaos and thermalization from a Pauli-sum H: the dip→ramp→plateau
+  SFF, the Poisson-vs-GOE gap-ratio histogram, and the energy-basis
+  populations pₖ = |⟨Eₖ|ψ⟩|² (effective dimension d_eff) that ETH predicts
+  observables relax to.
+- **Dynamic branch tree** — for circuits with mid-circuit measurement, the
+  full outcome tree with per-edge Born probabilities (load the dynamic
+  teleportation example: two measurements → four 25 % branches).
+
+See [`panels.md`](panels.md) for the per-panel reference on each.
+
 ---
 
 # Part III — Noise & error mitigation
@@ -462,15 +493,23 @@ amplitude damping flipping one of the three qubits in transit.
 
 **Try a device import.** The Noise panel can import an IBM
 `BackendProperties` JSON (T1/T2, per-gate error, readout, coupling
-map), and it has a coupling-graph view and a custom-Kraus editor for
-arbitrary 1q/2q channels.
+map) — either from a file or live from the qiskit GitHub backend list
+via **Import IBM BackendProperties from Qiskit** — and it has a
+coupling-graph view and a custom-Kraus editor for arbitrary 1q/2q channels.
+
+**Quantify the damage.** With noise on, open **Fidelity & purity** for the
+one-glance F = ⟨ψ|ρ|ψ⟩ / trace distance / purity / S(ρ) vs the ideal, and
+**Decoherence** for the depth-stepped movie of the histogram flattening
+toward uniform. Both are noise-mode only and read the trajectory-averaged ρ.
+**Coherence** (noise mode) shows the off-diagonal coherence shrinking as
+phase damping bites.
 
 **Turn noise OFF** when you're done — Quantiom's default-fast
 invariant means a noise-off circuit runs at full noiseless speed; an
 accidentally-left-on noise model can be a surprise in the next
 section if you forget.
 
-See [`panels.md`](panels.md) → Noise model.
+See [`panels.md`](panels.md) → Noise model / Fidelity & purity / Decoherence.
 
 ## 10. ZNE: undoing some of the noise (5 min)
 
@@ -565,7 +604,14 @@ matches the Full-CI ground-state energy of H₂ at this bond length
   the gradient with the Fubini–Study metric — often far fewer steps
   than plain Adam on a curved landscape.
 
-See [`panels.md`](panels.md) → Expectation ⟨P⟩.
+**See the geometry itself.** Open the **Quantum geometric tensor** panel to
+view that Fubini–Study metric g_ij over your free symbols (heatmap + √det g +
+eigenvalues) — the curvature QNG is correcting for. The **Quantum Fisher
+info** panel reports F_Q = 4 Var(J_α), the metrological sensitivity and an
+entanglement witness (GHZ saturates the Heisenberg limit N²).
+
+See [`panels.md`](panels.md) → Expectation ⟨P⟩ / Quantum geometric tensor /
+Quantum Fisher info.
 
 ## 13. Hamiltonian → Trotter (5 min)
 
@@ -602,11 +648,19 @@ tabulates the measured syndrome bitstrings. Flip the **noise toggle**
 and it routes through a Pauli-frame tracker with per-gate depolarising
 injection — realistic syndromes from a stabilizer code.
 
-For dynamic (mid-circuit measurement) circuits generally, the
-**Measurement counts** panel is the shots view: N full simulations with
-the classical-register histogram.
+**Open Stabilizer generators** on the same circuit: it lists the n signed
+Pauli generators ⟨g₁…⟩ of the stabilizer group straight from the tableau
+(GHZ-4 → +XXXX / +ZZII / +IZZI / +IIZZ) — the compact description that works
+far past the statevector cap.
 
-See [`panels.md`](panels.md) → Syndrome sampling / Measurement counts.
+For dynamic (mid-circuit measurement) circuits generally, the
+**Measurement counts** panel is the shots view (N full simulations with the
+classical-register histogram), and the **Dynamic branch tree** shows the full
+outcome tree with per-edge Born probabilities — load the dynamic
+teleportation example to see two measurements fan out into four 25 % leaves.
+
+See [`panels.md`](panels.md) → Syndrome sampling / Measurement counts /
+Stabilizer generators / Dynamic branch tree.
 
 ---
 
