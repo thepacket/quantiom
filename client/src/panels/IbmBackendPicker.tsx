@@ -3,53 +3,68 @@ import { importIbmBackend, type NoiseModel } from "../sim/noise";
 
 /**
  * Picker for IBM device calibration snapshots published in Qiskit's
- * fake_provider. Lists a representative set of backends; clicking a row fetches
- * that device's `props_<name>.json` from GitHub (raw, CORS-open) and runs it
- * through `importIbmBackend`. Cancel / Esc / click-outside close it.
+ * fake_provider. The full backend list is fetched from the GitHub repo on open
+ * (so it's always complete and current); clicking a row fetches that device's
+ * `props_<name>.json` (raw, CORS-open) and runs it through `importIbmBackend`.
+ * Cancel / Esc / click-outside close it.
  */
 
-type Backend = { id: string; label: string; qubits: number; family: string };
+type Backend = { id: string; qubits?: number; family: string };
 
-// Curated, representative selection from Qiskit's ~80 fake backends, spanning
-// 1 → 156 qubits. The actual noise comes from each device's live props file.
-const BACKENDS: Backend[] = [
-  { id: "armonk", label: "ibmq_armonk", qubits: 1, family: "Canary" },
-  { id: "manila", label: "ibmq_manila", qubits: 5, family: "Falcon" },
-  { id: "lima", label: "ibmq_lima", qubits: 5, family: "Falcon" },
-  { id: "belem", label: "ibmq_belem", qubits: 5, family: "Falcon" },
-  { id: "quito", label: "ibmq_quito", qubits: 5, family: "Falcon" },
-  { id: "jakarta", label: "ibmq_jakarta", qubits: 7, family: "Falcon" },
-  { id: "lagos", label: "ibm_lagos", qubits: 7, family: "Falcon" },
-  { id: "nairobi", label: "ibm_nairobi", qubits: 7, family: "Falcon" },
-  { id: "perth", label: "ibm_perth", qubits: 7, family: "Falcon" },
-  { id: "oslo", label: "ibm_oslo", qubits: 7, family: "Falcon" },
-  { id: "guadalupe", label: "ibmq_guadalupe", qubits: 16, family: "Falcon" },
-  { id: "cairo", label: "ibm_cairo", qubits: 27, family: "Falcon" },
-  { id: "hanoi", label: "ibm_hanoi", qubits: 27, family: "Falcon" },
-  { id: "kolkata", label: "ibmq_kolkata", qubits: 27, family: "Falcon" },
-  { id: "mumbai", label: "ibmq_mumbai", qubits: 27, family: "Falcon" },
-  { id: "montreal", label: "ibmq_montreal", qubits: 27, family: "Falcon" },
-  { id: "auckland", label: "ibm_auckland", qubits: 27, family: "Falcon" },
-  { id: "geneva", label: "ibm_geneva", qubits: 27, family: "Falcon" },
-  { id: "brooklyn", label: "ibmq_brooklyn", qubits: 65, family: "Hummingbird" },
-  { id: "manhattan", label: "ibmq_manhattan", qubits: 65, family: "Hummingbird" },
-  { id: "washington", label: "ibm_washington", qubits: 127, family: "Eagle" },
-  { id: "sherbrooke", label: "ibm_sherbrooke", qubits: 127, family: "Eagle" },
-  { id: "brisbane", label: "ibm_brisbane", qubits: 127, family: "Eagle" },
-  { id: "kyoto", label: "ibm_kyoto", qubits: 127, family: "Eagle" },
-  { id: "osaka", label: "ibm_osaka", qubits: 127, family: "Eagle" },
-  { id: "kyiv", label: "ibm_kyiv", qubits: 127, family: "Eagle" },
-  { id: "quebec", label: "ibm_quebec", qubits: 127, family: "Eagle" },
-  { id: "kawasaki", label: "ibm_kawasaki", qubits: 127, family: "Eagle" },
-  { id: "torino", label: "ibm_torino", qubits: 133, family: "Heron" },
-  { id: "fez", label: "ibm_fez", qubits: 156, family: "Heron" },
-  { id: "marrakesh", label: "ibm_marrakesh", qubits: 156, family: "Heron" },
-];
-
+const CONTENTS_API =
+  "https://api.github.com/repos/Qiskit/qiskit-ibm-runtime/contents/qiskit_ibm_runtime/fake_provider/backends";
 const RAW = (id: string) =>
   `https://raw.githubusercontent.com/Qiskit/qiskit-ibm-runtime/main/qiskit_ibm_runtime/fake_provider/backends/${id}/props_${id}.json`;
 
+// Known qubit counts (the props file is authoritative on click; this is only
+// to enrich the table). Unknown backends still list, with "—".
+const QUBITS: Record<string, number> = {
+  armonk: 1,
+  yorktown: 5, manila: 5, lima: 5, belem: 5, quito: 5, bogota: 5, santiago: 5,
+  athens: 5, rome: 5, ourense: 5, valencia: 5, vigo: 5, essex: 5, london: 5, burlington: 5,
+  jakarta: 7, lagos: 7, nairobi: 7, perth: 7, oslo: 7, casablanca: 7,
+  guadalupe: 16,
+  almaden: 20, boeblingen: 20, singapore: 20, johannesburg: 20, poughkeepsie: 20,
+  cairo: 27, hanoi: 27, kolkata: 27, mumbai: 27, montreal: 27, toronto: 27,
+  sydney: 27, auckland: 27, geneva: 27, paris: 27, algiers: 27,
+  cambridge: 28, rochester: 53,
+  brooklyn: 65, manhattan: 65,
+  washington: 127, sherbrooke: 127, brisbane: 127, kyoto: 127, osaka: 127,
+  kyiv: 127, quebec: 127, kawasaki: 127, cusco: 127,
+  torino: 133, fez: 156, marrakesh: 156,
+};
+
+function familyFor(q: number | undefined): string {
+  if (q === 1) return "Canary";
+  if (q === 5 || q === 7 || q === 16 || q === 27) return "Falcon";
+  if (q === 20 || q === 28 || q === 53 || q === 65) return "Hummingbird";
+  if (q === 127) return "Eagle";
+  if (q === 133 || q === 156) return "Heron";
+  return "";
+}
+
+// Offline fallback — the known backend folders, used if the GitHub API call
+// fails (rate limit / no network). The live fetch supersedes this when it works.
+const FALLBACK = [
+  "aachen", "algiers", "almaden", "armonk", "athens", "auckland", "belem", "berlin",
+  "boeblingen", "bogota", "boston", "brisbane", "brooklyn", "brussels", "burlington",
+  "cairo", "cambridge", "casablanca", "cusco", "essex", "fez", "fractional", "geneva",
+  "guadalupe", "hanoi", "jakarta", "johannesburg", "kawasaki", "kingston", "kolkata",
+  "kyiv", "kyoto", "lagos", "lima", "london", "manhattan", "manila", "marrakesh",
+  "melbourne", "miami", "montreal", "mumbai", "nairobi", "nighthawk", "osaka", "oslo",
+  "ourense", "paris", "peekskill", "perth", "pittsburgh", "poughkeepsie", "prague",
+  "quebec", "quito", "rochester", "rome", "santiago", "sherbrooke", "singapore",
+  "strasbourg", "sydney", "torino", "toronto", "valencia", "vigo", "washington", "yorktown",
+];
+
+function toBackends(ids: string[]): Backend[] {
+  return ids
+    .map((id) => ({ id, qubits: QUBITS[id], family: familyFor(QUBITS[id]) }))
+    .sort((a, b) => (a.qubits ?? 9999) - (b.qubits ?? 9999) || a.id.localeCompare(b.id));
+}
+
 export function IbmBackendPicker({ onPick, onClose }: { onPick: (n: NoiseModel) => void; onClose: () => void }) {
+  const [list, setList] = useState<Backend[] | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +74,20 @@ export function IbmBackendPicker({ onPick, onClose }: { onPick: (n: NoiseModel) 
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // Fetch the full backend folder list from the repo on open.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(CONTENTS_API)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((entries: Array<{ name: string; type: string }>) => {
+        if (cancelled) return;
+        const ids = entries.filter((e) => e.type === "dir").map((e) => e.name);
+        setList(toBackends(ids.length > 0 ? ids : FALLBACK));
+      })
+      .catch(() => { if (!cancelled) setList(toBackends(FALLBACK)); });
+    return () => { cancelled = true; };
+  }, []);
+
   const pick = async (b: Backend) => {
     if (loading) return;
     setError(null);
@@ -66,10 +95,9 @@ export function IbmBackendPicker({ onPick, onClose }: { onPick: (n: NoiseModel) 
     try {
       const res = await fetch(RAW(b.id));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const imported = importIbmBackend(await res.text());
-      onPick(imported);
+      onPick(importIbmBackend(await res.text()));
     } catch (e) {
-      setError(`Couldn't load ${b.label}: ${e instanceof Error ? e.message : String(e)}`);
+      setError(`Couldn't load ${b.id}: ${e instanceof Error ? e.message : String(e)}`);
       setLoading(null);
     }
   };
@@ -82,32 +110,36 @@ export function IbmBackendPicker({ onPick, onClose }: { onPick: (n: NoiseModel) 
           <button className="ibmpick__x" onClick={onClose} title="Cancel (Esc)">×</button>
         </div>
         <p className="ibmpick__note">
-          Live calibration snapshots from Qiskit's <code>fake_provider</code>. Click a
-          device to fetch its props and load its noise model.
+          Every device in Qiskit's <code>fake_provider</code>{list ? ` (${list.length})` : ""}.
+          Click one to fetch its live props and load its noise model.
         </p>
         {error && <div className="ibmpick__err">✗ {error}</div>}
         <div className="ibmpick__scroll">
-          <table className="ibmpick__table">
-            <thead>
-              <tr><th>Backend</th><th>Qubits</th><th>Family</th></tr>
-            </thead>
-            <tbody>
-              {BACKENDS.map((b) => (
-                <tr
-                  key={b.id}
-                  className={"ibmpick__row" + (loading === b.id ? " ibmpick__row--loading" : "")}
-                  onClick={() => pick(b)}
-                >
-                  <td>{b.label}</td>
-                  <td className="ibmpick__num">{b.qubits}</td>
-                  <td className="ibmpick__fam">{b.family}{loading === b.id ? " · loading…" : ""}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {!list ? (
+            <div className="ibmpick__loading">loading device list…</div>
+          ) : (
+            <table className="ibmpick__table">
+              <thead>
+                <tr><th>Backend</th><th>Qubits</th><th>Family</th></tr>
+              </thead>
+              <tbody>
+                {list.map((b) => (
+                  <tr
+                    key={b.id}
+                    className={"ibmpick__row" + (loading === b.id ? " ibmpick__row--loading" : "")}
+                    onClick={() => pick(b)}
+                  >
+                    <td>{b.id}</td>
+                    <td className="ibmpick__num">{b.qubits ?? "—"}</td>
+                    <td className="ibmpick__fam">{b.family}{loading === b.id ? " · loading…" : ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
         <div className="ibmpick__foot">
-          <a href="https://github.com/Qiskit/qiskit-ibm-runtime/tree/main/qiskit_ibm_runtime/fake_provider/backends" target="_blank" rel="noreferrer">all backends ↗</a>
+          <a href="https://github.com/Qiskit/qiskit-ibm-runtime/tree/main/qiskit_ibm_runtime/fake_provider/backends" target="_blank" rel="noreferrer">repo ↗</a>
           <button className="ibmpick__cancel" onClick={onClose}>Cancel</button>
         </div>
       </div>

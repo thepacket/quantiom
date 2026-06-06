@@ -765,6 +765,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .ibmpick__row td { padding: 6px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
 .ibmpick__row:hover td { background: var(--bg-3, var(--bg-2)); }
 .ibmpick__row--loading td { opacity: 0.6; cursor: default; }
+.ibmpick__loading { padding: 24px; text-align: center; color: var(--muted); font-size: 12px; }
 .ibmpick__num { text-align: right; font-variant-numeric: tabular-nums; width: 56px; }
 .ibmpick__fam { color: var(--muted); }
 .ibmpick__foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-top: 1px solid var(--border); font-size: 11px; }
