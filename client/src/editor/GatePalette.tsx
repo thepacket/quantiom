@@ -141,8 +141,7 @@ export function GatePalette({ customGates = [], onRemoveCustomGate }: Props) {
                       onDragStart={(e) => onDragStart(e, g.id, g.symbol)}
                       data-tip={`${g.name}${g.description ? " — " + g.description : ""}`}
                     >
-                      <span className="palette__symbol">{g.symbol}</span>
-                      {g.category !== "identity-pauli" && <span className="palette__id">{g.id}</span>}
+                      <span className="palette__symbol">{g.id.toUpperCase()}</span>
                     </div>
                   ))}
                 </div>
