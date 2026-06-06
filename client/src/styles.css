@@ -940,6 +940,66 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .sff__plateau { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.7; }
 .sff__heis { stroke: #ffd24f; stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.7; }
 .sff__legend { font-size: 10px; color: var(--muted); }
+
+/* Level statistics (gap-ratio) panel */
+.lvl__presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.lvl__preset { font-size: 9px; padding: 1px 5px; color: var(--muted); }
+.lvl__input { width: 100%; box-sizing: border-box; font-family: var(--mono, monospace); font-size: 11px; resize: vertical; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 4px; }
+.lvl__out { display: flex; flex-direction: column; gap: 4px; }
+.lvl__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.lvl__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.lvl__verdict { color: var(--accent-2); font-weight: 600; }
+.lvl__svg { display: block; }
+.lvl__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.lvl__axis-line { stroke: var(--border); stroke-width: 1; }
+.lvl__bar { fill: var(--accent); opacity: 0.55; }
+.lvl__poisson { fill: none; stroke: #6fb1ff; stroke-width: 1.4; }
+.lvl__goe { fill: none; stroke: #ff8e6f; stroke-width: 1.4; }
+.lvl__poisson-mark { stroke: #6fb1ff; stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.6; }
+.lvl__goe-mark { stroke: #ff8e6f; stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.6; }
+.lvl__mean-mark { stroke: var(--fg); stroke-width: 1.4; }
+.lvl__legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 10px; color: var(--muted); }
+.lvl__key--poisson { color: #6fb1ff; }
+.lvl__key--goe { color: #ff8e6f; }
+.lvl__key--warn { color: #ffd24f; }
+
+/* Quantum Fisher information panel */
+.qfi { display: flex; flex-direction: column; gap: 6px; }
+.qfi__axes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.qfi__label { font-size: 11px; color: var(--muted); }
+.qfi__axis { font-size: 10px; padding: 1px 7px; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; background: var(--bg-2); }
+.qfi__axis--on { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.qfi__out { display: flex; flex-direction: column; gap: 4px; }
+.qfi__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.qfi__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.qfi__verdict { color: var(--muted); }
+.qfi__verdict--ent { color: var(--accent-2); font-weight: 600; }
+.qfi__svg { display: block; }
+.qfi__track { stroke: var(--border); stroke-width: 2; }
+.qfi__sql-band { fill: var(--muted); opacity: 0.15; }
+.qfi__sql { stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 3 2; }
+.qfi__heis { stroke: #ffd24f; stroke-width: 1.4; }
+.qfi__fill { stroke: var(--accent-2); stroke-width: 3; }
+.qfi__dot { fill: var(--accent-2); }
+.qfi__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+
+/* Symmetry sectors panel */
+.sym { display: flex; flex-direction: column; gap: 6px; }
+.sym__badges { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; }
+.sym__badge { font-size: 10px; padding: 1px 7px; border-radius: 3px; color: var(--muted); border: 1px solid var(--border); background: var(--bg-2); }
+.sym__badge--on { color: var(--bg); background: var(--accent-2); border-color: var(--accent-2); font-weight: 600; }
+.sym__pz { color: var(--muted); }
+.sym__pz b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.sym__svg { display: block; }
+.sym__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.sym__val { fill: var(--fg); font-size: 9px; font-variant-numeric: tabular-nums; }
+.sym__axis-line { stroke: var(--border); stroke-width: 1; }
+.sym__bar { fill: var(--accent); }
+.sym__bar--odd { fill: var(--accent-2); }
+.sym__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
+.sym__key--even { color: var(--accent); }
+.sym__key--odd { color: var(--accent-2); }
+
 .hamspec__swatch { width: 12px; height: 0; border-top-width: 2px; border-top-style: solid; display: inline-block; }
 .hamspec__swatch--ground { border-top-color: #7ee787; }
 .hamspec__swatch--exp { border-top-style: dashed; border-top-color: #ffd24f; }

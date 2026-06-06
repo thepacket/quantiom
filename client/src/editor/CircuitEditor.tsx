@@ -73,12 +73,15 @@ import { TSweepFFTPanel } from "../panels/TSweepFFTPanel";
 import { WignerPanel } from "../panels/WignerPanel";
 import { MagicPanel } from "../panels/MagicPanel";
 import { NegativityPanel } from "../panels/NegativityPanel";
+import { QfiPanel } from "../panels/QfiPanel";
+import { SymmetrySectorsPanel } from "../panels/SymmetrySectorsPanel";
 import { LoschmidtPanel } from "../panels/LoschmidtPanel";
 import { PTMPanel } from "../panels/PTMPanel";
 import { BlochTrajectoryPanel } from "../panels/BlochTrajectoryPanel";
 import { OtocPanel } from "../panels/OtocPanel";
 import { HamSpectrumPanel } from "../panels/HamSpectrumPanel";
 import { SpectralFormFactorPanel } from "../panels/SpectralFormFactorPanel";
+import { LevelStatisticsPanel } from "../panels/LevelStatisticsPanel";
 import { TannerPanel } from "../panels/TannerPanel";
 import { StabilizerTableauPanel } from "../panels/StabilizerTableauPanel";
 import { QSpherePanel } from "../panels/QSpherePanel";
@@ -1180,6 +1183,8 @@ export function CircuitEditor() {
         <ErrorBoundary label="zx"><ZXPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="mutual-info"><MutualInfoPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="negativity"><NegativityPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="qfi"><QfiPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="symmetry-sectors"><SymmetrySectorsPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="schmidt"><SchmidtPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="entropy-profile"><EntropyProfilePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="correlations"><CorrelationPanel state={simState} /></ErrorBoundary>
@@ -1244,6 +1249,7 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="ham-spectrum"><HamSpectrumPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="spectral-form-factor"><SpectralFormFactorPanel /></ErrorBoundary>
+        <ErrorBoundary label="level-statistics"><LevelStatisticsPanel /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>
