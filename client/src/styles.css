@@ -1050,6 +1050,53 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .part__curve { fill: none; stroke: var(--accent-2); stroke-width: 1.4; }
 .part__legend { font-size: 10px; color: var(--muted); }
 
+/* Structure factor S(k) panel */
+.sk__out { display: flex; flex-direction: column; gap: 4px; }
+.sk__stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--muted); }
+.sk__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.sk__svg { display: block; }
+.sk__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.sk__axis-line { stroke: var(--border); stroke-width: 1; }
+.sk__zero { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.6; }
+.sk__curve { fill: none; stroke: var(--accent-2); stroke-width: 1.6; }
+.sk__peak { stroke: #ffd24f; stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.8; }
+.sk__legend { font-size: 10px; color: var(--muted); }
+
+/* Krylov complexity panel */
+.kry__presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.kry__preset { font-size: 9px; padding: 1px 5px; color: var(--muted); }
+.kry__input { width: 100%; box-sizing: border-box; font-family: var(--mono, monospace); font-size: 11px; resize: vertical; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 4px; }
+.kry__out { display: flex; flex-direction: column; gap: 4px; }
+.kry__stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--muted); }
+.kry__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.kry__svg { display: block; }
+.kry__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.kry__axis-line { stroke: var(--border); stroke-width: 1; }
+.kry__bar { fill: var(--accent); opacity: 0.8; }
+.kry__curve { fill: none; stroke: var(--accent-2); stroke-width: 1.6; }
+.kry__legend { font-size: 10px; color: var(--muted); }
+
+/* Operator entanglement panel */
+.opent { display: flex; flex-direction: column; gap: 4px; }
+.opent__stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--muted); }
+.opent__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.opent__svg { display: block; }
+.opent__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.opent__axis-line { stroke: var(--border); stroke-width: 1; }
+.opent__bar { fill: var(--accent-2); }
+.opent__legend { font-size: 10px; color: var(--muted); }
+
+/* Entanglement asymmetry panel */
+.asym__out { display: flex; flex-direction: column; gap: 4px; }
+.asym__stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--muted); }
+.asym__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.asym__svg { display: block; }
+.asym__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.asym__axis-line { stroke: var(--border); stroke-width: 1; }
+.asym__curve { fill: none; stroke: var(--accent-2); stroke-width: 1.6; }
+.asym__dot { fill: var(--accent-2); }
+.asym__legend { font-size: 10px; color: var(--muted); }
+
 /* Symmetry sectors panel */
 .sym { display: flex; flex-direction: column; gap: 6px; }
 .sym__badges { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; }

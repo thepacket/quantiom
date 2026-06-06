@@ -78,6 +78,10 @@ import { QfiPanel } from "../panels/QfiPanel";
 import { QgtPanel } from "../panels/QgtPanel";
 import { SymmetrySectorsPanel } from "../panels/SymmetrySectorsPanel";
 import { ParticipationPanel } from "../panels/ParticipationPanel";
+import { StructureFactorPanel } from "../panels/StructureFactorPanel";
+import { KrylovPanel } from "../panels/KrylovPanel";
+import { OperatorEntanglementPanel } from "../panels/OperatorEntanglementPanel";
+import { AsymmetryPanel } from "../panels/AsymmetryPanel";
 import { LoschmidtPanel } from "../panels/LoschmidtPanel";
 import { PTMPanel } from "../panels/PTMPanel";
 import { BlochTrajectoryPanel } from "../panels/BlochTrajectoryPanel";
@@ -1192,6 +1196,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="ptm">
           <PTMPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="operator-entanglement">
+          <OperatorEntanglementPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="zx"><ZXPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="mutual-info"><MutualInfoPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="negativity"><NegativityPanel state={simState} /></ErrorBoundary>
@@ -1204,9 +1211,13 @@ export function CircuitEditor() {
         <ErrorBoundary label="participation">
           <ParticipationPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="entanglement-asymmetry">
+          <AsymmetryPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="schmidt"><SchmidtPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="entropy-profile"><EntropyProfilePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="correlations"><CorrelationPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="structure-factor"><StructureFactorPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="space-time">
           <SpaceTimePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
@@ -1225,6 +1236,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="otoc">
           <OtocPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="krylov"><KrylovPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="interaction-graph"><InteractionGraphPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="tanner"><TannerPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="stabilizer-tableau"><StabilizerTableauPanel circuit={circuit} customGates={customGates} /></ErrorBoundary>
