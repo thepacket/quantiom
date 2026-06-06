@@ -900,6 +900,20 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .hamspec__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
 .hamspec__legend span { display: inline-flex; align-items: center; gap: 4px; }
 
+/* ─── Stabilizer generators ────────────────────────────────────────── */
+.stab { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+.stab__hint { font-size: 10px; color: var(--muted); }
+.stab__list { display: flex; flex-direction: column; gap: 2px; }
+.stab__gen { display: flex; align-items: baseline; gap: 6px; font-family: ui-monospace, monospace; font-size: 13px; }
+.stab__idx { color: var(--muted); font-size: 11px; min-width: 22px; }
+.stab__sign { color: #3fb950; font-weight: 700; }
+.stab__sign--neg { color: #f0883e; }
+.stab__paulis { letter-spacing: 1px; }
+.stab__p--I { color: var(--muted); opacity: 0.5; }
+.stab__p--X { color: #7ee0ff; font-weight: 700; }
+.stab__p--Y { color: #c98aff; font-weight: 700; }
+.stab__p--Z { color: #f7b955; font-weight: 700; }
+
 /* ─── Fidelity & purity ────────────────────────────────────────────── */
 .fid { display: flex; flex-direction: column; gap: 8px; padding: 2px 0; }
 .fid__row { display: flex; flex-direction: column; gap: 3px; }

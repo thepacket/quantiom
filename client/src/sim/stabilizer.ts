@@ -278,6 +278,28 @@ export class Stabilizer {
    * O(n³) per qubit, called once per simulate(); cheap relative to gate
    * application.
    */
+  /**
+   * The n stabilizer generators ⟨g₁,…,gₙ⟩ as signed Pauli strings — the
+   * group that fixes the state. Sign is the row phase (+ for r=0, − for r=1);
+   * each character is I/X/Y/Z from the (x_q, z_q) bit pair. E.g. a Bell pair
+   * yields two of {+XX, +ZZ, −YY}. Big-endian: qubit 0 is the leftmost char.
+   */
+  stabilizers(): string[] {
+    const n = this.n;
+    const out: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const row = n + i; // stabilizer rows occupy the second half of the tableau
+      let s = this.r(row) ? "-" : "+";
+      for (let q = 0; q < n; q++) {
+        const x = this.get(row, q);
+        const z = this.get(row, n + q);
+        s += x && z ? "Y" : x ? "X" : z ? "Z" : "I";
+      }
+      out.push(s);
+    }
+    return out;
+  }
+
   blochVectors(): { x: number; y: number; z: number }[] {
     const n = this.n;
     const out: { x: number; y: number; z: number }[] = new Array(n);

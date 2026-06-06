@@ -80,6 +80,7 @@ import { OtocPanel } from "../panels/OtocPanel";
 import { HamSpectrumPanel } from "../panels/HamSpectrumPanel";
 import { SpectralFormFactorPanel } from "../panels/SpectralFormFactorPanel";
 import { TannerPanel } from "../panels/TannerPanel";
+import { StabilizerTableauPanel } from "../panels/StabilizerTableauPanel";
 import { QSpherePanel } from "../panels/QSpherePanel";
 import { HusimiPanel } from "../panels/HusimiPanel";
 import { ZXPanel } from "../panels/ZXPanel";
@@ -1202,6 +1203,7 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="interaction-graph"><InteractionGraphPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="tanner"><TannerPanel circuit={circuit} /></ErrorBoundary>
+        <ErrorBoundary label="stabilizer-tableau"><StabilizerTableauPanel circuit={circuit} customGates={customGates} /></ErrorBoundary>
         <ErrorBoundary label="light-cone">
           <LightConePanel numQubits={circuit.numQubits} target={coneTarget} dir={coneDir} onTarget={setConeTarget} onDir={setConeDir} />
         </ErrorBoundary>
