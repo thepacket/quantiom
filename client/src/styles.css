@@ -983,6 +983,18 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .qfi__dot { fill: var(--accent-2); }
 .qfi__legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--muted); }
 
+/* Quantum geometric tensor panel */
+.qgt { display: flex; flex-direction: column; gap: 6px; }
+.qgt__stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--muted); }
+.qgt__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.qgt__grid { display: grid; gap: 2px; }
+.qgt__corner { }
+.qgt__hdr { font-size: 10px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; }
+.qgt__hdr--row { text-align: right; padding-right: 4px; align-self: center; }
+.qgt__cell { font-size: 10px; color: var(--fg); text-align: center; padding: 3px 2px; border-radius: 2px; font-variant-numeric: tabular-nums; }
+.qgt__legend { font-size: 10px; color: var(--muted); }
+.qgt__berry { color: var(--accent-2); }
+
 /* Coherence panel */
 .coh { display: flex; flex-direction: column; gap: 8px; }
 .coh__row { display: flex; flex-direction: column; gap: 3px; }
