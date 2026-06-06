@@ -40,7 +40,7 @@ function estimateGateWidth(gate: PlacedGate, customGates: CustomGate[]): number 
   if (isCustom) {
     const cd = customGates.find((c) => c.id === gate.gateId.slice(CUSTOM_PREFIX.length));
     const label = cd?.name?.slice(0, 8) ?? "?";
-    return Math.max(40, label.length * 8 + 12);
+    return Math.max(40, Math.ceil(label.length * 9.6 + 14));
   }
   const def = GATES_BY_ID[gate.gateId];
   if (!def) return 36;
@@ -55,7 +55,7 @@ function estimateGateWidth(gate: PlacedGate, customGates: CustomGate[]): number 
     case "delay": return 44;
     case "box":
     default:
-      return Math.max(36, label.length * 8 + 12);
+      return Math.max(36, Math.ceil(label.length * 9.6 + 14));
   }
 }
 
@@ -632,7 +632,7 @@ function PlacedGateView({
     const yTop = lo * ROW_H + 8;
     const boxH = (hi - lo + 1) * ROW_H - 16;
     const label = customDef?.name ?? "?";
-    const w = Math.max(40, label.length * 8 + 12);
+    const w = Math.max(40, Math.ceil(label.length * 9.6 + 14));
     return (
       <g
         className={"gate gate--custom" + (selected ? " gate--selected" : "") + (past ? " gate--past" : "") + (matched ? " gate--match" : "") + (dimmed ? " gate--dimmed" : "")}
@@ -780,7 +780,7 @@ function TargetGlyph({
       );
     case "box":
     default: {
-      const w = Math.max(36, label.length * 8 + 12);
+      const w = Math.max(36, Math.ceil(label.length * 9.6 + 14));
       return (
         <g>
           <rect x={x - w / 2} y={y - 18} width={w} height={36} rx={5} className="gate__box" />
