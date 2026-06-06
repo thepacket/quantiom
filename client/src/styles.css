@@ -93,7 +93,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__input-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--border); background: var(--bg-2); }
 .chat__input { flex: 1; padding: 6px 8px; font-family: inherit; font-size: 17px; resize: vertical; min-height: 38px; max-height: 200px; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; }
 .chat__input:focus { outline: none; border-color: var(--accent); }
-.chat__send { align-self: center; min-width: 72px; font-size: 17px; padding: 8px 14px; background: var(--panel); }
+.chat__send { align-self: center; min-width: 72px; font-size: 17px; font-weight: 400; padding: 8px 14px; background: var(--panel); }
 .chat__error { padding: 6px 10px; color: #ff8a8a; font-size: 16px; }
 .chat__context { position: relative; }
 .chat__context-pop { position: absolute; top: 100%; right: 0; margin-top: 4px; width: 260px; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); z-index: 200; padding: 6px 4px; }
@@ -173,11 +173,11 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .palette__tile {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   background: var(--tile-color, var(--panel-2)); border: 1.5px solid var(--tile-color, var(--border)); border-radius: 4px;
-  height: 34px; cursor: grab; user-select: none; color: #111; overflow: hidden;
+  height: 34px; cursor: default; user-select: none; color: #111; overflow: hidden;
   transition: filter 80ms, transform 80ms, box-shadow 80ms;
 }
 .palette__tile:hover { filter: brightness(1.12); box-shadow: 0 0 0 2px rgba(0,0,0,0.28) inset; }
-.palette__tile:active { cursor: grabbing; transform: scale(0.97); }
+.palette__tile:active { transform: scale(0.97); }
 
 /* Category fill/border colors — applied via data-cat attribute. The tile is
    filled with its category colour and the glyph is black for contrast. */
