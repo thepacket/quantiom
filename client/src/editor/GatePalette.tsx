@@ -6,6 +6,11 @@ import { CUSTOM_PREFIX } from "./customGates";
 
 export const DND_MIME = "application/x-quantiom-gate";
 
+/** Common alias shown as a secondary id on the palette tile (e.g. CX ≡ CNOT). */
+const SECONDARY_ID: Record<string, string> = {
+  cx: "CNOT",
+};
+
 type Props = {
   customGates?: CustomGate[];
   onRemoveCustomGate?: (id: string) => void;
@@ -142,6 +147,7 @@ export function GatePalette({ customGates = [], onRemoveCustomGate }: Props) {
                       data-tip={`${g.name}${g.description ? " — " + g.description : ""}`}
                     >
                       <span className="palette__symbol">{g.id.toUpperCase()}</span>
+                      {SECONDARY_ID[g.id] && <span className="palette__id">{SECONDARY_ID[g.id]}</span>}
                     </div>
                   ))}
                 </div>
