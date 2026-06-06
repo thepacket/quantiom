@@ -142,7 +142,7 @@ export function GatePalette({ customGates = [], onRemoveCustomGate }: Props) {
                       data-tip={`${g.name}${g.description ? " — " + g.description : ""}`}
                     >
                       <span className="palette__symbol">{g.symbol}</span>
-                      <span className="palette__id">{g.id}</span>
+                      {g.category !== "identity-pauli" && <span className="palette__id">{g.id}</span>}
                     </div>
                   ))}
                 </div>
