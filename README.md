@@ -77,7 +77,14 @@ ZX-calculus diagram, and a causal-cone overlay.
 
 **AI assistant.** An optional chat panel talks to OpenRouter (any model,
 your own key), receives the current circuit as OpenQASM 3 on every turn,
-and auto-opens any OpenQASM block in its reply as a new tab.
+and auto-opens any OpenQASM block in its reply as a new tab. A searchable,
+categorized **prompt library** drops ready-made prompts into the box. A
+**dialogue mode** turns it into a debate: two model instances take roles
+(Proposer ↔ Critic, Professor ↔ Student, IBM ↔ Rigetti, or your own) and
+discuss the circuit turn by turn — every turn grounded in the same
+simulator context, so the exchange stays checkable. Stop or jump in at
+any point, and export the whole transcript (with the circuit embedded) as
+Markdown.
 
 **Interoperability.** Circuits round-trip OpenQASM 3 (and parse
 OpenQASM 2), export to Qiskit, Cirq, Braket, Q#, PyQuil, pytket,
@@ -111,7 +118,7 @@ item (next to Help) shows the version, GitHub link, authorship, and
 licence.
 
 Quantiom is moving fast and the surface to verify is wide — 64 gates,
-three simulator backends, an AI chat assistant, ~59 panels (40 of them
+three simulator backends, an AI chat assistant, ~65 panels (40 of them
 entanglement / dynamics / state visualisers), OpenQASM 3 round-trip,
 and nine code/format emitters. Expect rough edges; bug
 reports against any of it are welcome.
@@ -639,6 +646,25 @@ is still 100% client-side.
   auto-open treatment.
 - **Model picker.** Live-fetches the full OpenRouter catalog with
   search; click any model to switch. Choice persists per browser.
+- **Prompt library.** A searchable **prompts** picker with ~65
+  ready-made prompts across 10 categories (Analyze, Create, Optimize,
+  Transform, Explain & derive, Debug & verify, Export & hardware, Noise
+  & error, Benchmark & characterize, Visualize & interpret). Selecting
+  one drops it into the box for editing (it doesn't auto-send);
+  bracketed `[values]` are fill-in placeholders, and the
+  benchmark/visualize prompts are written to *interpret* what Quantiom
+  computes.
+- **AI ↔ AI dialogue mode.** A `chat | dialogue` toggle turns the panel
+  into a debate between two model instances. Each side gets its own
+  **name, persona, and model** (presets: Proposer ↔ Critic, Professor ↔
+  Student, IBM ↔ Rigetti); they take alternating turns about the current
+  circuit, **every turn grounded in the same circuit + attached
+  context** so claims stay checkable against the simulator. A turn cap
+  (2–12), a live turn counter, and an automatic convergence-stop keep
+  the cost bounded; you can **stop** any time or **jump in** with your
+  own message and continue. Proposed circuits get a click-to-open-as-tab
+  button, and **export** downloads the whole transcript — with the
+  circuit embedded — as Markdown.
 - **Streaming responses** via SSE, with a Stop button to cancel
   mid-stream. ⌘/Ctrl+Enter sends.
 - **Resizable height** by dragging the top edge; collapsible to a 24px
