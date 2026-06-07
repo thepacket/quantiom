@@ -896,9 +896,7 @@ export function CircuitEditor() {
           <EndiannessToggle />
         </div>
         <div className="app__title">{circuit.name ?? "Untitled"}</div>
-        <div className="app__header-right">
-          <span className="app__trust-note">{"The panels with a red dot can't be trusted in presence of noise"}</span>
-        </div>
+        <div className="app__header-right" />
       </header>
       <GatePalette customGates={customGates} onRemoveCustomGate={removeCustomGate} />
       <div className="editor__center">
@@ -1223,25 +1221,13 @@ export function CircuitEditor() {
             <button className="editor__panels-btn" onClick={() => setAllPanelsCollapsed(true)} title="Collapse all panels">none</button>
           </span>
         </div>
+        <div className="panels-cat">Controls</div>
         <ErrorBoundary label="parameters">
           <ParameterPanel state={simState} values={paramValues} onChange={setParamValues} />
         </ErrorBoundary>
+
+        <div className="panels-cat">State</div>
         <ErrorBoundary label="statevector"><StatevectorPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="measurement-counts">
-          <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} shotsTick={shotsTick} />
-        </ErrorBoundary>
-        <ErrorBoundary label="branch-tree">
-          <BranchTreePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
-        </ErrorBoundary>
-        <ErrorBoundary label="decoherence">
-          <DecoherencePanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
-        </ErrorBoundary>
-        <ErrorBoundary label="fidelity">
-          <FidelityPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
-        </ErrorBoundary>
-        <ErrorBoundary label="coherence">
-          <CoherencePanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
-        </ErrorBoundary>
         <ErrorBoundary label="amp-phase"><AmplitudePhasePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="probabilities">
           <ProbabilityPanel
@@ -1252,15 +1238,27 @@ export function CircuitEditor() {
             shotsTick={shotsTick}
           />
         </ErrorBoundary>
+        <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="bloch"><BlochPanel state={simState} gpuBlochVectors={gpuBloch} /></ErrorBoundary>
         <ErrorBoundary label="bloch-trajectory">
           <BlochTrajectoryPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
-        <ErrorBoundary label="phase-disk"><PhaseDiskPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="qsphere"><QSpherePanel state={simState} /></ErrorBoundary>
+
+        <div className="panels-cat">Measurement</div>
+        <ErrorBoundary label="measurement-counts">
+          <MeasurementCountsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} shotsTick={shotsTick} />
+        </ErrorBoundary>
+        <ErrorBoundary label="branch-tree">
+          <BranchTreePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+
+        <div className="panels-cat">Phase space &amp; magic</div>
         <ErrorBoundary label="wigner"><WignerPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="husimi"><HusimiPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="magic"><MagicPanel state={simState} /></ErrorBoundary>
+
+        <div className="panels-cat">Expectation &amp; metrology</div>
         <ErrorBoundary label="expectation">
           <ExpectationPanel
             state={simState}
@@ -1273,35 +1271,31 @@ export function CircuitEditor() {
             }}
           />
         </ErrorBoundary>
-        <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="unitary-heatmap">
-          <UnitaryHeatmapPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
-        </ErrorBoundary>
-        <ErrorBoundary label="ptm">
-          <PTMPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
-        </ErrorBoundary>
-        <ErrorBoundary label="operator-entanglement">
-          <OperatorEntanglementPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
-        </ErrorBoundary>
-        <ErrorBoundary label="zx"><ZXPanel circuit={circuit} /></ErrorBoundary>
-        <ErrorBoundary label="mutual-info"><MutualInfoPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="negativity"><NegativityPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="concurrence"><ConcurrencePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="qfi"><QfiPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="qgt">
           <QgtPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
-        <ErrorBoundary label="symmetry-sectors"><SymmetrySectorsPanel state={simState} /></ErrorBoundary>
+
+        <div className="panels-cat">Entanglement &amp; correlations</div>
+        <ErrorBoundary label="mutual-info"><MutualInfoPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="negativity"><NegativityPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="concurrence"><ConcurrencePanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="schmidt"><SchmidtPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="entropy-profile"><EntropyProfilePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="participation">
           <ParticipationPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="correlations"><CorrelationPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="structure-factor"><StructureFactorPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="symmetry-sectors"><SymmetrySectorsPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="coherence">
+          <CoherencePanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
         </ErrorBoundary>
         <ErrorBoundary label="entanglement-asymmetry">
           <AsymmetryPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
-        <ErrorBoundary label="schmidt"><SchmidtPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="entropy-profile"><EntropyProfilePanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="correlations"><CorrelationPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="structure-factor"><StructureFactorPanel state={simState} /></ErrorBoundary>
+
+        <div className="panels-cat">Dynamics</div>
         <ErrorBoundary label="space-time">
           <SpaceTimePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
@@ -1321,14 +1315,56 @@ export function CircuitEditor() {
           <OtocPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
         <ErrorBoundary label="krylov"><KrylovPanel state={simState} /></ErrorBoundary>
+
+        <div className="panels-cat">Operator &amp; spectrum</div>
+        <ErrorBoundary label="density"><DensityPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="unitary-heatmap">
+          <UnitaryHeatmapPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="ptm">
+          <PTMPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="operator-entanglement">
+          <OperatorEntanglementPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="zx"><ZXPanel circuit={circuit} /></ErrorBoundary>
+        <ErrorBoundary label="hamiltonian">
+          <HamiltonianPanel onLoadInNewTab={(c, n) => t.newTab(c, n)} />
+        </ErrorBoundary>
+        <ErrorBoundary label="ham-spectrum"><HamSpectrumPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="diagonal-ensemble"><DiagonalEnsemblePanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="spectral-form-factor"><SpectralFormFactorPanel /></ErrorBoundary>
+        <ErrorBoundary label="level-statistics"><LevelStatisticsPanel /></ErrorBoundary>
+
+        <div className="panels-cat">Circuit structure</div>
         <ErrorBoundary label="interaction-graph"><InteractionGraphPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="tanner"><TannerPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="stabilizer-tableau"><StabilizerTableauPanel circuit={circuit} customGates={customGates} /></ErrorBoundary>
         <ErrorBoundary label="light-cone">
           <LightConePanel numQubits={circuit.numQubits} target={coneTarget} dir={coneDir} onTarget={setConeTarget} onDir={setConeDir} />
         </ErrorBoundary>
-        <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
         <ErrorBoundary label="resources"><ResourcePanel circuit={circuit} coupling={noise.coupling} /></ErrorBoundary>
+
+        <div className="panels-cat">Noise &amp; error</div>
+        <ErrorBoundary label="noise"><NoisePanel noise={noise} onChange={setNoise} /></ErrorBoundary>
+        <ErrorBoundary label="decoherence">
+          <DecoherencePanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
+        </ErrorBoundary>
+        <ErrorBoundary label="fidelity">
+          <FidelityPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
+        </ErrorBoundary>
+
+        <div className="panels-cat">Characterization &amp; benchmarking</div>
+        <ErrorBoundary label="syndromes">
+          <SyndromePanel circuit={circuit} customGates={customGates} noise={noise} shotsTick={shotsTick} />
+        </ErrorBoundary>
+        <ErrorBoundary label="randomized-benchmarking"><RbPanel noise={noise} /></ErrorBoundary>
+        <ErrorBoundary label="qec-workbench"><QecPanel /></ErrorBoundary>
+        <ErrorBoundary label="tomography">
+          <TomographyPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
+        </ErrorBoundary>
+
+        <div className="panels-cat">Verification &amp; export</div>
         <ErrorBoundary label="compare">
           <ComparePanel
             currentTabId={t.activeId}
@@ -1353,21 +1389,6 @@ export function CircuitEditor() {
               }))}
           />
         </ErrorBoundary>
-        <ErrorBoundary label="syndromes">
-          <SyndromePanel circuit={circuit} customGates={customGates} noise={noise} shotsTick={shotsTick} />
-        </ErrorBoundary>
-        <ErrorBoundary label="randomized-benchmarking"><RbPanel noise={noise} /></ErrorBoundary>
-        <ErrorBoundary label="qec-workbench"><QecPanel /></ErrorBoundary>
-        <ErrorBoundary label="tomography">
-          <TomographyPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
-        </ErrorBoundary>
-        <ErrorBoundary label="hamiltonian">
-          <HamiltonianPanel onLoadInNewTab={(c, n) => t.newTab(c, n)} />
-        </ErrorBoundary>
-        <ErrorBoundary label="ham-spectrum"><HamSpectrumPanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="diagonal-ensemble"><DiagonalEnsemblePanel state={simState} /></ErrorBoundary>
-        <ErrorBoundary label="spectral-form-factor"><SpectralFormFactorPanel /></ErrorBoundary>
-        <ErrorBoundary label="level-statistics"><LevelStatisticsPanel /></ErrorBoundary>
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>

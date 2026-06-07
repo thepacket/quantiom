@@ -63,7 +63,7 @@ function persistCollapsed(id: string, collapsed: boolean) {
   }
 }
 
-export function PanelShell({ id, title, children, toolbar, getCopyText, defaultCollapsed = false, className, unverified = false }: Props) {
+export function PanelShell({ id, title, children, toolbar, getCopyText, defaultCollapsed = false, className }: Props) {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     const map = loadCollapsedMap();
     return id in map ? map[id] : defaultCollapsed;
@@ -108,15 +108,6 @@ export function PanelShell({ id, title, children, toolbar, getCopyText, defaultC
         >
           <span className="panel__chevron">{collapsed ? "▸" : "▾"}</span>
           <h2>{title}</h2>
-          {unverified && (
-            <span
-              title="This panel's output is not independently verifiable — it depends on noise / approximations / unproven advanced features."
-              style={{
-                display: "inline-block", width: 7, height: 7, borderRadius: "50%",
-                background: "#f85149", marginLeft: 6, flex: "0 0 auto",
-              }}
-            />
-          )}
         </button>
         <div className="panel__toolbar">
           {toolbar}
