@@ -252,7 +252,22 @@ placed gate to select it and edit its parameters in the inspector.
 **Rectangle-select.** Hold the left mouse on empty canvas and drag a
 rubber band; every gate it intersects highlights. The **Edit menu**'s
 Selection section then copies / cuts / pastes that block — across
-tabs, too (Cmd/Ctrl-C / V).
+tabs, too (Cmd/Ctrl-C / V). It also **Repeats** the selected columns ×N
+(ansatz / Trotter layers) and **Folds** them into a collapsed box (click to
+expand). Arrow keys nudge the selected gate by one column / qubit.
+
+**Right-click a gate** for a context menu — Edit, Duplicate, Invert (†), Add /
+Remove control (which promotes the gate to its controlled variant, x → cx,
+h → ch, …), Toggle anti-control, Delete. Gates the simulator can't run (an
+entangled state-prep, an unimplemented gate) get a **red dashed ring** with
+the reason in the tooltip.
+
+**Insert a block.** The Edit menu's *Insert block* section drops in a Bell /
+GHZ / QFT / inverse-QFT / Trotter-Ising-layer snippet at the cursor, sized to
+the current qubit count.
+
+**Zoom.** The −/+/Reset control on the step row scales the canvas (40–200 %),
+anchored at the top-left.
 
 **Append U†.** Build any sub-circuit, select a column range, and use
 **Edit → Append U†** to append its exact inverse (reversed and
@@ -667,8 +682,16 @@ classical-register histogram), and the **Dynamic branch tree** shows the full
 outcome tree with per-edge Born probabilities — load the dynamic
 teleportation example to see two measurements fan out into four 25 % leaves.
 
+**Characterization & benchmarking** (under their own panel category): turn on
+the noise model, then **Randomized benchmarking** runs random Clifford
+sequences and fits the fidelity decay to the SPAM-robust error-per-Clifford,
+and the **QEC workbench** sweeps the physical error rate through a repetition
+code's lookup decoder — the d=3/5/7 logical-error curves cross at the
+threshold p = ½.
+
 See [`panels.md`](panels.md) → Syndrome sampling / Measurement counts /
-Stabilizer generators / Dynamic branch tree.
+Stabilizer generators / Dynamic branch tree / Randomized benchmarking /
+QEC workbench.
 
 ---
 

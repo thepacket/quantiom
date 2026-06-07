@@ -27,7 +27,7 @@ their compute when collapsed.
         │            client/ (Vite + React + TS)           │
         │                                                  │
         │  editor/    ←→   sim/       ←→   panels/         │
-        │   IR, tabs,      simulate +      ~57 panels,     │
+        │   IR, tabs,      simulate +      ~59 panels,     │
         │   undo, DnD,     stabilizer +    each pure       │
         │   QASM round-    noisy traj +    function of     │
         │   trip glue,     WebGPU paths    SimResult       │
@@ -55,7 +55,7 @@ client/src/
                 share links, recorder, docs modal, the main editor shell
   sim/          the simulator core (this is the brain)
   qasm/         OpenQASM 3 parse + emit + eight SDK / LaTeX emitters
-  panels/       ~57 collapsible peer panels (38 visualisers)
+  panels/       ~59 collapsible peer panels (40 visualisers)
   styles.css    all styles in one file
 server/         FastAPI shell — static host + health endpoint
 examples/       88 .qasm files in 10 categories, imported via Vite ?raw
@@ -200,6 +200,8 @@ sim/structureFactor.ts  S(k) — FT of the connected ⟨ZⱼZₗ⟩ correlator
 sim/krylov.ts           Lanczos bₙ + spread complexity C(t)
 sim/operatorEntanglement.ts  operator-Schmidt spectrum of U across a cut
 sim/entanglementAsymmetry.ts  depth-swept U(1)-symmetry breaking ΔS_A
+sim/randomizedBenchmarking.ts  1q Clifford group + RB survival fit (EPC)
+sim/qec.ts              repetition code: lookup decoder + logical-error sweep
 (… plus the other visualiser substrates: magic, wigner, husimi, qsphere,
  negativity, ptm, otoc, loschmidt, zx, tanner, unitary, interaction, …)
 ```
@@ -428,7 +430,7 @@ Quantiom ships with a comprehensive automated test suite. The numeric
 core — the part where correctness actually matters — is covered
 thoroughly and verified against analytic ground truth.
 
-- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **845
+- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **859
   tests (~96% statement coverage)** cover the statevector simulator
   (Bell / GHZ / rotations / measurement / the `initialize()` gate /
   big-endian), the X/Y-basis measurement primitives, every gate's matrix
@@ -451,7 +453,7 @@ thoroughly and verified against analytic ground truth.
   DOM-only `exportSvg`, which the Node-only suite can't reach.
 - **Continuous integration.** `.github/workflows/ci.yml` type-checks
   the source and the tests, runs the full suite, and builds the client
-  on **every push and pull request**. A green build means all 845 tests
+  on **every push and pull request**. A green build means all 859 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
   **380-check** browser-side cross-section of the same engine the

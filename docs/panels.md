@@ -1257,6 +1257,42 @@ reveal nothing about the teleported state.
 
 ---
 
+## Randomized benchmarking
+
+Single-qubit **randomized benchmarking**. Runs K random Clifford sequences of
+increasing length under the noise model, appends the recovery Clifford that
+inverts each sequence, and fits the survival probability P(m) = A·p^m + ½. The
+headline is the **error per Clifford** r = (1 − p)/2 — the SPAM-robust gate
+error (state-prep and measurement error fall into A and B, not p).
+
+**When available.** Run on click; needs a non-zero 1-qubit noise rate to show
+any decay (otherwise survival ≈ 1).
+
+**What you see.** Survival-probability dots vs sequence length, with the
+fitted exponential and the ½ asymptote. Stronger noise → faster decay →
+larger EPC. The 24-element single-qubit Clifford group is enumerated by BFS
+over {H, S}; each sequence runs through the trajectory noise simulator.
+
+---
+
+## QEC workbench (repetition)
+
+A quantum-error-correction workbench for the **bit-flip repetition code** with
+a real **syndrome → minimum-weight lookup decoder**. Sweeps the physical
+error rate p, decodes each Monte-Carlo shot, and plots the **logical error
+rate** for distances 3 / 5 / 7 against the break-even diagonal
+(logical = physical).
+
+**When available.** Run on click (self-contained; sweeps p internally).
+
+**What you see.** The three distance curves cross at the **threshold p = ½**
+(marked): below it a larger distance suppresses errors exponentially, above it
+a larger distance is worse. The exact rate is the binomial tail
+Σ_{k>d/2} C(d,k) pᵏ(1−p)^{d−k}; the panel runs the actual lookup decoder over
+4000 shots per point so you see real (slightly noisy) decoded curves.
+
+---
+
 ## Tomography
 
 Process tomography. Reconstructs the Pauli-basis χ matrix from

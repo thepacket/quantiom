@@ -248,7 +248,17 @@ host plus `/api/health`.
 - `client/src/editor/`
   - `state.ts`: undo/redo reducer with consecutive-keystroke
     coalescing. Reducer actions include `compact-columns`,
-    `delete-range`, `duplicate-range` for the toolbar.
+    `delete-range`, `duplicate-range`, `repeat-range` (append N copies —
+    ansatz/Trotter layers) and `insert-gates` (snippet blocks) for the toolbar.
+  - `snippets.ts`: gate-block snippet library (Bell / GHZ / QFT / iQFT /
+    Trotter-Ising layer) inserted via the Edit menu (`insert-gates`).
+  - `CircuitCanvas.tsx` editor features: right-click gate **context menu**
+    (Edit/Duplicate/Invert†/Add-Remove control [promotes to the controlled
+    gate id x→cx,h→ch,…]/Toggle anti-control/Delete; handler on the move AND
+    reassign handles), red dashed **skip rings** from `SimResult.skipped`,
+    UI-only column **folding**, and CSS-transform **zoom** (40–200%, top-left
+    anchored; controls ride in the StepBar row). Keyboard ⌘C/X/V on the
+    selection + arrow-nudge.
   - `tabs.ts`: multi-tab state hook (`useTabs`). One reducer manages
     `{ tabs, activeId }` with per-tab versioned history + per-tab UI
     state (selected gate, picked step, paramValues). Storage key
@@ -325,6 +335,17 @@ host plus `/api/health`.
     (operator-Schmidt spectrum of the circuit unitary across the mid-cut —
     entangling power; CNOT→1, SWAP→2 ebits), `AsymmetryPanel` (depth-swept
     entanglement asymmetry ΔS_A — U(1)-symmetry breaking / quantum Mpemba).
+  - Characterization / benchmarking (run-on-click, default-collapsed): `RbPanel`
+    (single-qubit randomized benchmarking — 24-elem Clifford group via BFS over
+    {H,S}, survival fit P(m)=A·p^m+½, error-per-Clifford r=(1−p)/2;
+    `sim/randomizedBenchmarking.ts`), `QecPanel` (bit-flip repetition code
+    d=3/5/7, syndrome→min-weight lookup decoder, Monte-Carlo logical-error sweep
+    crossing the threshold p=½; `sim/qec.ts`).
+  - The right column groups all ~59 panels under 12 sticky **category headers**
+    (Controls / State / Measurement / Phase space & magic / Expectation &
+    metrology / Entanglement & correlations / Dynamics / Operator & spectrum /
+    Circuit structure / Noise & error / Characterization & benchmarking /
+    Verification & export). The per-panel "unverified" red dot was removed.
   - `CouplingMapView.tsx`: shared SVG render of an adjacency list as
     a node-link graph (circular layout ≤ 24 qubits, grid above).
 - `server/` — FastAPI shell: `/api/health` + static-file mount.
@@ -420,7 +441,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (845 tests): the simulator core is deeply covered —
+- **What's covered** (859 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
@@ -444,8 +465,10 @@ host plus `/api/health`.
   degeneracy-safe √ρ), `qfi`, `qgt`, `symmetrySectors`, `coherence`,
   `spectralFormFactor`, `levelStatistics`, `diagonalEnsemble`, `branchTree`,
   `noiseImpact`, `decoherence`, `structureFactor`, `krylov`,
-  `operatorEntanglement` (product 0 / CNOT 1 / SWAP 2 ebits), `entanglementAsymmetry`
-  — each against analytic ground truth.
+  `operatorEntanglement` (product 0 / CNOT 1 / SWAP 2 ebits), `entanglementAsymmetry`,
+  `randomizedBenchmarking` (noiseless→survival≈1, decay→positive EPC) and `qec`
+  (repetition exact 3p²−2p³, MC matches exact, threshold≈½) — each against
+  analytic ground truth.
   `npm run test:coverage` reports ~96% statements (core modules are
   95–100%; the remaining tail is the React `useReducer`/`useEffect` hook
   bodies and DOM-only `exportSvg`, which the Node-only suite can't exercise
