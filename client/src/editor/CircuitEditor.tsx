@@ -566,6 +566,14 @@ export function CircuitEditor() {
   const [folds, setFolds] = useState<Array<{ from: number; to: number }>>([]);
   useEffect(() => { setFolds([]); setZoom(1); }, [t.activeId]);
 
+  // Whole-palette collapse (gives the canvas more room). Persisted.
+  const [paletteCollapsed, setPaletteCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem("quantiom:palette-collapsed") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("quantiom:palette-collapsed", paletteCollapsed ? "1" : "0"); } catch { /* ignore */ }
+  }, [paletteCollapsed]);
+
   // Shared gate-clipboard ops (used by both the Edit menu and keyboard).
   const copySelection = useCallback(() => {
     const selected = circuit.gates.filter((g) => selectedIds.has(g.id));
@@ -852,7 +860,7 @@ export function CircuitEditor() {
   }, [t]);
 
   return (
-    <div className="editor">
+    <div className={`editor${paletteCollapsed ? " editor--palette-collapsed" : ""}`}>
       <HoverTip />
       {showDocs !== null && <DocsModal initialTab={showDocs} onClose={() => setShowDocs(null)} />}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
@@ -898,13 +906,17 @@ export function CircuitEditor() {
         <div className="app__header-left">
           <h1>Quantiom</h1>
           <span className="app__version">v{APP_VERSION}.{__GIT_COMMITS__} ({__GIT_SHA__})</span>
-          <span className="app__tagline">circuit editor · simulator · visualizer</span>
           <EndiannessToggle />
         </div>
         <div className="app__title">{circuit.name ?? "Untitled"}</div>
         <div className="app__header-right" />
       </header>
-      <GatePalette customGates={customGates} onRemoveCustomGate={removeCustomGate} />
+      <GatePalette
+        customGates={customGates}
+        onRemoveCustomGate={removeCustomGate}
+        collapsed={paletteCollapsed}
+        onToggleCollapsed={() => setPaletteCollapsed((v) => !v)}
+      />
       <div className="editor__center">
         <TabStrip
           tabs={t.tabs}

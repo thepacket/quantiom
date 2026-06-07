@@ -40,14 +40,17 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .app__main { flex: 1; min-height: 0; display: flex; }
 
 /* ─── Editor layout ─────────────────────────────────────────────────── */
-.editor { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(280px, 360px); grid-template-rows: auto 1fr; flex: 1; min-height: 0; height: 100%; }
+.editor { display: grid; grid-template-columns: var(--palette-w, minmax(220px, 280px)) minmax(0, 1fr) minmax(280px, 360px); grid-template-rows: auto 1fr; flex: 1; min-height: 0; height: 100%; }
 /* Narrow viewports: shrink side columns further so the canvas never overlaps. */
 @media (max-width: 1100px) {
-  .editor { grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) minmax(240px, 300px); }
+  .editor { grid-template-columns: var(--palette-w, minmax(180px, 220px)) minmax(0, 1fr) minmax(240px, 300px); }
 }
 @media (max-width: 880px) {
-  .editor { grid-template-columns: minmax(160px, 200px) minmax(0, 1fr) minmax(220px, 260px); }
+  .editor { grid-template-columns: var(--palette-w, minmax(160px, 200px)) minmax(0, 1fr) minmax(220px, 260px); }
 }
+/* Whole-palette collapse: the first column shrinks to a thin reopen strip at
+   every breakpoint (the variable wins over the media-query fallbacks). */
+.editor--palette-collapsed { --palette-w: 1.9rem; }
 /* Chat panel sits inside editor__center, below the Inspector. */
 .chat { display: flex; flex-direction: column; position: relative; border-top: 1px solid var(--border); background: var(--panel); min-height: 0; }
 .chat--collapsed { height: 24px; min-height: 24px; }
@@ -206,8 +209,16 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 }
 
 .palette { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-right: 1px solid var(--border); }
-.palette__search { padding: 8px; border-bottom: 1px solid var(--border); }
-.palette__search input { width: 100%; }
+.palette__search { display: flex; align-items: center; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border); }
+.palette__search input { width: 100%; min-width: 0; }
+.palette__collapse { flex: none; width: 22px; height: 24px; padding: 0; background: transparent; border: 1px solid var(--border); border-radius: 3px; color: var(--muted); cursor: pointer; }
+.palette__collapse:hover { color: var(--fg); border-color: var(--border-strong); }
+/* Collapsed: a thin vertical reopen strip. */
+.palette--collapsed { align-items: stretch; }
+.palette__reopen { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; height: 100%; padding: 10px 0; background: transparent; border: none; color: var(--muted); cursor: pointer; }
+.palette__reopen:hover { color: var(--fg); background: var(--bg-2); }
+.palette__reopen-icon { font-size: 12px; }
+.palette__reopen-label { writing-mode: vertical-rl; letter-spacing: 2px; font-size: 10px; text-transform: uppercase; }
 .palette__groups { overflow: auto; padding: 4px 0 12px; }
 .palette__group { margin: 0; }
 .palette__group-header { width: 100%; display: flex; align-items: center; gap: 6px; border: none; border-radius: 0; padding: 8px 10px 4px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; text-align: left; }

@@ -42,6 +42,9 @@ function labelFontSize(label: string): string | undefined {
 type Props = {
   customGates?: CustomGate[];
   onRemoveCustomGate?: (id: string) => void;
+  /** Whole-palette collapse: when true, render only a thin reopen strip. */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 };
 
 /**
@@ -59,7 +62,7 @@ export function makeDragGhost(symbol: string): HTMLDivElement {
   return ghost;
 }
 
-export function GatePalette({ customGates = [], onRemoveCustomGate }: Props) {
+export function GatePalette({ customGates = [], onRemoveCustomGate, collapsed: paletteCollapsed = false, onToggleCollapsed }: Props) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Set<GateCategory | "custom">>(new Set());
 
@@ -110,9 +113,23 @@ export function GatePalette({ customGates = [], onRemoveCustomGate }: Props) {
     setTimeout(() => ghost.remove(), 0);
   };
 
+  if (paletteCollapsed) {
+    return (
+      <aside className="palette palette--collapsed">
+        <button className="palette__reopen" onClick={onToggleCollapsed} title="Show gate palette" aria-label="Show gate palette">
+          <span className="palette__reopen-icon">▸</span>
+          <span className="palette__reopen-label">GATES</span>
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside className="palette">
       <div className="palette__search">
+        {onToggleCollapsed && (
+          <button className="palette__collapse" onClick={onToggleCollapsed} title="Collapse gate palette" aria-label="Collapse gate palette">◂</button>
+        )}
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}

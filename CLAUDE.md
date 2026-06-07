@@ -473,7 +473,8 @@ host plus `/api/health`.
 - **Storage keys**: `quantiom:tabs:v1` (with legacy
   `quantiom:circuit:v1` migration), `quantiom:custom-gates:v1`,
   `quantiom:noise:v2`, `quantiom:panel-collapsed:v1`,
-  `quantiom:probabilities-mode`, `quantiom:probabilities-shots`.
+  `quantiom:probabilities-mode`, `quantiom:probabilities-shots`,
+  `quantiom:palette-collapsed` (whole gate-palette collapse).
 
 ## Testing
 
