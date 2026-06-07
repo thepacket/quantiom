@@ -87,6 +87,10 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
   const [showContext, setShowContext] = useState<boolean>(false);
   const [showPrompts, setShowPrompts] = useState<boolean>(false);
   const [attached, setAttached] = useState<Set<AttachKey>>(loadAttached);
+  // Reply-pane font scale (1 = 100%), adjustable with −/+. Persisted.
+  const [replyScale, setReplyScale] = useState<number>(() => {
+    try { const v = parseFloat(localStorage.getItem("quantiom:chat:font-scale") ?? ""); return Number.isFinite(v) && v >= 0.6 && v <= 2 ? v : 1; } catch { return 1; }
+  });
   // AI ↔ AI dialogue mode.
   const [mode, setMode] = useState<"chat" | "dialogue">("chat");
   const [dialogueCfg, setDialogueCfg] = useState<DialogueConfig>(loadDialogue);
@@ -130,6 +134,10 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
   useEffect(() => { saveHistory(history); }, [history]);
   useEffect(() => { saveAttached(attached); }, [attached]);
   useEffect(() => { saveDialogue(dialogueCfg); }, [dialogueCfg]);
+  useEffect(() => { try { localStorage.setItem("quantiom:chat:font-scale", String(replyScale)); } catch { /* ignore */ } }, [replyScale]);
+  const adjustScale = useCallback((d: number) => {
+    setReplyScale((s) => Math.round(Math.min(2, Math.max(0.6, s + d)) * 100) / 100);
+  }, []);
 
   // Auto-scroll to bottom on new content.
   useEffect(() => {
@@ -398,6 +406,11 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
         <button className="chat__btn" onClick={() => setShowSettings((s) => !s)} title="API key & options">
           ⚙
         </button>
+        <span className="chat__fontsize" title="Reply text size">
+          <button className="chat__btn chat__fontsize-btn" onClick={() => adjustScale(-0.1)} disabled={replyScale <= 0.6} aria-label="Decrease reply text size">−</button>
+          <button className="chat__fontsize-pct" onClick={() => setReplyScale(1)} title="Reset to 100%">{Math.round(replyScale * 100)}%</button>
+          <button className="chat__btn chat__fontsize-btn" onClick={() => adjustScale(0.1)} disabled={replyScale >= 2} aria-label="Increase reply text size">+</button>
+        </span>
         {mode === "dialogue" && (
           <button
             className="chat__btn"
@@ -442,7 +455,7 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
           </div>
         </div>
       )}
-      <div className="chat__messages" ref={scrollRef}>
+      <div className="chat__messages" ref={scrollRef} style={{ "--chat-scale": replyScale } as React.CSSProperties}>
         {mode === "chat" ? (
           <>
             {history.length === 0 && !streamBuf && (
