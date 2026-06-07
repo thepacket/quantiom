@@ -62,7 +62,7 @@ function Body({ state }: Props) {
   if (!bars) return null;
 
   const truncated = data.amplitudes.length > MAX_BARS;
-  return <Plot bars={bars} truncated={truncated} total={data.amplitudes.length} />;
+  return <Plot bars={bars} truncated={truncated} total={data.amplitudes.length} numQubits={data.numQubits} />;
 }
 
 /** Phase (−π..π] → hue around the colour wheel. */
@@ -73,13 +73,14 @@ function hueFor(phase: number): string {
 
 const ROW_H = 16;       // height per basis-state row
 const BAR_H = 11;       // bar thickness within a row
-const LABEL_W = 42;     // left gutter for the basis / index label
 const PAD = 6;
 const TARGET_W = 300;   // design width; the SVG scales to fill the panel
 
-function Plot({ bars, truncated, total }: { bars: Bar[]; truncated: boolean; total: number }) {
-  const useBasis = bars.length <= 16; // full basis labels when few; indices when many
-  const barArea = TARGET_W - LABEL_W - 6;
+function Plot({ bars, truncated, total, numQubits }: { bars: Bar[]; truncated: boolean; total: number; numQubits: number }) {
+  // Always label rows in binary (|x⟩); widen the left gutter to fit the n-bit
+  // string (a decimal index is shorter but far less readable here).
+  const labelW = Math.min(110, Math.max(42, numQubits * 7 + 12));
+  const barArea = TARGET_W - labelW - 6;
   const W = TARGET_W;
   const H = PAD * 2 + bars.length * ROW_H;
   const maxMag = Math.max(1e-9, ...bars.map((b) => b.mag));
@@ -88,16 +89,16 @@ function Plot({ bars, truncated, total }: { bars: Bar[]; truncated: boolean; tot
     <div className="ampphase">
       <svg viewBox={`0 0 ${W} ${H}`} className="ampphase__svg plot-fill" role="img">
         {/* magnitude baseline (left edge of the bars) */}
-        <line x1={LABEL_W} y1={PAD} x2={LABEL_W} y2={H - PAD} className="ampphase__axis-line" />
+        <line x1={labelW} y1={PAD} x2={labelW} y2={H - PAD} className="ampphase__axis-line" />
         {bars.map((b, k) => {
           const y = PAD + k * ROW_H;
           const len = (b.mag / maxMag) * barArea;
           return (
             <g key={b.index}>
-              <text x={LABEL_W - 4} y={y + ROW_H / 2 + 3} textAnchor="end" className="ampphase__axis">
-                {useBasis ? b.basis : b.index}
+              <text x={labelW - 4} y={y + ROW_H / 2 + 3} textAnchor="end" className="ampphase__axis ampphase__label">
+                {b.basis}
               </text>
-              <rect x={LABEL_W} y={y + (ROW_H - BAR_H) / 2} width={Math.max(0, len)} height={BAR_H} fill={hueFor(b.phase)}>
+              <rect x={labelW} y={y + (ROW_H - BAR_H) / 2} width={Math.max(0, len)} height={BAR_H} fill={hueFor(b.phase)}>
                 <title>|{b.basis}⟩: |amp| = {b.mag.toFixed(4)}, arg = {(b.phase * 180 / Math.PI).toFixed(0)}°</title>
               </rect>
             </g>
