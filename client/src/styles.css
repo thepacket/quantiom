@@ -1186,6 +1186,35 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .hamspec__swatch--ground { border-top-color: #7ee787; }
 .hamspec__swatch--exp { border-top-style: dashed; border-top-color: #ffd24f; }
 
+/* RB modes + interleaved dual plot */
+.rb__mode { font-size: 11px; padding: 2px 4px; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; }
+.rb__dual { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.rb__key { display: inline-flex; align-items: center; font-weight: 600; }
+
+/* Benchmarking panels (QV / mirror / XEB / crosstalk / T1-T2 / Pauli budget) —
+   share the RB/QEC visual language. */
+.qv, .mirror, .xeb, .xtalk, .t12, .pbudget { display: flex; flex-direction: column; gap: 6px; }
+.qv__head, .mirror__head, .xeb__head, .xtalk__head, .t12__head { display: flex; align-items: center; gap: 10px; }
+.qv__run, .mirror__run, .xeb__run, .xtalk__run, .t12__run {
+  padding: 3px 12px; font-size: 11px; background: var(--accent); color: var(--bg);
+  border: 1px solid var(--accent); border-radius: 3px; cursor: pointer;
+}
+.qv__run:disabled, .mirror__run:disabled, .xeb__run:disabled, .xtalk__run:disabled, .t12__run:disabled { opacity: 0.6; cursor: default; }
+.qv__note, .mirror__note, .xeb__note, .xtalk__note, .t12__note { font-size: 10px; color: var(--muted); }
+.qv__hint, .mirror__hint, .xeb__hint, .xtalk__hint, .t12__hint, .pbudget__hint { font-size: 11px; color: var(--muted); }
+.qv__out, .mirror__out, .xeb__out, .xtalk__out, .t12__out { display: flex; flex-direction: column; gap: 4px; }
+.qv__stats, .xeb__stats, .xtalk__stats, .t12__stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--muted); }
+.qv__stats b, .xeb__stats b, .xtalk__stats b, .t12__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.qv__svg, .mirror__svg, .xeb__svg, .xtalk__svg, .t12__svg, .pbudget__svg { display: block; }
+.qv__axis, .mirror__axis, .xeb__axis, .xtalk__axis, .t12__axis, .pbudget__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.qv__axis-line, .xeb__axis-line, .xtalk__axis-line, .t12__axis-line, .pbudget__axis-line { stroke: var(--border); stroke-width: 1; }
+.qv__legend, .mirror__legend, .xeb__legend, .xtalk__legend, .t12__legend, .pbudget__legend { font-size: 10px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.qv__thresh { stroke: #ffd24f; stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.85; }
+.qv__asymptote, .mirror__asymptote { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
+.mirror__cell { fill: var(--bg); font-size: 8.5px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.xtalk__key, .t12__key, .pbudget__key { display: inline-flex; align-items: center; font-weight: 600; }
+.pbudget__tot { fill: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
+
 /* ─── Tanner / check graph ─────────────────────────────────────────── */
 .tanner { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
 .tanner__stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }

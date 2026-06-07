@@ -47,10 +47,17 @@ equivalence-checking compares two open tabs by process fidelity and trace
 distance.
 
 **Characterization & benchmarking.** Randomized benchmarking fits the
-single-qubit Clifford fidelity decay to a SPAM-robust error-per-Clifford; a
-QEC workbench runs a repetition-code syndrome-lookup decoder and plots the
-logical-error curves crossing the threshold; syndrome sampling exercises
-stabilizer codes under a Pauli-frame noise tracker.
+single-qubit Clifford fidelity decay to a SPAM-robust error-per-Clifford —
+with interleaved (gate-specific error) and unitarity (error-coherence) modes.
+Quantum Volume runs Haar-SU(4) model circuits and tests the heavy-output
+probability against the 2/3 threshold; mirror / volumetric benchmarking maps
+the success frontier over a width × depth grid; cross-entropy benchmarking
+(XEB) tracks the linear fidelity of random circuits per cycle; simultaneous RB
+measures crosstalk / addressability; T1 / T2 experiments fit the coherence-time
+decays; a Pauli error budget breaks the noise model into per-qubit X/Y/Z
+contributions. A QEC workbench runs a repetition-code syndrome-lookup decoder
+and plots the logical-error curves crossing the threshold; syndrome sampling
+exercises stabilizer codes under a Pauli-frame noise tracker.
 
 **Visualisers.** A column of 30-plus entanglement, dynamics, and
 diagnostic visualisers sits alongside the statevector / probability /

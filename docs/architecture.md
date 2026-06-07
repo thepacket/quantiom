@@ -27,7 +27,7 @@ their compute when collapsed.
         │            client/ (Vite + React + TS)           │
         │                                                  │
         │  editor/    ←→   sim/       ←→   panels/         │
-        │   IR, tabs,      simulate +      ~59 panels,     │
+        │   IR, tabs,      simulate +      ~65 panels,     │
         │   undo, DnD,     stabilizer +    each pure       │
         │   QASM round-    noisy traj +    function of     │
         │   trip glue,     WebGPU paths    SimResult       │
@@ -55,7 +55,7 @@ client/src/
                 share links, recorder, docs modal, the main editor shell
   sim/          the simulator core (this is the brain)
   qasm/         OpenQASM 3 parse + emit + eight SDK / LaTeX emitters
-  panels/       ~59 collapsible peer panels (40 visualisers)
+  panels/       ~65 collapsible peer panels (40 visualisers)
   styles.css    all styles in one file
 server/         FastAPI shell — static host + health endpoint
 examples/       88 .qasm files in 10 categories, imported via Vite ?raw
@@ -200,8 +200,15 @@ sim/structureFactor.ts  S(k) — FT of the connected ⟨ZⱼZₗ⟩ correlator
 sim/krylov.ts           Lanczos bₙ + spread complexity C(t)
 sim/operatorEntanglement.ts  operator-Schmidt spectrum of U across a cut
 sim/entanglementAsymmetry.ts  depth-swept U(1)-symmetry breaking ΔS_A
-sim/randomizedBenchmarking.ts  1q Clifford group + RB survival fit (EPC)
+sim/randomizedBenchmarking.ts  1q Clifford group + RB survival fit (EPC);
+                        interleaved (gate error) + unitarity (error coherence)
 sim/qec.ts              repetition code: lookup decoder + logical-error sweep
+sim/quantumVolume.ts    Haar SU(4) model circuits + heavy-output probability
+sim/mirrorBenchmark.ts  mirror circuits + width×depth success grid
+sim/xeb.ts              cross-entropy benchmarking: linear XEB fidelity / cycle
+sim/simultaneousRb.ts   isolated-vs-simultaneous RB crosstalk / addressability
+sim/t1t2.ts             T1 inversion-recovery + T2 Ramsey decay (gate-times)
+sim/pauliBudget.ts      per-qubit X/Y/Z Pauli error budget (Pauli-twirl approx)
 (… plus the other visualiser substrates: magic, wigner, husimi, qsphere,
  negativity, ptm, otoc, loschmidt, zx, tanner, unitary, interaction, …)
 ```

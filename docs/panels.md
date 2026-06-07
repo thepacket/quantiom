@@ -1273,6 +1273,116 @@ fitted exponential and the ½ asymptote. Stronger noise → faster decay →
 larger EPC. The 24-element single-qubit Clifford group is enumerated by BFS
 over {H, S}; each sequence runs through the trajectory noise simulator.
 
+**Modes** (dropdown):
+
+- **Standard** — the survival-decay fit above.
+- **Interleaved** — runs a reference sweep and a second sweep with a chosen
+  Clifford (X/Y/Z/H/S/S†/√X/√X†) interleaved after every random one. The decay
+  ratio isolates that gate's error r_G = (1 − p_int/p_ref)/2, reported with the
+  Magesan systematic bound; the dual plot shows both decays.
+- **Unitarity** — runs random Clifford sequences (no recovery) and fits the
+  purity decay Tr(ρ²) → 1/d to the *unitarity* u. u near 1 ⇒ coherent
+  (calibration) error; u ≈ p² ⇒ purely stochastic error. Comparing u against
+  the standard p tells you whether your error is over- or under-rotation vs
+  random.
+
+---
+
+## Quantum volume
+
+The **Quantum Volume** protocol (Cross et al. 2019). Runs square model circuits
+— width = depth, each layer a random permutation paired up with Haar-random
+SU(4) gates — and measures the **heavy-output probability** (HOP): the chance
+of sampling a bitstring whose ideal probability exceeds the median.
+
+**When available.** Run on click; the "device" is the noise model, so a clean
+model passes every reachable width and noise pulls HOP down.
+
+**What you see.** HOP with 2σ error bars per width 2–5 against the 2/3 threshold
+and the ideal-HOP reference (1+ln2)/2 ≈ 0.85. A width **passes** when its 2σ
+lower bound clears 2/3 (green); the achieved **QV = 2^(largest passing width)**.
+
+---
+
+## Mirror / volumetric
+
+**Mirror (volumetric) benchmarking** (Proctor et al. 2022). Runs random
+Clifford-layer circuits followed by their exact inverse — so the ideal output
+is |0…0⟩ — over a **width × depth grid**, and shows the success probability
+P(|0…0⟩) as a heatmap.
+
+**When available.** Run on click; needs the noise model enabled to show
+structure (a clean model is 1 everywhere).
+
+**What you see.** A grid coloured red (failed) → green (success); the frontier
+where success drops to ½ traces the largest circuit shapes the device can still
+execute. SPAM-light and scalable — no full-circuit Clifford recovery needed.
+
+---
+
+## Cross-entropy benchmarking
+
+**XEB** (Google supremacy-style). Runs random brickwork circuits (random √X/√Y/T
+single-qubit gates + CZ entanglers) at growing cycle counts and computes the
+**linear XEB fidelity** Σ(p_noisy−1/D)(p_ideal−1/D) / Σ(p_ideal−1/D)² — 1 for a
+perfect device, 0 for the uniform distribution.
+
+**When available.** Run on click; enable the noise model to see the decay.
+
+**What you see.** Fidelity dots vs depth with the fitted per-cycle decay λ.
+Computed exactly from the full distributions (no shot sampling), so a clean
+model returns ≈ 1 at every depth.
+
+---
+
+## Simultaneous RB (crosstalk)
+
+**Simultaneous randomized benchmarking** — the crosstalk / addressability test
+(Gambetta et al. 2012). Runs single-qubit RB on each qubit isolated vs with
+every qubit driven at once and compares the error per Clifford.
+
+**When available.** Run on click; needs the noise model's **crosstalk** rate
+(and ideally a coupling map) set to show an effect.
+
+**What you see.** Isolated vs simultaneous EPC bars per qubit, plus the mean
+**addressability** ratio EPC_simul/EPC_iso (1 ⇒ perfectly addressable). Isolated
+and simultaneous use the *same* random sequences and trajectory randomness, so
+with crosstalk 0 the ratio is exactly 1; the spectator model adds
+`crosstalk × (coupled neighbours)` depolarising under simultaneous driving.
+
+---
+
+## T1 / T2 experiments
+
+The standard coherence-time experiments, with the idle delay measured in
+**gate-times** (each idle is one identity gate, so the noise model's per-gate
+damping accumulates).
+
+- **T1** (inversion recovery): prepare |1⟩, idle, read P(|1⟩) → fits T1.
+- **T2\*** (Ramsey): prepare |+⟩, idle, H, read P(|0⟩) → fits T2.
+
+**When available.** Run on click; needs amplitude / phase damping set in the
+Noise panel to decay.
+
+**What you see.** Both decay curves with the fitted T1 / T2 (in gate-times) and
+the ½ floor. Physically T2 ≤ 2·T1.
+
+---
+
+## Pauli error budget
+
+A transparent decomposition of the noise model into each qubit's **per-gate
+X/Y/Z error** via the Pauli-twirl approximation: depolarising contributes
+p₁/3 to each Pauli, amplitude damping p_X = p_Y = γ/4 (small p_Z), phase
+damping a pure Z = (1 − √(1−γ))/2.
+
+**When available.** Needs the noise model enabled; exact and instant (no
+simulation).
+
+**What you see.** Stacked X/Y/Z bars per qubit with a readout-error tick and
+the total per-qubit gate error. Use it to see which error channel dominates and
+on which qubits.
+
 ---
 
 ## QEC workbench (repetition)

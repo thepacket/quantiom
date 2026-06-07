@@ -106,6 +106,12 @@ import { EquivalencePanel } from "../panels/EquivalencePanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
 import { RbPanel } from "../panels/RbPanel";
 import { QecPanel } from "../panels/QecPanel";
+import { QvPanel } from "../panels/QvPanel";
+import { MirrorPanel } from "../panels/MirrorPanel";
+import { XebPanel } from "../panels/XebPanel";
+import { CrosstalkPanel } from "../panels/CrosstalkPanel";
+import { T1T2Panel } from "../panels/T1T2Panel";
+import { PauliBudgetPanel } from "../panels/PauliBudgetPanel";
 import { MeasurementCountsPanel } from "../panels/MeasurementCountsPanel";
 import { BranchTreePanel } from "../panels/BranchTreePanel";
 import { DecoherencePanel } from "../panels/DecoherencePanel";
@@ -1359,6 +1365,12 @@ export function CircuitEditor() {
           <SyndromePanel circuit={circuit} customGates={customGates} noise={noise} shotsTick={shotsTick} />
         </ErrorBoundary>
         <ErrorBoundary label="randomized-benchmarking"><RbPanel noise={noise} /></ErrorBoundary>
+        <ErrorBoundary label="quantum-volume"><QvPanel noise={noise} /></ErrorBoundary>
+        <ErrorBoundary label="mirror-benchmark"><MirrorPanel noise={noise} /></ErrorBoundary>
+        <ErrorBoundary label="xeb"><XebPanel noise={noise} /></ErrorBoundary>
+        <ErrorBoundary label="simultaneous-rb"><CrosstalkPanel noise={noise} /></ErrorBoundary>
+        <ErrorBoundary label="t1-t2"><T1T2Panel noise={noise} /></ErrorBoundary>
+        <ErrorBoundary label="pauli-budget"><PauliBudgetPanel circuit={circuit} noise={noise} /></ErrorBoundary>
         <ErrorBoundary label="qec-workbench"><QecPanel /></ErrorBoundary>
         <ErrorBoundary label="tomography">
           <TomographyPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />

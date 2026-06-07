@@ -338,10 +338,29 @@ host plus `/api/health`.
   - Characterization / benchmarking (run-on-click, default-collapsed): `RbPanel`
     (single-qubit randomized benchmarking — 24-elem Clifford group via BFS over
     {H,S}, survival fit P(m)=A·p^m+½, error-per-Clifford r=(1−p)/2;
-    `sim/randomizedBenchmarking.ts`), `QecPanel` (bit-flip repetition code
-    d=3/5/7, syndrome→min-weight lookup decoder, Monte-Carlo logical-error sweep
-    crossing the threshold p=½; `sim/qec.ts`).
-  - The right column groups all ~59 panels under 12 sticky **category headers**
+    `sim/randomizedBenchmarking.ts`. **Three modes**: Standard, **Interleaved**
+    (`interleavedRb` — gate-specific error r_G=(1−p_int/p_ref)/2 + Magesan
+    bound, dual ref/interleaved decay plot), **Unitarity** (`unitarityRb` —
+    purity decay Tr(ρ²)→1/d via density mode, fit u for error coherence)),
+    `QecPanel` (bit-flip repetition code d=3/5/7, syndrome→min-weight lookup
+    decoder, Monte-Carlo logical-error sweep crossing the threshold p=½;
+    `sim/qec.ts`), `QvPanel` (**Quantum Volume** — Haar SU(4) model circuits,
+    heavy-output probability vs the 2/3 threshold w/ 2σ bound, QV=2^(largest
+    passing width); `sim/quantumVolume.ts`), `MirrorPanel` (**mirror /
+    volumetric** — random Clifford forward+inverse mirror circuits, success
+    P(|0…0⟩) heatmap over a width×depth grid; `sim/mirrorBenchmark.ts`),
+    `XebPanel` (**cross-entropy benchmarking** — random brickwork circuits,
+    linear XEB fidelity Σ(p_n−1/D)(p_i−1/D)/Σ(p_i−1/D)² vs cycle depth,
+    per-cycle λ; `sim/xeb.ts`), `CrosstalkPanel` (**simultaneous RB** — per-qubit
+    isolated-vs-simultaneous EPC, paired runs [shared Clifford seqs + seeded
+    `Math.random`] so crosstalk 0 ⇒ addressability exactly 1; spectator model
+    folds `noise.crosstalk·deg` into depol; `sim/simultaneousRb.ts`),
+    `T1T2Panel` (**T1 inversion-recovery + T2 Ramsey** — idle = identity-gate
+    chain so per-gate damping accumulates; decay constants in gate-times;
+    `sim/t1t2.ts`), `PauliBudgetPanel` (**Pauli error budget** — per-qubit X/Y/Z
+    error stacked bars via the Pauli-twirl approx of depol+amp+phase damping,
+    exact/instant; `sim/pauliBudget.ts`).
+  - The right column groups all ~65 panels under 12 sticky **category headers**
     (Controls / State / Measurement / Phase space & magic / Expectation &
     metrology / Entanglement & correlations / Dynamics / Operator & spectrum /
     Circuit structure / Noise & error / Characterization & benchmarking /
@@ -441,7 +460,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (859 tests): the simulator core is deeply covered —
+- **What's covered** (885 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
@@ -466,9 +485,15 @@ host plus `/api/health`.
   `spectralFormFactor`, `levelStatistics`, `diagonalEnsemble`, `branchTree`,
   `noiseImpact`, `decoherence`, `structureFactor`, `krylov`,
   `operatorEntanglement` (product 0 / CNOT 1 / SWAP 2 ebits), `entanglementAsymmetry`,
-  `randomizedBenchmarking` (noiseless→survival≈1, decay→positive EPC) and `qec`
-  (repetition exact 3p²−2p³, MC matches exact, threshold≈½) — each against
-  analytic ground truth.
+  `randomizedBenchmarking` (noiseless→survival≈1, decay→positive EPC), `qec`
+  (repetition exact 3p²−2p³, MC matches exact, threshold≈½), and the
+  benchmarking suite — `interleavedRb`/`unitarityRb` (noiseless→r≈0/u≈1, noise→
+  decay), `quantumVolume` (haarSU4 unitarity, clean HOP beats noisy), `mirror
+  Benchmark` (ideal mirror returns to |0…0⟩, noise→depth decay), `xeb` (clean
+  F≈1, noise→λ<1), `simultaneousRb` (paired runs ⇒ addressability=1 at
+  crosstalk 0, >1 with crosstalk+coupling), `t1t2` (T1≈−1/ln(1−γ), stronger
+  damping→shorter T1), `pauliBudget` (depol→X=Y=Z=p₁/3, phase→pure Z) — each
+  against analytic ground truth.
   `npm run test:coverage` reports ~96% statements (core modules are
   95–100%; the remaining tail is the React `useReducer`/`useEffect` hook
   bodies and DOM-only `exportSvg`, which the Node-only suite can't exercise

@@ -684,14 +684,21 @@ teleportation example to see two measurements fan out into four 25 % leaves.
 
 **Characterization & benchmarking** (under their own panel category): turn on
 the noise model, then **Randomized benchmarking** runs random Clifford
-sequences and fits the fidelity decay to the SPAM-robust error-per-Clifford,
-and the **QEC workbench** sweeps the physical error rate through a repetition
-code's lookup decoder — the d=3/5/7 logical-error curves cross at the
-threshold p = ½.
+sequences and fits the fidelity decay to the SPAM-robust error-per-Clifford
+(with **Interleaved** mode for a single gate's error and **Unitarity** mode for
+the error's coherence). **Quantum volume** tests heavy-output probability
+against the 2/3 threshold; **Mirror / volumetric** maps the success frontier
+over a width × depth grid; **Cross-entropy benchmarking** tracks the linear XEB
+fidelity per cycle; **Simultaneous RB** measures crosstalk; **T1 / T2
+experiments** fit the coherence decays in gate-times; the **Pauli error budget**
+breaks the noise model into per-qubit X/Y/Z bars; and the **QEC workbench**
+sweeps the physical error rate through a repetition code's lookup decoder — the
+d=3/5/7 logical-error curves cross at the threshold p = ½.
 
 See [`panels.md`](panels.md) → Syndrome sampling / Measurement counts /
 Stabilizer generators / Dynamic branch tree / Randomized benchmarking /
-QEC workbench.
+Quantum volume / Mirror · volumetric / Cross-entropy benchmarking /
+Simultaneous RB / T1 · T2 experiments / Pauli error budget / QEC workbench.
 
 ---
 
