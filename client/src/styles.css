@@ -109,7 +109,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__open-tab { padding: 2px 8px; font-size: 14px; }
 .chat__code { margin: 0; padding: 8px; background: var(--bg); color: var(--fg); font-family: ui-monospace, monospace; font-size: 0.94em; overflow: auto; max-height: 320px; }
 .chat__input-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--border); background: var(--bg-2); }
-.chat__input { flex: 1; padding: 8px 10px; font-family: inherit; font-size: 20px; line-height: 1.4; resize: vertical; min-height: 44px; max-height: 240px; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; }
+.chat__input { flex: 1; padding: 8px 10px; font-family: inherit; font-size: 20px; font-weight: 400; line-height: 1.4; resize: vertical; min-height: 44px; max-height: 240px; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; }
 .chat__input:focus { outline: none; border-color: var(--accent); }
 .chat__send { align-self: center; min-width: 72px; font-size: 17px; font-weight: 400; padding: 8px 14px; background: var(--panel); }
 .chat__error { padding: 6px 10px; color: #ff8a8a; font-size: 16px; }
