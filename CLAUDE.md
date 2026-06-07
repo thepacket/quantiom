@@ -414,7 +414,7 @@ host plus `/api/health`.
   & derive / Debug & verify / Export & hardware) whose entries insert a
   ready-made prompt into the input for editing (append, not auto-send;
   bracketed `[values]` are placeholders; shown in BOTH chat and dialogue
-  modes — in dialogue it seeds the topic). 10 categories / ~65 prompts
+  modes — in dialogue it seeds the topic). 10 categories / ~95 prompts
   (Analyze / Create / Optimize / Transform / Explain & derive / Debug &
   verify / Export & hardware / Noise & error / Benchmark & characterize /
   Visualize & interpret). The circuit QASM is auto-attached to every

@@ -654,7 +654,7 @@ is still 100% client-side.
   token (and on partial `$$…$$`) would lock the main thread.
 - **Model picker.** Live-fetches the full OpenRouter catalog with
   search; click any model to switch. Choice persists per browser.
-- **Prompt library.** A searchable **prompts** picker with ~65
+- **Prompt library.** A searchable **prompts** picker with ~95
   ready-made prompts across 10 categories (Analyze, Create, Optimize,
   Transform, Explain & derive, Debug & verify, Export & hardware, Noise
   & error, Benchmark & characterize, Visualize & interpret). Selecting

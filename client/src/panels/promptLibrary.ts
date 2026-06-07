@@ -52,6 +52,18 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
         title: "Clifford / T-count check",
         text: "Is this circuit Clifford? If not, list the non-Clifford gates and give the T-count and T-depth.",
       },
+      {
+        title: "Product state or entangled?",
+        text: "Is the output a product state or entangled? If product, factor it qubit by qubit; if entangled, identify which subsystems are entangled.",
+      },
+      {
+        title: "Symmetries & conserved quantities",
+        text: "Identify any symmetries or conserved quantities this circuit respects (e.g. excitation/Hamming-weight number, Z₂ parity) and which gates would break them.",
+      },
+      {
+        title: "Causal cone of a qubit",
+        text: "Trace the backward causal cone of qubit [q]'s final value: which gates can possibly affect it, and which are irrelevant?",
+      },
     ],
   },
   {
@@ -113,6 +125,26 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
         title: "Code encoder (Steane / repetition)",
         text: "Build the encoder circuit for the [Steane [[7,1,3]] / 3-qubit repetition] code, mapping one logical qubit into the code space. Emit the OpenQASM.",
       },
+      {
+        title: "Bernstein–Vazirani",
+        text: "Build a Bernstein–Vazirani circuit that recovers the hidden bitstring [bits, e.g. 1011] in a single query on [n] qubits. Emit the OpenQASM.",
+      },
+      {
+        title: "Deutsch–Jozsa",
+        text: "Build a Deutsch–Jozsa circuit on [n] qubits for a [constant / balanced] oracle and explain how one shot decides which. Emit the OpenQASM.",
+      },
+      {
+        title: "Cluster / graph state",
+        text: "Create a [n]-qubit linear cluster state (H on all qubits, then CZ between neighbours). Emit the OpenQASM.",
+      },
+      {
+        title: "Random circuit",
+        text: "Generate a random [n]-qubit circuit of depth [d] from a hardware-native gate set (random single-qubit gates + a brickwork of CZ/CX). Emit the OpenQASM.",
+      },
+      {
+        title: "QFT adder",
+        text: "Build a Draper QFT-based adder that adds the constant [a] to an [n]-qubit register. Emit the OpenQASM.",
+      },
     ],
   },
   {
@@ -137,6 +169,14 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
       {
         title: "Optimize then verify",
         text: "Apply peephole optimizations to this circuit, emit the result as OpenQASM, and argue why it is equivalent to the original.",
+      },
+      {
+        title: "Reduce parallel depth",
+        text: "Reorder commuting gates to minimize the circuit's parallel (critical-path) depth without changing the unitary. Emit the OpenQASM and report before/after depth.",
+      },
+      {
+        title: "Fuse single-qubit runs",
+        text: "Fuse each maximal run of consecutive single-qubit gates on a wire into one U3. Emit the OpenQASM.",
       },
     ],
   },
@@ -167,6 +207,18 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
         title: "Change measurement basis",
         text: "Modify this circuit to measure all qubits in the [X / Y] basis instead of Z. Emit the OpenQASM.",
       },
+      {
+        title: "CZ ↔ CX rewrite",
+        text: "Rewrite every CZ as H·CX·H (or every CX as H·CZ·H), then simplify. Emit the OpenQASM.",
+      },
+      {
+        title: "Make it controlled-U",
+        text: "Add one control qubit that turns this entire circuit into a controlled-U. Emit the OpenQASM.",
+      },
+      {
+        title: "Permute the qubit order",
+        text: "Relabel the qubits according to the permutation [e.g. 0→2,1→0,2→1] and rewrite the circuit accordingly. Emit the OpenQASM.",
+      },
     ],
   },
   {
@@ -191,6 +243,18 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
       {
         title: "Expected dominant noise",
         text: "Given a typical superconducting device, give the Kraus operators for the noise channel likely to dominate on this circuit and explain its effect.",
+      },
+      {
+        title: "Stabilizer generators",
+        text: "If this circuit's output is a stabilizer state, give its stabilizer generators; if not, explain which gate takes it outside the stabilizer formalism.",
+      },
+      {
+        title: "Prove it implements …",
+        text: "Prove, step by step, that this circuit implements [claimed operation, e.g. a SWAP / a Toffoli / QFT].",
+      },
+      {
+        title: "Post-measurement state",
+        text: "Explain what happens if I measure qubit [q] in the Z basis now: the probability of each outcome and the resulting post-measurement state of the remaining qubits.",
       },
     ],
   },
@@ -217,6 +281,14 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
         title: "Explain the measurement stats",
         text: "Explain why the measurement statistics of this circuit look the way they do, referencing the gate structure.",
       },
+      {
+        title: "Trace a specific amplitude",
+        text: "Walk through, term by term, how the amplitude of basis state |[bitstring]⟩ in the final state is produced.",
+      },
+      {
+        title: "Diagnose unexpected probabilities",
+        text: "The output probabilities aren't what I expected [describe what you expected]. Diagnose the discrepancy and point to the responsible gates.",
+      },
     ],
   },
   {
@@ -241,6 +313,18 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
       {
         title: "Noise mitigation plan",
         text: "Which noise sources would most degrade this circuit on a superconducting device, and what concrete mitigation strategies should I apply?",
+      },
+      {
+        title: "Export to another SDK",
+        text: "Export this circuit as [Braket / Q# / PyQuil / pytket] code.",
+      },
+      {
+        title: "Shots for a target precision",
+        text: "Estimate how many measurement shots I need to resolve this circuit's output distribution (or ⟨[observable]⟩) to ±[precision], and explain the statistics.",
+      },
+      {
+        title: "Connectivity violations",
+        text: "List the two-qubit interactions in this circuit and check them against a [linear / ring / heavy-hex] coupling map; report which pairs are non-adjacent and need routing.",
       },
     ],
   },
@@ -271,6 +355,18 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
         title: "Build a noise model from a backend",
         text: "Sketch a noise model approximating IBM [backend, e.g. ibm_brisbane]: rough T1/T2, single- and two-qubit gate errors, readout error, and coupling map. Note that Quantiom can import the real calibration JSON.",
       },
+      {
+        title: "Readout-error mitigation",
+        text: "Explain how to build and apply a measurement-error mitigation (assignment / confusion matrix and its inverse) for this circuit's [n] qubits, and its limits.",
+      },
+      {
+        title: "Dynamical decoupling",
+        text: "Where could I insert dynamical-decoupling sequences (XY4 / CPMG) on the idle qubits in this circuit, and what error would they suppress?",
+      },
+      {
+        title: "Coherence-limited depth",
+        text: "Given T1 = [µs], T2 = [µs], and a [ns] gate time, estimate the maximum useful depth of this circuit before decoherence dominates the signal.",
+      },
     ],
   },
   {
@@ -300,6 +396,18 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
         title: "Design a characterization experiment",
         text: "Design an experiment to measure [property, e.g. two-qubit gate error / crosstalk / readout error] on my device, including the circuit structure and the metric to extract.",
       },
+      {
+        title: "Mirror / volumetric read",
+        text: "My mirror (volumetric) benchmark shows success dropping to ½ around width [w] × depth [d]. What does that say about my device's usable circuit shapes?",
+      },
+      {
+        title: "Pauli error budget read",
+        text: "My Pauli error budget shows qubit [q] dominated by [X / Y / Z] error. What physical mechanism does that point to, and how would I reduce it?",
+      },
+      {
+        title: "Crosstalk / addressability",
+        text: "Simultaneous RB reports addressability [r]× on qubit [q] vs isolated. Interpret it and suggest how to reduce the crosstalk.",
+      },
     ],
   },
   {
@@ -328,6 +436,22 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
       {
         title: "Chaotic or integrable?",
         text: "The level-statistics gap ratio of this Hamiltonian's spectrum is [value] (Poisson ≈ 0.386, GOE ≈ 0.531). Is the system integrable or chaotic, and what does that mean for thermalization?",
+      },
+      {
+        title: "Read the unitary heatmap",
+        text: "Interpret the unitary heatmap (magnitude + phase) of this circuit: does it look like a permutation, block-diagonal, sparse, or dense (scrambling) operator, and what does that imply?",
+      },
+      {
+        title: "OTOC scrambling",
+        text: "My OTOC C(t) saturates around t = [value]. Explain what that says about information scrambling and the effective butterfly velocity.",
+      },
+      {
+        title: "Read the Q-sphere",
+        text: "Interpret this Q-sphere: which basis states carry amplitude, their Hamming weights (latitude), and the relative phases (hue).",
+      },
+      {
+        title: "Concurrence vs negativity",
+        text: "The pairwise concurrence between qubits [i] and [j] is [c]. Interpret it alongside the log-negativity, and what monogamy says about the rest of the system.",
       },
     ],
   },
