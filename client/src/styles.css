@@ -40,17 +40,27 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .app__main { flex: 1; min-height: 0; display: flex; }
 
 /* ─── Editor layout ─────────────────────────────────────────────────── */
-.editor { display: grid; grid-template-columns: var(--palette-w, minmax(220px, 280px)) minmax(0, 1fr) minmax(280px, 360px); grid-template-rows: auto 1fr; flex: 1; min-height: 0; height: 100%; }
+.editor { display: grid; grid-template-columns: var(--palette-w, minmax(220px, 280px)) minmax(0, 1fr) var(--panels-w, minmax(280px, 360px)); grid-template-rows: auto 1fr; flex: 1; min-height: 0; height: 100%; }
 /* Narrow viewports: shrink side columns further so the canvas never overlaps. */
 @media (max-width: 1100px) {
-  .editor { grid-template-columns: var(--palette-w, minmax(180px, 220px)) minmax(0, 1fr) minmax(240px, 300px); }
+  .editor { grid-template-columns: var(--palette-w, minmax(180px, 220px)) minmax(0, 1fr) var(--panels-w, minmax(240px, 300px)); }
 }
 @media (max-width: 880px) {
-  .editor { grid-template-columns: var(--palette-w, minmax(160px, 200px)) minmax(0, 1fr) minmax(220px, 260px); }
+  .editor { grid-template-columns: var(--palette-w, minmax(160px, 200px)) minmax(0, 1fr) var(--panels-w, minmax(220px, 260px)); }
 }
-/* Whole-palette collapse: the first column shrinks to a thin reopen strip at
+/* Whole-column collapse: the side column shrinks to a thin reopen strip at
    every breakpoint (the variable wins over the media-query fallbacks). */
 .editor--palette-collapsed { --palette-w: 1.9rem; }
+.editor--panels-collapsed { --panels-w: 1.9rem; }
+/* When the right column is collapsed, hide its content and show the strip. */
+.panels__reopen { display: none; }
+.editor--panels-collapsed .editor__right > :not(.panels__reopen) { display: none; }
+.editor--panels-collapsed .panels__reopen {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: 100%; height: 100%; padding: 10px 0; background: transparent;
+  border: none; color: var(--muted); cursor: pointer;
+}
+.editor--panels-collapsed .panels__reopen:hover { color: var(--fg); background: var(--bg-2); }
 /* Chat panel sits inside editor__center, below the Inspector. */
 .chat { display: flex; flex-direction: column; position: relative; border-top: 1px solid var(--border); background: var(--panel); min-height: 0; }
 .chat--collapsed { height: 24px; min-height: 24px; }

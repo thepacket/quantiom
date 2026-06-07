@@ -574,6 +574,14 @@ export function CircuitEditor() {
     try { localStorage.setItem("quantiom:palette-collapsed", paletteCollapsed ? "1" : "0"); } catch { /* ignore */ }
   }, [paletteCollapsed]);
 
+  // Whole right-panel-column collapse (mirrors the palette). Persisted.
+  const [panelsCollapsed, setPanelsCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem("quantiom:panels-collapsed") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("quantiom:panels-collapsed", panelsCollapsed ? "1" : "0"); } catch { /* ignore */ }
+  }, [panelsCollapsed]);
+
   // Shared gate-clipboard ops (used by both the Edit menu and keyboard).
   const copySelection = useCallback(() => {
     const selected = circuit.gates.filter((g) => selectedIds.has(g.id));
@@ -860,7 +868,7 @@ export function CircuitEditor() {
   }, [t]);
 
   return (
-    <div className={`editor${paletteCollapsed ? " editor--palette-collapsed" : ""}`}>
+    <div className={`editor${paletteCollapsed ? " editor--palette-collapsed" : ""}${panelsCollapsed ? " editor--panels-collapsed" : ""}`}>
       <HoverTip />
       {showDocs !== null && <DocsModal initialTab={showDocs} onClose={() => setShowDocs(null)} />}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
@@ -1188,7 +1196,22 @@ export function CircuitEditor() {
         </ErrorBoundary>
       </div>
       <div className="editor__right">
+        <button
+          className="panels__reopen"
+          onClick={() => setPanelsCollapsed(false)}
+          title="Show panels"
+          aria-label="Show panels"
+        >
+          <span className="palette__reopen-icon">◂</span>
+          <span className="palette__reopen-label">PANELS</span>
+        </button>
         <div className="editor__right-bar">
+          <button
+            className="palette__collapse"
+            onClick={() => setPanelsCollapsed(true)}
+            title="Collapse panels"
+            aria-label="Collapse panels"
+          >▸</button>
           <label className="editor__right-bar-toggle" title="When on, every panel with shot-based sampling re-runs on each tick.">
             <input
               type="checkbox"

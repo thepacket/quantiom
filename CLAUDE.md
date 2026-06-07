@@ -474,7 +474,8 @@ host plus `/api/health`.
   `quantiom:circuit:v1` migration), `quantiom:custom-gates:v1`,
   `quantiom:noise:v2`, `quantiom:panel-collapsed:v1`,
   `quantiom:probabilities-mode`, `quantiom:probabilities-shots`,
-  `quantiom:palette-collapsed` (whole gate-palette collapse).
+  `quantiom:palette-collapsed` (whole gate-palette collapse),
+  `quantiom:panels-collapsed` (whole right-panel-column collapse).
 
 ## Testing
 
