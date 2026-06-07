@@ -44,6 +44,13 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div style={{ padding: "20px 22px", color: "var(--fg)", fontSize: 13, lineHeight: 1.6 }}>
+          {/* Logo; gracefully hidden if the asset isn't present. */}
+          <img
+            src="/quantiom-logo.png"
+            alt="Quantiom logo"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            style={{ display: "block", width: 96, height: 96, margin: "0 auto 12px", borderRadius: 12 }}
+          />
           <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "0.5px" }}>Quantiom</div>
           <div style={{ color: "var(--muted)", fontFamily: "ui-monospace, monospace", fontSize: 11, marginTop: 2 }}>
             v{APP_VERSION}.{__GIT_COMMITS__} ({__GIT_SHA__})

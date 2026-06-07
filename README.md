@@ -1,4 +1,8 @@
-# Quantiom
+<p align="center">
+  <img src="client/public/quantiom-logo.png" width="140" alt="Quantiom logo" />
+</p>
+
+<h1 align="center">Quantiom</h1>
 
 [![CI](https://github.com/thepacket/quantiom/actions/workflows/ci.yml/badge.svg)](https://github.com/thepacket/quantiom/actions/workflows/ci.yml)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20540701-blue?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.20540701)
