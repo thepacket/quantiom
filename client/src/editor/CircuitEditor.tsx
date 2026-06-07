@@ -466,46 +466,46 @@ function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
 }
 
 /**
- * Draggable horizontal splitter between the canvas and the Inspector.
- * Drag up → Inspector grows; drag down → Inspector shrinks. The user's
- * choice persists in localStorage. We adjust the CSS custom property
- * `--inspector-h` on document.documentElement so a single rule on the
- * Inspector picks up the value without re-rendering anything.
+ * Draggable vertical splitter between the circuit canvas and the Inspector
+ * side panel. Drag left → Inspector grows; drag right → Inspector shrinks.
+ * The user's choice persists in localStorage. We adjust the CSS custom
+ * property `--inspector-w` on document.documentElement so a single rule on
+ * the Inspector picks up the value without re-rendering anything.
  *
- * Bounded between 60 px (just the header) and 60% of viewport height.
+ * Bounded between 200 px and 60% of the viewport width.
  */
 function InspectorSplitter() {
-  const STORAGE_KEY = "quantiom:inspector-h";
+  const STORAGE_KEY = "quantiom:inspector-w";
   const draggingRef = useRef(false);
-  const startYRef = useRef(0);
-  const startHRef = useRef(0);
+  const startXRef = useRef(0);
+  const startWRef = useRef(0);
 
   useEffect(() => {
     const saved = parseInt(localStorage.getItem(STORAGE_KEY) ?? "", 10);
     if (Number.isFinite(saved) && saved > 0) {
-      document.documentElement.style.setProperty("--inspector-h", `${saved}px`);
+      document.documentElement.style.setProperty("--inspector-w", `${saved}px`);
     }
   }, []);
 
   const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
     draggingRef.current = true;
-    startYRef.current = e.clientY;
-    const current = getComputedStyle(document.documentElement).getPropertyValue("--inspector-h").trim();
+    startXRef.current = e.clientX;
+    const current = getComputedStyle(document.documentElement).getPropertyValue("--inspector-w").trim();
     const px = parseInt(current.endsWith("px") ? current : "0", 10);
-    startHRef.current = px || guessCurrentInspectorHeight();
+    startWRef.current = px || guessCurrentInspectorWidth();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
   };
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!draggingRef.current) return;
-    const delta = startYRef.current - e.clientY; // drag up = positive
-    const next = clamp(startHRef.current + delta, 60, window.innerHeight * 0.6);
-    document.documentElement.style.setProperty("--inspector-h", `${Math.round(next)}px`);
+    const delta = startXRef.current - e.clientX; // drag left = wider
+    const next = clamp(startWRef.current + delta, 200, window.innerWidth * 0.6);
+    document.documentElement.style.setProperty("--inspector-w", `${Math.round(next)}px`);
   };
   const onUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!draggingRef.current) return;
     draggingRef.current = false;
-    const current = getComputedStyle(document.documentElement).getPropertyValue("--inspector-h").trim();
+    const current = getComputedStyle(document.documentElement).getPropertyValue("--inspector-w").trim();
     const px = parseInt(current.endsWith("px") ? current : "0", 10);
     if (px > 0) {
       try { localStorage.setItem(STORAGE_KEY, String(px)); } catch { /* ignore */ }
@@ -515,7 +515,7 @@ function InspectorSplitter() {
 
   return (
     <div
-      className="editor__splitter"
+      className="editor__vsplitter"
       onPointerDown={onDown}
       onPointerMove={onMove}
       onPointerUp={onUp}
@@ -526,9 +526,9 @@ function InspectorSplitter() {
 }
 
 function clamp(v: number, lo: number, hi: number): number { return Math.max(lo, Math.min(hi, v)); }
-function guessCurrentInspectorHeight(): number {
+function guessCurrentInspectorWidth(): number {
   const el = document.querySelector(".inspector") as HTMLElement | null;
-  return el ? el.getBoundingClientRect().height : 200;
+  return el ? el.getBoundingClientRect().width : 300;
 }
 
 export function CircuitEditor() {
@@ -581,6 +581,14 @@ export function CircuitEditor() {
   useEffect(() => {
     try { localStorage.setItem("quantiom:panels-collapsed", panelsCollapsed ? "1" : "0"); } catch { /* ignore */ }
   }, [panelsCollapsed]);
+
+  // Inspector side-panel collapse (right of the canvas). Persisted.
+  const [inspectorCollapsed, setInspectorCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem("quantiom:inspector-collapsed") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("quantiom:inspector-collapsed", inspectorCollapsed ? "1" : "0"); } catch { /* ignore */ }
+  }, [inspectorCollapsed]);
 
   // Shared gate-clipboard ops (used by both the Edit menu and keyboard).
   const copySelection = useCallback(() => {
@@ -1159,33 +1167,48 @@ export function CircuitEditor() {
             )}
           </div>
         </div>
-        <div className="editor__canvas-scroll">
-          <div className="editor__canvas-zoom" style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}>
-            <CircuitCanvas
-              circuit={circuit}
-              dispatch={dispatch}
-              selectedGateId={selectedGateId}
-              onSelect={setSelectedGateId}
-              currentStep={effectiveStep}
-              customGates={customGates}
-              highlightedIds={findMatches(circuit, findQuery)}
-              selectedIds={selectedIds}
-              onSelectionChange={setSelectedIds}
-              coneIds={coneIds}
-              skipped={skippedMap}
-              folds={folds}
-              onUnfold={(f) => setFolds((prev) => prev.filter((x) => !(x.from === f.from && x.to === f.to)))}
-            />
+        <div className="editor__canvas-row">
+          <div className="editor__canvas-scroll">
+            <div className="editor__canvas-zoom" style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}>
+              <CircuitCanvas
+                circuit={circuit}
+                dispatch={dispatch}
+                selectedGateId={selectedGateId}
+                onSelect={setSelectedGateId}
+                currentStep={effectiveStep}
+                customGates={customGates}
+                highlightedIds={findMatches(circuit, findQuery)}
+                selectedIds={selectedIds}
+                onSelectionChange={setSelectedIds}
+                coneIds={coneIds}
+                skipped={skippedMap}
+                folds={folds}
+                onUnfold={(f) => setFolds((prev) => prev.filter((x) => !(x.from === f.from && x.to === f.to)))}
+              />
+            </div>
           </div>
+          {inspectorCollapsed ? (
+            <button
+              className="inspector-reopen"
+              onClick={() => setInspectorCollapsed(false)}
+              title="Show inspector"
+              aria-label="Show inspector"
+            >
+              <span className="palette__reopen-icon">◂</span>
+              <span className="palette__reopen-label">INSPECTOR</span>
+            </button>
+          ) : (
+            <>
+              <InspectorSplitter />
+              <Inspector
+                circuit={circuit}
+                dispatch={dispatch}
+                selectedGateId={selectedGateId}
+                onCollapse={() => setInspectorCollapsed(true)}
+              />
+            </>
+          )}
         </div>
-        <InspectorSplitter />
-        <Inspector
-          circuit={circuit}
-          dispatch={dispatch}
-          selectedGateId={selectedGateId}
-          onSelect={setSelectedGateId}
-          onStepTo={setPickedStep}
-        />
         <ErrorBoundary label="chat">
           <ChatPanel
             circuit={circuit}

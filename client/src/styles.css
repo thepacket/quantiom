@@ -177,25 +177,26 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .panels-cat:first-of-type { border-top: none; }
 .editor__panels-btn { padding: 2px 8px; background: transparent; border: 1px solid var(--border); border-radius: 4px; color: var(--fg); cursor: pointer; font-size: 11px; }
 .editor__panels-btn:hover { background: var(--bg-3, var(--bg-2)); }
-/* Seven grid rows for editor__center's children:
+/* Five grid rows for editor__center's children:
    TabStrip (auto) · toolbar (auto) · transport row [StepBar + zoom] (auto) ·
-   canvas (1fr — grows to fill remaining vertical space) · splitter (auto) ·
-   Inspector (--inspector-h, defaults to auto when the user hasn't dragged) ·
-   ChatPanel (auto; its own internal flex layout drives height). */
+   canvas-row (1fr — the circuit canvas + the Inspector side panel, side by
+   side) · ChatPanel (auto; its own internal flex layout drives height). */
 .editor__center {
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto var(--inspector-h, auto) auto;
+  grid-template-rows: auto auto auto 1fr auto;
   min-width: 0; min-height: 0;
 }
+/* Canvas + the Inspector side panel share the 1fr row, side by side. */
+.editor__canvas-row { display: flex; min-height: 0; min-width: 0; overflow: hidden; }
+.editor__vsplitter {
+  width: 6px; cursor: col-resize; background: var(--bg-2); flex: none;
+  border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+}
+.editor__vsplitter:hover { background: var(--accent); opacity: 0.4; }
 /* StepBar + zoom controls share one row so the zoom widget never costs a
    full-width row of its own. */
 .editor__transport { display: flex; align-items: stretch; }
 .editor__transport .step-bar { flex: 1; }
-.editor__splitter {
-  height: 6px; cursor: row-resize; background: var(--bg-2);
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-}
-.editor__splitter:hover { background: var(--accent); opacity: 0.4; }
 .editor__toolbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg-2); gap: 12px; flex-wrap: wrap; row-gap: 6px; }
 .editor__counts { display: flex; align-items: center; gap: 6px; color: var(--muted); }
 .editor__counts span { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; color: var(--fg); }
@@ -204,7 +205,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .file-menu { display: flex; gap: 4px; align-items: center; }
 .file-menu select { padding: 3px 6px; }
 .editor__actions { display: flex; gap: 6px; flex-wrap: wrap; row-gap: 6px; align-items: center; }
-.editor__canvas-scroll { overflow: auto; background: var(--bg); padding: 8px 0 0 8px; }
+.editor__canvas-scroll { flex: 1 1 auto; min-width: 0; overflow: auto; background: var(--bg); padding: 8px 0 0 8px; }
 
 /* ─── Palette ───────────────────────────────────────────────────────── */
 /* Instant hover tooltip (no native-title delay), shown via HoverTip. */
@@ -553,7 +554,17 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .arb-matrix__cell--im { margin-top: 2px; color: #c4a96d; }
 
 /* ─── Inspector ─────────────────────────────────────────────────────── */
-.inspector { border-top: 1px solid var(--border); background: var(--panel); padding: 10px 12px; max-height: 60vh; min-height: 60px; overflow: auto; }
+/* Inspector: a vertical panel on the right edge of the circuit canvas area. */
+.inspector { flex: none; width: var(--inspector-w, 300px); min-width: 0; border-left: 1px solid var(--border); background: var(--panel); padding: 10px 12px; overflow: auto; }
+.inspector__bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: -10px -12px 8px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.inspector__bar-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); }
+/* Collapsed Inspector: a thin vertical "INSPECTOR" reopen strip. */
+.inspector-reopen {
+  flex: none; width: 1.9rem; display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding: 10px 0; background: var(--panel); border: none;
+  border-left: 1px solid var(--border); color: var(--muted); cursor: pointer;
+}
+.inspector-reopen:hover { color: var(--fg); background: var(--bg-2); }
 .inspector--empty { color: var(--muted); font-size: 12px; }
 .inspector__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .inspector__name { font-size: 13px; color: var(--fg); }

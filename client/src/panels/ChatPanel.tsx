@@ -300,46 +300,27 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
     URL.revokeObjectURL(url);
   }, [dialogue, dialogueCfg, circuit]);
 
-  // Drag handle for height resize. This handle is the divider between the
-  // gate-parameters (Inspector) panel above and the chat below, so it acts as
-  // a true two-pane splitter: growing the chat shrinks the Inspector by the
-  // same amount (its top edge stays anchored) and the circuit canvas above is
-  // untouched. We do that by adjusting the chat height and the Inspector's
-  // `--inspector-h` CSS var inversely.
+  // Drag handle for the chat's own height. The chat is the bottom row of the
+  // editor; the canvas-row above (1fr) absorbs the change, so growing the chat
+  // shrinks the circuit + Inspector area. Driven imperatively during the drag
+  // (committed to React state on mouse-up) to avoid a one-frame jitter.
   const onResizeStart = useCallback((startEvent: React.MouseEvent) => {
     startEvent.preventDefault();
     const startY = startEvent.clientY;
     const startChat = height;
-    const root = document.documentElement;
-    const readInspector = () => {
-      const v = getComputedStyle(root).getPropertyValue("--inspector-h").trim();
-      const px = parseInt(v, 10);
-      if (Number.isFinite(px) && px > 0) return px;
-      const el = document.querySelector(".inspector") as HTMLElement | null;
-      return el ? Math.round(el.getBoundingClientRect().height) : 200;
-    };
-    const startInspector = readInspector();
-    const MIN_PARAMS = 60, MIN_CHAT = 120, MAX_CHAT = 800;
+    const MIN_CHAT = 120, MAX_CHAT = 800;
     let lastChat = startChat;
-    // Drive both heights imperatively during the drag so they update in the
-    // SAME frame — mixing a React setState (one frame late) with a synchronous
-    // CSS-var write makes the panels jitter. Commit to React state on mouse-up.
     const onMove = (e: MouseEvent) => {
-      let d = startY - e.clientY; // drag up → chat grows, params shrinks
-      d = Math.min(d, startInspector - MIN_PARAMS);
+      let d = startY - e.clientY; // drag up → chat grows
       d = Math.min(d, MAX_CHAT - startChat);
       d = Math.max(d, MIN_CHAT - startChat);
       lastChat = startChat + d;
       if (chatRef.current) chatRef.current.style.height = `${lastChat}px`;
-      root.style.setProperty("--inspector-h", `${Math.round(startInspector - d)}px`);
     };
     const onUp = () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
       setHeight(lastChat); // commit once (keeps React state + saveHeight in sync)
-      const v = getComputedStyle(root).getPropertyValue("--inspector-h").trim();
-      const px = parseInt(v, 10);
-      if (Number.isFinite(px) && px > 0) { try { localStorage.setItem("quantiom:inspector-h", String(px)); } catch { /* ignore */ } }
     };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);

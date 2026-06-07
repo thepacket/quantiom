@@ -53,19 +53,27 @@ type Props = {
   circuit: Circuit;
   selectedGateId: string | null;
   dispatch: React.Dispatch<HistoryAction>;
-  onSelect: (id: string | null) => void;
-  /** Optional — when provided, the Inspector renders a "Step to before"
-   *  button that freezes the simulator just before this gate so all the
-   *  panels reflect the state the gate is about to act on. */
-  onStepTo?: (column: number | null) => void;
+  /** When provided, the Inspector shows a ▸ collapse button in its bar. */
+  onCollapse?: () => void;
 };
 
-export function Inspector({ circuit, selectedGateId, dispatch, onSelect, onStepTo }: Props) {
+/** Top bar of the Inspector side panel: title + collapse button. */
+function InspectorBar({ onCollapse }: { onCollapse: () => void }) {
+  return (
+    <div className="inspector__bar">
+      <span className="inspector__bar-title">Inspector</span>
+      <button className="palette__collapse" onClick={onCollapse} title="Collapse inspector" aria-label="Collapse inspector">▸</button>
+    </div>
+  );
+}
+
+export function Inspector({ circuit, selectedGateId, dispatch, onCollapse }: Props) {
   const gate = circuit.gates.find((g) => g.id === selectedGateId) ?? null;
 
   if (!gate) {
     return (
       <div className="inspector inspector--empty">
+        {onCollapse && <InspectorBar onCollapse={onCollapse} />}
         <p>Drag a gate from the palette onto a qubit wire. Click a placed gate to edit.</p>
       </div>
     );
@@ -100,6 +108,7 @@ export function Inspector({ circuit, selectedGateId, dispatch, onSelect, onStepT
 
   return (
     <div className="inspector">
+      {onCollapse && <InspectorBar onCollapse={onCollapse} />}
       <div className="inspector__head">
         <div>
           <div className="inspector__name">{def.name}</div>
@@ -107,26 +116,6 @@ export function Inspector({ circuit, selectedGateId, dispatch, onSelect, onStepT
             id: {def.id} · {totalQubits(def)} qubit{totalQubits(def) === 1 ? "" : "s"}
             {def.numClbits ? ` · ${def.numClbits} clbit` : ""}
           </div>
-        </div>
-        <div className="inspector__head-actions">
-          {onStepTo && (
-            <button
-              className="inspector__step-here"
-              onClick={() => onStepTo(gate.column - 1)}
-              title="Freeze the simulator just before this gate so the panels show what it acts on"
-            >
-              Step here
-            </button>
-          )}
-          <button
-            className="inspector__delete"
-            onClick={() => {
-              dispatch({ type: "remove-gate", id: gate.id });
-              onSelect(null);
-            }}
-          >
-            Delete
-          </button>
         </div>
       </div>
 
