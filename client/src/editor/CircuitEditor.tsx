@@ -920,6 +920,7 @@ export function CircuitEditor() {
       )}
       <header className="app__header">
         <div className="app__header-left">
+          <img src="/quantiom-logo.png" className="app__logo" alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
           <h1>Quantiom</h1>
           <span className="app__version">v{APP_VERSION}.{__GIT_COMMITS__} ({__GIT_SHA__})</span>
           <EndiannessToggle />
