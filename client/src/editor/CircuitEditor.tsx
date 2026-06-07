@@ -104,6 +104,8 @@ import { ComparePanel } from "../panels/ComparePanel";
 import { ChatPanel } from "../panels/ChatPanel";
 import { EquivalencePanel } from "../panels/EquivalencePanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
+import { RbPanel } from "../panels/RbPanel";
+import { QecPanel } from "../panels/QecPanel";
 import { MeasurementCountsPanel } from "../panels/MeasurementCountsPanel";
 import { BranchTreePanel } from "../panels/BranchTreePanel";
 import { DecoherencePanel } from "../panels/DecoherencePanel";
@@ -1354,6 +1356,8 @@ export function CircuitEditor() {
         <ErrorBoundary label="syndromes">
           <SyndromePanel circuit={circuit} customGates={customGates} noise={noise} shotsTick={shotsTick} />
         </ErrorBoundary>
+        <ErrorBoundary label="randomized-benchmarking"><RbPanel noise={noise} /></ErrorBoundary>
+        <ErrorBoundary label="qec-workbench"><QecPanel /></ErrorBoundary>
         <ErrorBoundary label="tomography">
           <TomographyPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
         </ErrorBoundary>

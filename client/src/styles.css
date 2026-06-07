@@ -1150,6 +1150,31 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .sym__key--odd { color: var(--accent-2); }
 
 .hamspec__swatch { width: 12px; height: 0; border-top-width: 2px; border-top-style: solid; display: inline-block; }
+
+/* Randomized benchmarking panel */
+.rb { display: flex; flex-direction: column; gap: 6px; }
+.rb__head { display: flex; align-items: center; gap: 10px; }
+.rb__run, .qec__run { padding: 3px 12px; font-size: 11px; background: var(--accent); color: var(--bg); border: 1px solid var(--accent); border-radius: 3px; cursor: pointer; }
+.rb__run:disabled, .qec__run:disabled { opacity: 0.6; cursor: default; }
+.rb__note, .qec__note { font-size: 10px; color: var(--muted); }
+.rb__hint, .qec__hint { font-size: 11px; color: var(--muted); }
+.rb__out, .qec__out { display: flex; flex-direction: column; gap: 4px; }
+.rb__stats, .qec__stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--muted); }
+.rb__stats b, .qec__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.rb__svg, .qec__svg { display: block; }
+.rb__axis, .qec__axis { fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.rb__axis-line, .qec__axis-line { stroke: var(--border); stroke-width: 1; }
+.rb__asymptote { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
+.rb__fit { fill: none; stroke: var(--accent-2); stroke-width: 1.6; }
+.rb__dot { fill: var(--fg); }
+.rb__legend, .qec__legend { font-size: 10px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* QEC workbench panel */
+.qec { display: flex; flex-direction: column; gap: 6px; }
+.qec__head { display: flex; align-items: center; gap: 10px; }
+.qec__diag { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.7; }
+.qec__thresh { stroke: #ffd24f; stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.8; }
+.qec__key--diag { color: var(--muted); }
 .hamspec__swatch--ground { border-top-color: #7ee787; }
 .hamspec__swatch--exp { border-top-style: dashed; border-top-color: #ffd24f; }
 
