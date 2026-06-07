@@ -7,7 +7,7 @@ import { useEndianness, displayAmplitudes } from "./endianness";
 
 type Props = { state: SimState };
 
-const MAX_QUBITS = 6;
+const MAX_QUBITS = 8;
 
 /**
  * Q-sphere — the whole multi-qubit state on one sphere. Each basis state
@@ -22,7 +22,7 @@ const MAX_QUBITS = 6;
  * Hamming-weight level (echoing the |x⟩ → latitude mapping) plus meridians
  * for orientation.
  *
- * Statevector path only, capped at 6 qubits (64 points), default-collapsed.
+ * Statevector path only, capped at 8 qubits (256 points), default-collapsed.
  */
 export function QSpherePanel({ state }: Props) {
   return (
@@ -49,7 +49,7 @@ function Body({ state }: Props) {
   if (n === 0) return null;
   if (data.isStabilizer) return <div className="panel__notice">Clifford fast path — no statevector amplitudes for the Q-sphere.</div>;
   if (data.isNoisy) return <div className="panel__notice">Noise mode on — amplitudes from a single trajectory aren't meaningful.</div>;
-  if (n > MAX_QUBITS) return <div className="panel__notice">{n} qubits — the Q-sphere is capped at {MAX_QUBITS} (64 states).</div>;
+  if (n > MAX_QUBITS) return <div className="panel__notice">{n} qubits — the Q-sphere is capped at {MAX_QUBITS} qubits ({2 ** MAX_QUBITS} states).</div>;
   if (!result) return null;
 
   return <Sphere points={result.points} n={n} />;

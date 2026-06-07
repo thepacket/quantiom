@@ -39,7 +39,7 @@ function popcount(x: number): number {
 export function qSphere(
   amplitudes: Amplitude[],
   n: number,
-  maxQubits = 6,
+  maxQubits = 8,
 ): QSphereResult | null {
   if (n < 1 || n > maxQubits) return null;
 

@@ -259,7 +259,7 @@ pole, |1…1⟩ at the south pole, weight-k states on the k-th ring),
 **marker size = |amplitude|**, **hue = phase**. It packs magnitudes and
 relative phases into a single picture.
 
-**When available.** Statevector path only; capped at 6 qubits (64 points).
+**When available.** Statevector path only; capped at 8 qubits (256 points).
 
 **Interaction.** The view is an orbitable 3-D globe — **drag to rotate**,
 **scroll to zoom**, **double-click to reset**. A wireframe of latitude rings

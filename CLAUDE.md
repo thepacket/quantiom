@@ -212,7 +212,7 @@ host plus `/api/health`.
     is a check whose support is the backward causal cone of the measured
     qubit (reuses `editor/lightcone.computeLightCone`).
   - `qsphere.ts`: `qSphere` — basis states on a sphere (latitude =
-    Hamming weight, size = |amp|, hue = phase), n ≤ 6. `husimi.ts`:
+    Hamming weight, size = |amp|, hue = phase), n ≤ 8. `husimi.ts`:
     `husimiQ` — spin coherent-state Husimi Q(θ,φ)=|⟨θ,φ|ψ⟩|² grid
     (always non-negative; complement to Wigner), n ≤ 7. `zx.ts`:
     `zxDiagram` — circuit → ZX diagram (Z/X spiders + phases, H-boxes,
@@ -583,7 +583,7 @@ host plus `/api/health`.
 - **Sonorizer.** Built, shipped, explicitly removed as "useless,
   uninteresting." Don't bring it back.
 - ~~**Q-sphere.**~~ Was once rejected as "too large"; **reopened and
-  SHIPPED 2026-06-03** (`QSpherePanel`, default-collapsed, n ≤ 6). Kept
+  SHIPPED 2026-06-03** (`QSpherePanel`, default-collapsed, n ≤ 8). Kept
   compact. Don't re-reject it.
 - **In-tool tutorials, guided lessons.** Editor-first; the example
   library is the education.
