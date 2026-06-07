@@ -56,6 +56,7 @@ export type MultiState = {
 export type TabsAction =
   | { type: "tab:new"; circuit?: Circuit; name?: string }
   | { type: "tab:close"; id: string }
+  | { type: "tab:close-all" }
   | { type: "tab:switch"; id: string }
   | { type: "tab:reorder"; fromId: string; toId: string }
   | { type: "tab:rename"; id: string; name: string }
@@ -106,6 +107,12 @@ export function multiReducer(state: MultiState, action: TabsAction): MultiState 
           activeId = (tabs[idx] ?? tabs[idx - 1] ?? tabs[0]).id;
         }
         return { tabs, activeId };
+      }
+      case "tab:close-all": {
+        // Close every circuit; the editor always keeps one tab, so reset to a
+        // single fresh blank one.
+        const t = blankTab();
+        return { tabs: [t], activeId: t.id };
       }
       case "tab:switch": {
         if (!state.tabs.some((t) => t.id === action.id)) return state;
@@ -296,6 +303,7 @@ export function useTabs() {
       [dispatch],
     ),
     closeTab: useCallback((id: string) => dispatch({ type: "tab:close", id }), [dispatch]),
+    closeAllTabs: useCallback(() => dispatch({ type: "tab:close-all" }), [dispatch]),
     switchTab: useCallback((id: string) => dispatch({ type: "tab:switch", id }), [dispatch]),
     reorderTab: useCallback(
       (fromId: string, toId: string) => dispatch({ type: "tab:reorder", fromId, toId }),

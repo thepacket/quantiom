@@ -937,7 +937,7 @@ export function CircuitEditor() {
         />
         <div className="editor__toolbar">
           <div className="editor__actions">
-            <FileMenu circuit={circuit} dispatch={dispatch} paramValues={paramValues} onLoadInNewTab={(c, name) => t.newTab(c, name)} />
+            <FileMenu circuit={circuit} dispatch={dispatch} paramValues={paramValues} onLoadInNewTab={(c, name) => t.newTab(c, name)} onCloseAll={t.closeAllTabs} />
             <EditMenu
               canUndo={undoState.canUndo}
               canRedo={undoState.canRedo}

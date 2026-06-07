@@ -24,6 +24,21 @@ type Props = {
   /** Current parameter values, used to bind free symbols when exporting to
    *  OpenQASM 2 (which has no symbolic parameters). */
   paramValues?: Record<string, number>;
+  /** Close every tab (multi-tab editor). When provided, a "Close All" item
+   *  appears, gated behind a confirmation dialog. */
+  onCloseAll?: () => void;
+};
+
+/** Minimal typings for the File System Access "Save As" API (not in lib.dom
+ *  for all targets). We only use the slice we need. */
+type SaveFilePickerOptions = {
+  suggestedName?: string;
+  types?: { description?: string; accept: Record<string, string[]> }[];
+};
+type WritableFileStream = { write: (data: string) => Promise<void>; close: () => Promise<void> };
+type SaveFileHandle = { createWritable: () => Promise<WritableFileStream> };
+type WindowWithSavePicker = Window & {
+  showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<SaveFileHandle>;
 };
 
 /** Slugify a name into something safe for a file system download. */
@@ -32,9 +47,10 @@ function toFilename(name: string | undefined): string {
   return (base || "circuit") + ".qasm";
 }
 
-export function FileMenu({ circuit, dispatch, onLoadInNewTab, paramValues }: Props) {
+export function FileMenu({ circuit, dispatch, onLoadInNewTab, paramValues, onCloseAll }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const [confirmCloseAll, setConfirmCloseAll] = useState(false);
 
   const loadQasm = (qasm: string, name: string | undefined, inNewTab = false) => {
     const result = parseQasm3(qasm);
@@ -71,6 +87,28 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab, paramValues }: Pro
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 100);
+  };
+
+  // Save the current tab's circuit via a native "Save As" dialog (File System
+  // Access API). Lets the user choose the location/filename. Falls back to the
+  // plain download in browsers without the API (Firefox/Safari).
+  const onSaveQasm = async () => {
+    const text = emitQasm3(circuit);
+    const picker = (window as WindowWithSavePicker).showSaveFilePicker;
+    if (!picker) { onDownload(); return; }
+    try {
+      const handle = await picker({
+        suggestedName: toFilename(circuit.name),
+        types: [{ description: "OpenQASM 3", accept: { "text/plain": [".qasm"] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(text);
+      await writable.close();
+    } catch (err) {
+      // User dismissed the dialog → do nothing; any other error → fall back.
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      onDownload();
+    }
   };
 
   const downloadText = (text: string, ext: string, mime: string) => {
@@ -126,7 +164,9 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab, paramValues }: Pro
       <FileDropdown
         onOpenExamples={() => setExamplesOpen(true)}
         onOpenQasm={onOpen}
+        onSaveQasm={onSaveQasm}
         onDownloadQasm={onDownload}
+        onCloseAll={onCloseAll ? () => setConfirmCloseAll(true) : undefined}
         onShare={onShare}
         shareStatus={shareStatus}
         onQasm2={onDownloadQasm2}
@@ -141,6 +181,42 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab, paramValues }: Pro
         onSvg={() => downloadCanvasSvg(circuit.name)}
       />
       <ExamplesPicker open={examplesOpen} onToggle={() => setExamplesOpen((o) => !o)} onPick={onExamplePick} />
+      {confirmCloseAll && (
+        <ConfirmDialog
+          message="Close all the circuits without saving?"
+          onYes={() => { setConfirmCloseAll(false); onCloseAll?.(); }}
+          onCancel={() => setConfirmCloseAll(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Minimal modal confirm with explicit Yes / Cancel buttons (window.confirm
+ *  can't relabel its buttons). Escape cancels. */
+function ConfirmDialog({
+  message,
+  onYes,
+  onCancel,
+}: {
+  message: string;
+  onYes: () => void;
+  onCancel: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  return (
+    <div className="confirm-overlay" onMouseDown={onCancel}>
+      <div className="confirm-dialog" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="confirm-dialog__msg">{message}</div>
+        <div className="confirm-dialog__actions">
+          <button className="confirm-dialog__btn confirm-dialog__btn--primary" onClick={onYes} autoFocus>Yes</button>
+          <button className="confirm-dialog__btn" onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -154,7 +230,9 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab, paramValues }: Pro
 function FileDropdown({
   onOpenExamples,
   onOpenQasm,
+  onSaveQasm,
   onDownloadQasm,
+  onCloseAll,
   onShare,
   shareStatus,
   onQasm2,
@@ -170,7 +248,9 @@ function FileDropdown({
 }: {
   onOpenExamples: () => void;
   onOpenQasm: () => void;
+  onSaveQasm: () => void;
   onDownloadQasm: () => void;
+  onCloseAll?: () => void;
   onShare: () => void;
   shareStatus: "idle" | "copied" | "failed";
   onQasm2: () => void;
@@ -214,7 +294,9 @@ function FileDropdown({
           <div className="examples-picker__list">
             {item("Examples…", "browse the example circuit library", onOpenExamples)}
             {item("Open QASM…", "load a .qasm file from disk", onOpenQasm)}
+            {item("Save Circuit (QASM)…", "save this tab's circuit to a file (choose location)", onSaveQasm)}
             {item("Download QASM", "save current circuit as .qasm", onDownloadQasm)}
+            {onCloseAll && item("Close All", "close every circuit tab", onCloseAll)}
             {item(
               shareStatus === "copied" ? "Share — ✓ link copied"
                 : shareStatus === "failed" ? "Share — failed"

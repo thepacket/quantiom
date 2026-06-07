@@ -853,6 +853,16 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
     hsl(180,70%,58%), hsl(240,70%,58%), hsl(300,70%,58%), hsl(360,70%,58%)); }
 .ampphase__more { font-size: 10px; color: var(--muted); }
 
+/* ─── Confirm dialog (Yes / Cancel) ────────────────────────────────── */
+.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 3000; display: flex; align-items: center; justify-content: center; }
+.confirm-dialog { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; width: min(360px, 92vw); padding: 18px 18px 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.45); }
+.confirm-dialog__msg { font-size: 14px; color: var(--fg); margin-bottom: 16px; line-height: 1.5; }
+.confirm-dialog__actions { display: flex; justify-content: flex-end; gap: 8px; }
+.confirm-dialog__btn { padding: 5px 16px; font-size: 13px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+.confirm-dialog__btn:hover { border-color: var(--border-strong); }
+.confirm-dialog__btn--primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.confirm-dialog__btn--primary:hover { filter: brightness(1.1); }
+
 /* ─── IBM backend picker (modal) ───────────────────────────────────── */
 .ibmpick__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; }
 .ibmpick__card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; width: min(460px, 94vw); max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
