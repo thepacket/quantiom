@@ -247,7 +247,9 @@ per-tab.
 **Place and wire gates.** Drag any palette tile onto a qubit wire. For
 controlled gates, drag the control onto another wire; right-click a
 control dot to toggle it to an **anti-control** (open circle). Click a
-placed gate to select it and edit its parameters in the inspector.
+placed gate to select it and edit its parameters in the **Inspector** —
+the vertical panel on the right edge of the circuit canvas (drag its
+splitter to resize, or ▸ to collapse it to a thin strip).
 
 **Rectangle-select.** Hold the left mouse on empty canvas and drag a
 rubber band; every gate it intersects highlights. The **Edit menu**'s
@@ -928,9 +930,13 @@ native method in that target. Quantiom lowers it to an exact
 decomposition where it can, and otherwise leaves a clear comment rather
 than emit something wrong — see [`qasm.md`](qasm.md).
 
-**The AI chat stopped with a "timed out" message.** It has a 20-second
-idle timeout, so a hung or stalled request fails cleanly instead of
-freezing. Retry, or pick a faster model.
+**The AI chat stopped with a "timed out" message.** Two watchdogs guard
+the request — a 20-second byte-idle timeout (dead connection) and a
+90-second content-stall timeout (OpenRouter sending keep-alives but no
+tokens) — so a hung or unresponsive request fails cleanly instead of
+spinning. The in-progress reply also streams as plain text and only
+renders as formatted markdown/LaTeX once complete, so a long answer never
+freezes the UI mid-stream. Retry, or pick a faster model.
 
 ---
 

@@ -232,15 +232,16 @@ archived version. Each release also gets its own version-specific DOI.
     collision.
   - Control dot or target glyph → different qubit: stretch-gesture
     reassigns just that role.
-- **Inspector** — column, controls, targets, classical bits, parameter
-  expressions (free-form: `π/2`, `θ`, `2*t + π/4`, `sin(t)`); per-control
-  **anti-control** toggle (●/○); compact Re/Im **matrix entry grid**
-  for `u_arb` (2×2) and `u_arb_2` (4×4); per-gate **classical
-  condition** picker (`fire only if c[k] == v`); per-gate **annotation**
-  field (free-form note rendered as a small italic tag under the gate
-  box on the canvas; round-trips through QASM 3 as a `// note: …`
-  comment); **Step here** button freezes the simulator one column before
-  the selected gate.
+- **Inspector** — a **collapsible vertical panel on the right edge of the
+  circuit canvas** (drag the splitter to resize its width; ▸ collapses it
+  to a thin "INSPECTOR" strip). Edits the selected gate: column, controls,
+  targets, classical bits, parameter expressions (free-form: `π/2`, `θ`,
+  `2*t + π/4`, `sin(t)`); per-control **anti-control** toggle (●/○);
+  compact Re/Im **matrix entry grid** for `u_arb` (2×2) and `u_arb_2`
+  (4×4); per-gate **classical condition** picker (`fire only if c[k] == v`);
+  per-gate **annotation** field (free-form note rendered as a small italic
+  tag under the gate box on the canvas; round-trips through QASM 3 as a
+  `// note: …` comment).
 - **Per-qubit names** — double-click any `qN` rail label to rename
   (e.g. `data`, `ancilla`, `syndrome`); names round-trip through a
   `// qubit_names: …` comment in QASM 3 and are part of the share-link
@@ -648,7 +649,9 @@ is still 100% client-side.
   KaTeX** — inline `$…$` / `\(…\)`, display `$$…$$` / `\[…\]`, with
   Dirac braket macros (`\ket`, `\bra`, `\braket`, `\expval`, `\tr`).
   Your own messages stay literal; fenced QASM keeps its code-block +
-  auto-open treatment.
+  auto-open treatment. The *in-progress* reply streams as plain text and
+  re-renders as markdown/KaTeX only once complete — re-parsing on every
+  token (and on partial `$$…$$`) would lock the main thread.
 - **Model picker.** Live-fetches the full OpenRouter catalog with
   search; click any model to switch. Choice persists per browser.
 - **Prompt library.** A searchable **prompts** picker with ~65
@@ -658,7 +661,8 @@ is still 100% client-side.
   one drops it into the box for editing (it doesn't auto-send);
   bracketed `[values]` are fill-in placeholders, and the
   benchmark/visualize prompts are written to *interpret* what Quantiom
-  computes.
+  computes. Available in both chat and dialogue modes (in dialogue it
+  seeds the discussion topic).
 - **AI ↔ AI dialogue mode.** A `chat | dialogue` toggle turns the panel
   into a debate between two model instances. Each side gets its own
   **name, persona, and model** (presets: Proposer ↔ Critic, Professor ↔
@@ -671,7 +675,10 @@ is still 100% client-side.
   button, and **export** downloads the whole transcript — with the
   circuit embedded — as Markdown.
 - **Streaming responses** via SSE, with a Stop button to cancel
-  mid-stream. ⌘/Ctrl+Enter sends.
+  mid-stream. ⌘/Ctrl+Enter sends. Two watchdogs guard against an
+  unresponsive OpenRouter — a 20 s byte-idle (dead connection) and a 90 s
+  content-stall (keep-alives but no tokens) timeout — so a hung request
+  fails with a clear error instead of spinning.
 - **Resizable height** by dragging the top edge; collapsible to a 24px
   reopen strip. Height + open/closed state both persist.
 - **Bounded history persistence** (last 100 messages) so the next

@@ -276,6 +276,13 @@ host plus `/api/health`.
     a thin reopen strip; `quantiom:palette-collapsed` /
     `quantiom:panels-collapsed`), driven by `--palette-w` / `--panels-w`
     CSS vars on `.editor` so the collapse wins at every breakpoint.
+  - `Inspector.tsx`: the gate editor. **Now a collapsible vertical side
+    panel on the right edge of the circuit canvas** (canvas + Inspector
+    share the `.editor__canvas-row` flex; width via `--inspector-w` + a
+    vertical `InspectorSplitter`; ▸ collapses to an "INSPECTOR" strip,
+    `quantiom:inspector-collapsed`). The AI chat is the full-width bottom
+    row; its resize handle just sizes the chat now (the canvas-row
+    absorbs). The old "Step here" / "Delete" header buttons were removed.
   - `shareLink.ts`: gzip + base64url URL-hash encoding for the
     circuit IR.
   - `customGates.ts`: user-defined custom gate blocks;
@@ -406,12 +413,20 @@ host plus `/api/health`.
   categorized popover (Analyze / Create / Optimize / Transform / Explain
   & derive / Debug & verify / Export & hardware) whose entries insert a
   ready-made prompt into the input for editing (append, not auto-send;
-  bracketed `[values]` are placeholders). 10 categories / ~65 prompts
+  bracketed `[values]` are placeholders; shown in BOTH chat and dialogue
+  modes — in dialogue it seeds the topic). 10 categories / ~65 prompts
   (Analyze / Create / Optimize / Transform / Explain & derive / Debug &
   verify / Export & hardware / Noise & error / Benchmark & characterize /
   Visualize & interpret). The circuit QASM is auto-attached to every
   message, so prompts can say "this circuit"; the benchmark/visualize
-  prompts are written to *interpret* Quantiom-computed results. The chat
+  prompts are written to *interpret* Quantiom-computed results.
+  **Streaming is freeze-safe**: the in-progress bubble renders plain text
+  and re-renders as markdown/KaTeX only on completion (per-token re-parse
+  + partial `$$` locked the main thread), and token updates flush at
+  ~12 fps via a ref accumulator. `sim/openrouter.ts` has two watchdogs —
+  a 20s byte-idle (dead connection) and a 90s content-stall (keep-alives
+  but no tokens, reset on each real token) — so an unresponsive OpenRouter
+  errors out instead of hanging. The chat
   has two modes (header toggle): **chat** (1:1) and **dialogue** — an
   AI↔AI discussion where two model instances (roles A/B, each its own
   persona + model via `RolesPicker`) take turns about the current
@@ -486,7 +501,9 @@ host plus `/api/health`.
   `quantiom:noise:v2`, `quantiom:panel-collapsed:v1`,
   `quantiom:probabilities-mode`, `quantiom:probabilities-shots`,
   `quantiom:palette-collapsed` (whole gate-palette collapse),
-  `quantiom:panels-collapsed` (whole right-panel-column collapse).
+  `quantiom:panels-collapsed` (whole right-panel-column collapse),
+  `quantiom:inspector-w` (Inspector side-panel width),
+  `quantiom:inspector-collapsed` (Inspector collapse).
 
 ## Testing
 

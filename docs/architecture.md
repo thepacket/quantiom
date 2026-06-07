@@ -280,8 +280,12 @@ pills.
 - `AboutModal.tsx` — toolbar **About** dialog: name, version, GitHub
   link, authorship, MIT copyright.
 - `CircuitEditor.tsx` — the main editor shell. Top toolbar, tab
-  strip, canvas, inspector, right-panel column. The toolbar's File
-  / Edit / Help dropdown components + the About button live here.
+  strip, and the center column: canvas + the Inspector as a collapsible
+  vertical side panel (right of the canvas, width-resizable via a vertical
+  splitter), with the AI chat as the full-width bottom row. The gate
+  palette (left) and right-panel column are each whole-column collapsible.
+  The toolbar's File / Edit / Help dropdown components + the About button
+  live here.
 - `CircuitCanvas.tsx` — the SVG canvas. Hosts the gate rendering
   layer (SVG) plus a transparent `.canvas__cells` HTML overlay
   that owns drag-and-drop (the HTML DnD API doesn't play nicely
@@ -385,7 +389,8 @@ All persistence is `localStorage`. Keys, in alphabetical order:
 quantiom:circuit:v1          legacy single-circuit IR (migrated to tabs:v1)
 quantiom:clipboard:v1        cross-tab gate-rectangle clipboard
 quantiom:custom-gates:v1     user-defined custom gate library
-quantiom:inspector-h         Inspector splitter height (px)
+quantiom:inspector-w         Inspector side-panel width (px)
+quantiom:inspector-collapsed Inspector side-panel collapse
 quantiom:noise:v2            noise model (T1/T2, gates, coupling, Kraus)
 quantiom:palette-collapsed   gate-palette whole-column collapse
 quantiom:panel-collapsed:v1  which panels are open / closed
