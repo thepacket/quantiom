@@ -17,6 +17,7 @@ import {
   buildAttachedContext,
   type AttachKey,
 } from "./chatContext";
+import { PROMPT_LIBRARY } from "./promptLibrary";
 import {
   loadApiKey, saveApiKey,
   loadModel, saveModel,
@@ -72,10 +73,20 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showContext, setShowContext] = useState<boolean>(false);
+  const [showPrompts, setShowPrompts] = useState<boolean>(false);
   const [attached, setAttached] = useState<Set<AttachKey>>(loadAttached);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const chatRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Insert a library prompt into the input for review/editing (does not send).
+  // Appends below existing text rather than clobbering anything typed.
+  const insertPrompt = useCallback((text: string) => {
+    setInput((prev) => (prev.trim() ? `${prev.trimEnd()}\n\n${text}` : text));
+    setShowPrompts(false);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
 
   useEffect(() => { saveOpen(open); }, [open]);
   useEffect(() => { saveHeight(height); }, [height]);
@@ -224,6 +235,11 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
           open={showContext}
           onToggle={() => setShowContext((s) => !s)}
         />
+        <PromptPicker
+          open={showPrompts}
+          onToggle={() => setShowPrompts((s) => !s)}
+          onPick={insertPrompt}
+        />
         <button className="chat__btn" onClick={() => setShowSettings((s) => !s)} title="API key & options">
           ⚙
         </button>
@@ -273,6 +289,7 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
       <div className="chat__input-row">
         <textarea
           className="chat__input"
+          ref={inputRef}
           value={input}
           placeholder={streaming ? "streaming…" : "Message (Enter to send · Shift+Enter for newline)"}
           rows={2}
@@ -492,6 +509,89 @@ function ContextPicker({
           <div className="chat__context-note">
             Each adds a short pre-serialised block above your prompt.
             Distributions cap at the top 64 entries by probability.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Prompt library picker ─────────────────────────────────────────────
+
+function PromptPicker({
+  open,
+  onToggle,
+  onPick,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onPick: (text: string) => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onToggle();
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open, onToggle]);
+
+  const q = query.trim().toLowerCase();
+  const categories = useMemo(() => {
+    if (!q) return PROMPT_LIBRARY;
+    return PROMPT_LIBRARY
+      .map((c) => ({
+        ...c,
+        prompts: c.prompts.filter(
+          (p) => p.title.toLowerCase().includes(q) || p.text.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((c) => c.prompts.length > 0);
+  }, [q]);
+
+  return (
+    <div className="chat__prompts" ref={wrapRef}>
+      <button
+        className="chat__btn"
+        onClick={onToggle}
+        title="Insert a ready-made prompt into the message box (you can edit it before sending)"
+      >
+        prompts
+      </button>
+      {open && (
+        <div className="chat__prompts-pop">
+          <input
+            className="chat__prompts-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter prompts…"
+            autoFocus
+            spellCheck={false}
+          />
+          <div className="chat__prompts-list">
+            {categories.map((c) => (
+              <div key={c.name} className="chat__prompts-cat">
+                <div className="chat__prompts-cathead">{c.name}</div>
+                {c.prompts.map((p) => (
+                  <button
+                    key={p.title}
+                    className="chat__prompts-item"
+                    onClick={() => onPick(p.text)}
+                    title={p.text}
+                  >
+                    {p.title}
+                  </button>
+                ))}
+              </div>
+            ))}
+            {categories.length === 0 && <div className="chat__prompts-empty">No matching prompts.</div>}
+          </div>
+          <div className="chat__prompts-note">
+            Inserts into the message box for editing — bracketed [values] are
+            placeholders to fill in. Your circuit is attached automatically.
           </div>
         </div>
       )}

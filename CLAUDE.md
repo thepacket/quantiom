@@ -389,7 +389,18 @@ host plus `/api/health`.
   **LaTeX via KaTeX** — block `$$…$$` / `\[…\]`, inline `$…$` / `\(…\)`
   — through the shared `panels/Tex.tsx` (which defines quantum braket
   macros `\ket`/`\bra`/`\braket`/`\expval`/`\tr`). The chat system
-  prompt tells the model to write math in `$…$` / `$$…$$`.
+  prompt tells the model to write math in `$…$` / `$$…$$`. The chat
+  header has a **prompt library** picker (`PromptPicker` in
+  `ChatPanel.tsx`, data in `panels/promptLibrary.ts`): a searchable,
+  categorized popover (Analyze / Create / Optimize / Transform / Explain
+  & derive / Debug & verify / Export & hardware) whose entries insert a
+  ready-made prompt into the input for editing (append, not auto-send;
+  bracketed `[values]` are placeholders). 10 categories / ~65 prompts
+  (Analyze / Create / Optimize / Transform / Explain & derive / Debug &
+  verify / Export & hardware / Noise & error / Benchmark & characterize /
+  Visualize & interpret). The circuit QASM is auto-attached to every
+  message, so prompts can say "this circuit"; the benchmark/visualize
+  prompts are written to *interpret* Quantiom-computed results.
   `client/src/editor/AboutModal.tsx` — the toolbar **About** button
   (next to Help) opens it; shows name, version, description, GitHub
   URL, the "Developed by Claude Code in collaboration with Andre

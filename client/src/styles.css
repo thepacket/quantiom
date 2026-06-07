@@ -101,6 +101,17 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__context-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; font-size: 15px; color: var(--fg); cursor: pointer; border-radius: 3px; }
 .chat__context-row:hover { background: var(--bg-2); }
 .chat__context-note { padding: 6px 8px 2px; font-size: 13px; color: var(--muted); }
+/* Prompt library picker */
+.chat__prompts { position: relative; }
+.chat__prompts-pop { position: absolute; top: 100%; right: 0; margin-top: 4px; width: 320px; max-height: 380px; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); z-index: 200; overflow: hidden; }
+.chat__prompts-search { padding: 6px 10px; background: var(--bg-2); border: none; border-bottom: 1px solid var(--border); color: var(--fg); font-size: 16px; outline: none; }
+.chat__prompts-list { flex: 1; overflow: auto; padding: 4px 4px 0; }
+.chat__prompts-cat { margin-bottom: 4px; }
+.chat__prompts-cathead { font-size: 13px; color: var(--muted); padding: 6px 8px 3px; text-transform: uppercase; letter-spacing: 0.5px; position: sticky; top: 0; background: var(--bg); }
+.chat__prompts-item { display: block; width: 100%; padding: 5px 10px; border: none; border-radius: 3px; background: transparent; color: var(--fg); text-align: left; font-size: 14px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat__prompts-item:hover { background: var(--bg-2); color: var(--accent); }
+.chat__prompts-empty { padding: 10px; font-size: 14px; color: var(--muted); }
+.chat__prompts-note { padding: 6px 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
 .chat__model { position: relative; }
 .chat__model-btn { font-size: 15px; padding: 3px 8px; min-width: 120px; text-align: left; }
 .chat__model-pop { position: absolute; top: 100%; left: 0; margin-top: 4px; width: 380px; max-height: 360px; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); z-index: 200; overflow: hidden; }

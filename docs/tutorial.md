@@ -778,6 +778,14 @@ chatbot:
   `openqasm` fenced block, Quantiom parses it and **opens it as a new
   tab** the moment streaming finishes — "rewrite this as a Z-basis cat
   state" lands as a runnable circuit.
+- **Prompt library.** The **prompts** button opens a searchable,
+  categorized library (Analyze / Create / Optimize / Transform / Explain
+  & derive / Debug & verify / Export & hardware / Noise & error /
+  Benchmark & characterize / Visualize & interpret). Picking one drops a
+  ready-made prompt into the message box for you to edit before sending;
+  bracketed `[values]` are placeholders to fill in. The benchmark and
+  visualize prompts are built to *interpret* what Quantiom computes —
+  paste an RB/QV/XEB result or attach a panel snapshot and ask.
 
 Replies render as **markdown + LaTeX** (KaTeX, including Dirac braket
 notation), so derivations come back formatted. Treat answers as
