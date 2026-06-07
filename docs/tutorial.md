@@ -778,6 +778,19 @@ chatbot:
   `openqasm` fenced block, Quantiom parses it and **opens it as a new
   tab** the moment streaming finishes — "rewrite this as a Z-basis cat
   state" lands as a runnable circuit.
+- **AI ↔ AI dialogue.** Flip the header toggle to **dialogue** and two
+  model instances discuss your circuit, turn by turn — each turn grounded
+  in the same circuit + attached context, so the exchange stays honest
+  (claims are checkable against the simulator). Set each side's name,
+  persona, and model via **roles** (presets: Proposer ↔ Critic, Professor
+  ↔ Student, IBM ↔ Rigetti), choose a turn count, **stop** any time, or
+  **jump in** by typing a message and hitting Continue. A live turn
+  counter and an automatic convergence-stop keep the cost bounded, and
+  **export** downloads the whole exchange (with the circuit) as Markdown
+  for sharing. Circuits the AIs propose get a click-to-open-as-tab
+  button. Watching a Proposer get
+  cross-examined by a Critic — with the equivalence/resource panels as
+  the referee — is often more instructive than a monologue.
 - **Prompt library.** The **prompts** button opens a searchable,
   categorized library (Analyze / Create / Optimize / Transform / Explain
   & derive / Debug & verify / Export & hardware / Noise & error /

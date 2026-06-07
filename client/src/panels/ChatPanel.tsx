@@ -19,6 +19,18 @@ import {
 } from "./chatContext";
 import { PROMPT_LIBRARY } from "./promptLibrary";
 import {
+  DIALOGUE_PRESETS,
+  buildTurnMessages,
+  nextSpeakerOf,
+  turnsAreConverging,
+  dialogueToMarkdown,
+  loadDialogue,
+  saveDialogue,
+  type DialogueConfig,
+  type DialogueTurn,
+  type Role,
+} from "./dialogue";
+import {
   loadApiKey, saveApiKey,
   loadModel, saveModel,
   loadHistory, saveHistory,
@@ -75,6 +87,16 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
   const [showContext, setShowContext] = useState<boolean>(false);
   const [showPrompts, setShowPrompts] = useState<boolean>(false);
   const [attached, setAttached] = useState<Set<AttachKey>>(loadAttached);
+  // AI ↔ AI dialogue mode.
+  const [mode, setMode] = useState<"chat" | "dialogue">("chat");
+  const [dialogueCfg, setDialogueCfg] = useState<DialogueConfig>(loadDialogue);
+  const [dialogue, setDialogue] = useState<DialogueTurn[]>([]);
+  const [dialogueBuf, setDialogueBuf] = useState<DialogueTurn | null>(null);
+  const [dialogueRunning, setDialogueRunning] = useState<boolean>(false);
+  const [dialogueProgress, setDialogueProgress] = useState<{ i: number; n: number } | null>(null);
+  const [showRoles, setShowRoles] = useState<boolean>(false);
+  const dialogueAbortRef = useRef<boolean>(false);
+  const topicRef = useRef<string>("");
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const chatRef = useRef<HTMLDivElement | null>(null);
@@ -94,13 +116,14 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
   useEffect(() => { saveModel(model); }, [model]);
   useEffect(() => { saveHistory(history); }, [history]);
   useEffect(() => { saveAttached(attached); }, [attached]);
+  useEffect(() => { saveDialogue(dialogueCfg); }, [dialogueCfg]);
 
   // Auto-scroll to bottom on new content.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [history, streamBuf, open]);
+  }, [history, streamBuf, open, dialogue, dialogueBuf]);
 
   const send = useCallback(() => {
     const text = input.trim();
@@ -159,11 +182,123 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
   }, []);
 
   const clearChat = useCallback(() => {
-    if (streaming) return;
-    setHistory([]);
-    setStreamBuf("");
+    if (streaming || dialogueRunning) return;
+    if (mode === "dialogue") { setDialogue([]); setDialogueBuf(null); }
+    else { setHistory([]); setStreamBuf(""); }
     setError(null);
-  }, [streaming]);
+  }, [streaming, dialogueRunning, mode]);
+
+  // Snapshot the current circuit + attached panels as the grounding context
+  // shared by every dialogue turn (the circuit is fixed during a run).
+  const buildContextBlock = useCallback(() => {
+    const qasm = emitQasm3(circuit);
+    const extra = buildAttachedContext(attached, circuit, simResult, noise);
+    return (
+      `Current circuit (OpenQASM 3, ${circuit.numQubits} qubits, ` +
+      `${circuit.gates.length} gates):\n\n\`\`\`qasm\n${qasm}\n\`\`\`` +
+      (extra ? `\n\nAdditional Quantiom-computed context:\n\n${extra}` : "")
+    );
+  }, [circuit, attached, simResult, noise]);
+
+  // Run one turn as a promise around the streaming API.
+  const runTurn = useCallback(
+    (role: Role, msgs: ChatMessage[], onDelta: (c: string) => void): Promise<string | null> =>
+      new Promise((resolve) => {
+        abortRef.current = streamChat(apiKey, role.model, msgs, {
+          onDelta,
+          onDone: (full) => { abortRef.current = null; resolve(full); },
+          onError: (m) => { abortRef.current = null; setError(m); resolve(null); },
+        });
+      }),
+    [apiKey],
+  );
+
+  // Launch (or, when a transcript already exists, continue) the AI ↔ AI
+  // dialogue. The input box seeds the topic, or injects a human turn when
+  // continuing ("jump in").
+  const runDialogue = useCallback(() => {
+    if (dialogueRunning || streaming) return;
+    if (!apiKey) { setError("Set your OpenRouter API key (Settings)"); return; }
+    const { roleA, roleB, maxTurns } = dialogueCfg;
+    if (!roleA.model || !roleB.model) { setError("Pick a model for each role (roles)"); return; }
+    const text = input.trim();
+    const fresh = dialogue.length === 0;
+    if (fresh && !text) { setError("Enter a discussion topic to start"); return; }
+    setError(null);
+
+    const contextBlock = buildContextBlock();
+    // Topic = the original seed for a fresh run; for a continue we reuse the
+    // first turn's framing and add the human line as an interjection.
+    const seed = fresh ? text : (topicRef.current || "Continue the discussion.");
+    if (fresh) topicRef.current = text;
+    const startTranscript: DialogueTurn[] = fresh ? [] : [...dialogue];
+    if (!fresh && text) startTranscript.push({ speaker: "user", name: "User", content: text });
+
+    if (fresh) setDialogue([]);
+    else if (text) setDialogue(startTranscript);
+    setInput("");
+    setDialogueRunning(true);
+    dialogueAbortRef.current = false;
+
+    (async () => {
+      const transcript: DialogueTurn[] = [...startTranscript];
+      let speaker = nextSpeakerOf(transcript);
+      for (let t = 0; t < maxTurns; t++) {
+        if (dialogueAbortRef.current) break;
+        setDialogueProgress({ i: t + 1, n: maxTurns });
+        const role = speaker === "A" ? roleA : roleB;
+        const msgs = buildTurnMessages(speaker, { roleA, roleB }, contextBlock, seed, transcript);
+        setDialogueBuf({ speaker, name: role.name, content: "" });
+        const full = await runTurn(role, msgs, (chunk) =>
+          setDialogueBuf((b) => (b ? { ...b, content: b.content + chunk } : b)),
+        );
+        setDialogueBuf(null);
+        if (full == null) break; // error already surfaced
+        const turn: DialogueTurn = { speaker, name: role.name, content: full };
+        const prev = transcript[transcript.length - 1];
+        transcript.push(turn);
+        setDialogue((d) => [...d, turn]);
+        if (full.trim() === "") break;
+        // Cost guard: stop early if the two sides have converged (near-verbatim
+        // echo) rather than paying for the rest of the turn cap.
+        if (prev && prev.speaker !== "user" && turnsAreConverging(full, prev.content)) {
+          setDialogue((d) => [...d, { speaker: "user", name: "system", content: "— discussion converged; stopped early to save tokens. Edit the topic or jump in to continue." }]);
+          break;
+        }
+        if (dialogueAbortRef.current) break;
+        speaker = speaker === "A" ? "B" : "A";
+      }
+      setDialogueRunning(false);
+      setDialogueProgress(null);
+    })();
+  }, [dialogueRunning, streaming, apiKey, dialogueCfg, input, dialogue, buildContextBlock, runTurn]);
+
+  const stopDialogue = useCallback(() => {
+    dialogueAbortRef.current = true;
+    abortRef.current?.abort();
+  }, []);
+
+  // Download the dialogue transcript as a Markdown file.
+  const exportDialogue = useCallback(() => {
+    if (dialogue.length === 0) return;
+    const md = dialogueToMarkdown(dialogue, {
+      roleA: dialogueCfg.roleA,
+      roleB: dialogueCfg.roleB,
+      topic: topicRef.current,
+      circuitName: circuit.name,
+      qasm: emitQasm3(circuit),
+    });
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const slug = (circuit.name ?? "circuit").replace(/[^a-z0-9]+/gi, "-").toLowerCase().replace(/^-+|-+$/g, "") || "circuit";
+    a.href = url;
+    a.download = `quantiom-dialogue-${slug}.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, [dialogue, dialogueCfg, circuit]);
 
   // Drag handle for height resize. This handle is the divider between the
   // gate-parameters (Inspector) panel above and the chat below, so it acts as
@@ -228,25 +363,60 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
       <div className="chat__header">
         <button className="chat__toggle" onClick={() => setOpen(false)} title="Hide chat">▾</button>
         <span className="chat__title">AI Assistant</span>
-        <ModelPicker model={model} onPick={setModel} apiKey={apiKey} />
+        <div className="chat__mode" role="tablist">
+          <button
+            className={`chat__mode-btn${mode === "chat" ? " chat__mode-btn--on" : ""}`}
+            onClick={() => setMode("chat")}
+            title="One-on-one chat with the assistant"
+          >chat</button>
+          <button
+            className={`chat__mode-btn${mode === "dialogue" ? " chat__mode-btn--on" : ""}`}
+            onClick={() => setMode("dialogue")}
+            title="Watch two AIs discuss your circuit"
+          >dialogue</button>
+        </div>
+        {mode === "chat"
+          ? <ModelPicker model={model} onPick={setModel} apiKey={apiKey} />
+          : <RolesPicker cfg={dialogueCfg} onChange={setDialogueCfg} apiKey={apiKey} open={showRoles} onToggle={() => setShowRoles((s) => !s)} />}
         <ContextPicker
           attached={attached}
           onChange={setAttached}
           open={showContext}
           onToggle={() => setShowContext((s) => !s)}
         />
-        <PromptPicker
-          open={showPrompts}
-          onToggle={() => setShowPrompts((s) => !s)}
-          onPick={insertPrompt}
-        />
+        {mode === "chat" && (
+          <PromptPicker
+            open={showPrompts}
+            onToggle={() => setShowPrompts((s) => !s)}
+            onPick={insertPrompt}
+          />
+        )}
         <button className="chat__btn" onClick={() => setShowSettings((s) => !s)} title="API key & options">
           ⚙
         </button>
-        <button className="chat__btn" onClick={clearChat} disabled={streaming || history.length === 0} title="Clear chat history">
+        {mode === "dialogue" && (
+          <button
+            className="chat__btn"
+            onClick={exportDialogue}
+            disabled={dialogueRunning || dialogue.length === 0}
+            title="Download this dialogue as Markdown"
+          >
+            export
+          </button>
+        )}
+        <button
+          className="chat__btn"
+          onClick={clearChat}
+          disabled={streaming || dialogueRunning || (mode === "chat" ? history.length === 0 : dialogue.length === 0)}
+          title={mode === "chat" ? "Clear chat history" : "Clear the dialogue"}
+        >
           clear
         </button>
-        <span className="chat__tagline">Analyze, create, optimize and transform circuits.</span>
+        <span className="chat__tagline">
+          {mode === "chat"
+            ? "Analyze, create, optimize and transform circuits."
+            : "Two AIs discuss your circuit — grounded in the simulator."}
+        </span>
       </div>
       {showSettings && (
         <div className="chat__settings">
@@ -269,20 +439,38 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
         </div>
       )}
       <div className="chat__messages" ref={scrollRef}>
-        {history.length === 0 && !streamBuf && (
-          <div className="chat__empty">
-            Ask anything about the current circuit. Replies containing OpenQASM
-            blocks open automatically as new tabs.
-          </div>
-        )}
-        {history.map((m, i) => (
-          <Message key={i} message={m} />
-        ))}
-        {streamBuf && (
-          <Message
-            message={{ role: "assistant", content: streamBuf }}
-            inProgress
-          />
+        {mode === "chat" ? (
+          <>
+            {history.length === 0 && !streamBuf && (
+              <div className="chat__empty">
+                Ask anything about the current circuit. Replies containing OpenQASM
+                blocks open automatically as new tabs.
+              </div>
+            )}
+            {history.map((m, i) => (
+              <Message key={i} message={m} />
+            ))}
+            {streamBuf && (
+              <Message
+                message={{ role: "assistant", content: streamBuf }}
+                inProgress
+              />
+            )}
+          </>
+        ) : (
+          <>
+            {dialogue.length === 0 && !dialogueBuf && (
+              <div className="chat__empty">
+                Seed a topic below and watch <b>{dialogueCfg.roleA.name}</b> and{" "}
+                <b>{dialogueCfg.roleB.name}</b> discuss this circuit, turn by turn.
+                Set their roles &amp; models via <b>roles</b>; stop or jump in any time.
+              </div>
+            )}
+            {dialogue.map((t, i) => (
+              <DialogueTurnView key={i} turn={t} onLoadInNewTab={onLoadInNewTab} />
+            ))}
+            {dialogueBuf && <DialogueTurnView turn={dialogueBuf} onLoadInNewTab={onLoadInNewTab} inProgress />}
+          </>
         )}
         {error && <div className="chat__error">✗ {error}</div>}
       </div>
@@ -291,7 +479,15 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
           className="chat__input"
           ref={inputRef}
           value={input}
-          placeholder={streaming ? "streaming…" : "Message (Enter to send · Shift+Enter for newline)"}
+          placeholder={
+            mode === "dialogue"
+              ? (dialogueRunning
+                  ? "running…"
+                  : dialogue.length === 0
+                    ? "Discussion topic for the two AIs (Enter to start)"
+                    : "Optional: jump in with a message, then continue (Enter)")
+              : (streaming ? "streaming…" : "Message (Enter to send · Shift+Enter for newline)")
+          }
           rows={2}
           spellCheck={false}
           onChange={(e) => setInput(e.target.value)}
@@ -300,12 +496,23 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
             // sends too so muscle memory from the old binding keeps working.
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
-              send();
+              if (mode === "dialogue") runDialogue(); else send();
             }
           }}
-          disabled={streaming}
+          disabled={streaming || dialogueRunning}
         />
-        {streaming ? (
+        {mode === "dialogue" ? (
+          dialogueRunning ? (
+            <>
+              {dialogueProgress && <span className="chat__turn-count">turn {dialogueProgress.i}/{dialogueProgress.n}</span>}
+              <button className="chat__send" onClick={stopDialogue} title="Stop the dialogue">stop</button>
+            </>
+          ) : (
+            <button className="chat__send" onClick={runDialogue} title="Run the AI dialogue (Enter)">
+              {dialogue.length === 0 ? "run" : "continue"}
+            </button>
+          )
+        ) : streaming ? (
           <button className="chat__send" onClick={stop} title="Stop streaming">stop</button>
         ) : (
           <button className="chat__send" onClick={send} disabled={!input.trim()} title="Send (⌘/Ctrl+Enter)">
@@ -346,6 +553,52 @@ function Message({
                   <span className="chat__open-tab" title="This block was opened as a new tab when the message arrived">
                     auto-opened as new tab
                   </span>
+                )}
+              </div>
+              <pre className="chat__code"><code>{part.text}</code></pre>
+            </div>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Dialogue turn rendering ───────────────────────────────────────────
+
+function DialogueTurnView({
+  turn,
+  onLoadInNewTab,
+  inProgress,
+}: {
+  turn: DialogueTurn;
+  onLoadInNewTab: (circuit: Circuit, name?: string) => void;
+  inProgress?: boolean;
+}) {
+  const parts = useMemo(() => splitFencedBlocks(turn.content), [turn.content]);
+  const openQasm = (text: string) => {
+    const result = parseQasm3(text);
+    if (result.ok) onLoadInNewTab(result.circuit, turn.name);
+  };
+  return (
+    <div className={`chat__turn chat__turn--${turn.speaker}${inProgress ? " chat__msg--streaming" : ""}`}>
+      <div className="chat__turn-name">{turn.name}</div>
+      <div className="chat__msg-body">
+        {parts.map((part, i) =>
+          part.kind === "text" ? (
+            turn.speaker === "user" ? (
+              <div key={i} className="chat__text">{part.text}</div>
+            ) : (
+              <div key={i} className="chat__md"><Markdown source={part.text} /></div>
+            )
+          ) : (
+            <div key={i} className="chat__code-block">
+              <div className="chat__code-bar">
+                <span className="chat__code-lang">{part.lang || "code"}</span>
+                {part.isQasm && (
+                  <button className="chat__open-tab chat__open-tab--btn" onClick={() => openQasm(part.text)} title="Parse this circuit into a new tab">
+                    open as new tab
+                  </button>
                 )}
               </div>
               <pre className="chat__code"><code>{part.text}</code></pre>
@@ -592,6 +845,107 @@ function PromptPicker({
           <div className="chat__prompts-note">
             Inserts into the message box for editing — bracketed [values] are
             placeholders to fill in. Your circuit is attached automatically.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Dialogue roles picker ─────────────────────────────────────────────
+
+function RolesPicker({
+  cfg,
+  onChange,
+  apiKey,
+  open,
+  onToggle,
+}: {
+  cfg: DialogueConfig;
+  onChange: (next: DialogueConfig) => void;
+  apiKey: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onToggle();
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open, onToggle]);
+
+  const setRole = (which: "roleA" | "roleB", patch: Partial<Role>) =>
+    onChange({ ...cfg, [which]: { ...cfg[which], ...patch } });
+  const applyPreset = (idx: number) => {
+    const p = DIALOGUE_PRESETS[idx];
+    if (!p) return;
+    onChange({
+      ...cfg,
+      roleA: { ...cfg.roleA, name: p.a.name, persona: p.a.persona },
+      roleB: { ...cfg.roleB, name: p.b.name, persona: p.b.persona },
+    });
+  };
+
+  const roleEditor = (which: "roleA" | "roleB", label: string) => {
+    const r = cfg[which];
+    return (
+      <div className="chat__role">
+        <div className="chat__role-head">{label}</div>
+        <input
+          className="chat__role-name"
+          value={r.name}
+          onChange={(e) => setRole(which, { name: e.target.value })}
+          placeholder="name"
+          spellCheck={false}
+        />
+        <ModelPicker model={r.model} onPick={(id) => setRole(which, { model: id })} apiKey={apiKey} />
+        <textarea
+          className="chat__role-persona"
+          value={r.persona}
+          onChange={(e) => setRole(which, { persona: e.target.value })}
+          placeholder="persona / instructions"
+          rows={3}
+          spellCheck={false}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <div className="chat__roles" ref={wrapRef}>
+      <button className="chat__btn" onClick={onToggle} title="Configure the two AI roles, models, and turn count">
+        roles
+      </button>
+      {open && (
+        <div className="chat__roles-pop">
+          <div className="chat__roles-row">
+            <label className="chat__roles-label">Preset</label>
+            <select
+              className="rb__mode"
+              defaultValue=""
+              onChange={(e) => { if (e.target.value !== "") applyPreset(Number(e.target.value)); e.target.value = ""; }}
+            >
+              <option value="">choose…</option>
+              {DIALOGUE_PRESETS.map((p, i) => <option key={p.label} value={i}>{p.label}</option>)}
+            </select>
+            <label className="chat__roles-label">Turns</label>
+            <select
+              className="rb__mode"
+              value={cfg.maxTurns}
+              onChange={(e) => onChange({ ...cfg, maxTurns: Number(e.target.value) })}
+            >
+              {[2, 4, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+          {roleEditor("roleA", "Role A")}
+          {roleEditor("roleB", "Role B")}
+          <div className="chat__roles-note">
+            Each turn is grounded in the current circuit + attached context. A
+            speaks first; turns alternate. Use <b>+ context</b> to attach panel
+            snapshots so the debate stays honest.
           </div>
         </div>
       )}

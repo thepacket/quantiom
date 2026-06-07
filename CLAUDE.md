@@ -400,7 +400,20 @@ host plus `/api/health`.
   verify / Export & hardware / Noise & error / Benchmark & characterize /
   Visualize & interpret). The circuit QASM is auto-attached to every
   message, so prompts can say "this circuit"; the benchmark/visualize
-  prompts are written to *interpret* Quantiom-computed results.
+  prompts are written to *interpret* Quantiom-computed results. The chat
+  has two modes (header toggle): **chat** (1:1) and **dialogue** — an
+  AI↔AI discussion where two model instances (roles A/B, each its own
+  persona + model via `RolesPicker`) take turns about the current
+  circuit, every turn grounded in the same QASM+context. Presets
+  (Proposer↔Critic / Professor↔Student / IBM↔Rigetti), a turn cap, Stop,
+  and "jump in" (inject a human turn, then Continue). Pure core (turn
+  assembly, speaker bookkeeping, persistence) in `panels/dialogue.ts`
+  (tested); the React runner wraps `streamChat` per turn in ChatPanel.
+  Dialogue QASM blocks get a click-to-open-tab button (no auto-open, to
+  avoid tab spam across many turns). Cost guards: bounded turn loop, live
+  turn counter, and a Jaccard-based convergence early-stop
+  (`turnsAreConverging`). **export** downloads the transcript (+ circuit)
+  as Markdown via `dialogueToMarkdown` (pure, tested).
   `client/src/editor/AboutModal.tsx` — the toolbar **About** button
   (next to Help) opens it; shows name, version, description, GitHub
   URL, the "Developed by Claude Code in collaboration with Andre
