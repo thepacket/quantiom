@@ -749,9 +749,21 @@ nothing is silently lost. Watch the **angle conventions**: pytket uses
 half-turns, the others radians (the qasm.md reference spells out each
 target's quirks).
 
+**Save & close.** **File → Save Circuit (QASM)…** opens a native
+Save-As dialog so you choose where the active tab's `.qasm` lands (it
+falls back to a plain download in browsers without the File System Access
+API); **File → Download QASM** is the no-dialog quick save. **File →
+Close All** clears every tab after a Yes/Cancel confirm, resetting to one
+blank circuit.
+
 **Share link.** File → Share copies a URL whose hash is the
 gzip-compressed circuit — paste it to a colleague and they open the
 exact circuit, no account, no server.
+
+**Reclaiming space.** Collapse the **gate palette** (the ◂ next to its
+search box → a thin "GATES" strip) and the **whole right-hand panel
+column** (the ▸ in the panel bar → a "PANELS" strip) to give the canvas
+the full width; both states persist.
 
 See [`qasm.md`](qasm.md) for the full round-trip contract and per-emitter
 conventions.

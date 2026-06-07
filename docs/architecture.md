@@ -387,10 +387,13 @@ quantiom:clipboard:v1        cross-tab gate-rectangle clipboard
 quantiom:custom-gates:v1     user-defined custom gate library
 quantiom:inspector-h         Inspector splitter height (px)
 quantiom:noise:v2            noise model (T1/T2, gates, coupling, Kraus)
+quantiom:palette-collapsed   gate-palette whole-column collapse
 quantiom:panel-collapsed:v1  which panels are open / closed
+quantiom:panels-collapsed    right panel column whole-column collapse
 quantiom:probabilities-mode  "exact" or "shots" toggle
 quantiom:probabilities-shots N shots when in shots mode
 quantiom:tabs:v1             multi-tab state (per-tab versioned history)
+quantiom:chat:dialogue       AI-dialogue config (roles, models, turns)
 ```
 
 When you add a new persistable feature, pick the next version

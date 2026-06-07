@@ -202,7 +202,8 @@ archived version. Each release also gets its own version-specific DOI.
   the active tab with **Edit → Duplicate**. ⌘/Ctrl+1..9 jumps to tab N;
   ⌘/Ctrl+T opens a new one.
 - **64-gate palette** across 13 categories, with category-coloured
-  borders, search box, and collapsible category groups:
+  borders, a search box, collapsible category groups, and a whole-palette
+  collapse (◂ → a thin "GATES" reopen strip) that frees canvas width:
   - Identity & Pauli (I, X, Y, Z)
   - Clifford + T (H, S, S†, √X, √X†, √Y, √Y†, T, T†)
   - Phase & Rotation (P, RX, RY, RZ, **R(θ,φ)** — equatorial-axis
@@ -305,11 +306,13 @@ archived version. Each release also gets its own version-specific DOI.
   the whole right-hand panel column — Bloch spheres, probability bars,
   every open visualiser — by snapshotting that DOM subtree per frame.
 - **File menu** — **Examples…** (typeahead search across 93 circuits,
-  with QASM-header tooltips on hover), **Open QASM…**, **Download
-  QASM**, **Share** (URL-hash link), and an **Export →** section
-  (OpenQASM 2 · Qiskit · Cirq · Braket · Q# · PyQuil · pytket ·
-  **LaTeX (quantikz)** for papers · **JSON** raw IR · SVG). Opening a
-  file or example creates a new tab so your current work stays.
+  with QASM-header tooltips on hover), **Open QASM…**, **Save Circuit
+  (QASM)…** (native Save-As dialog for the active tab, falling back to a
+  download where unsupported), **Download QASM**, **Close All** (Yes/Cancel
+  confirm; resets to one blank tab), **Share** (URL-hash link), and an
+  **Export →** section (OpenQASM 2 · Qiskit · Cirq · Braket · Q# · PyQuil ·
+  pytket · **LaTeX (quantikz)** for papers · **JSON** raw IR · SVG).
+  Opening a file or example creates a new tab so your current work stays.
 - **Edit menu** — Undo, Redo; **Copy / Paste Circuit** (the whole
   circuit as OpenQASM 3, to/from the system clipboard — Paste opens a
   new tab); **Copy / Cut / Paste Selection** (the rectangle-selected
@@ -447,9 +450,11 @@ The simulator code lives in [client/src/sim/](client/src/sim/):
 
 ## Visualizer panels
 
-The right column stacks collapsible panels. Each panel persists its
-collapsed state per panel id in `localStorage`. Every panel has a
-**copy-to-clipboard** button in its header. Collapsed panels cost
+The right column stacks collapsible panels under 12 sticky category
+headers, and the **whole column collapses** to a thin "PANELS" reopen
+strip (▸ in the panel bar) to give the canvas more room. Each panel
+persists its collapsed state per panel id in `localStorage`. Every panel
+has a **copy-to-clipboard** button in its header. Collapsed panels cost
 nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
 `blochVectors` as lazy getters and panel bodies short-circuit their
 `useMemo`s when hidden.

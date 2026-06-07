@@ -262,9 +262,20 @@ host plus `/api/health`.
   - `tabs.ts`: multi-tab state hook (`useTabs`). One reducer manages
     `{ tabs, activeId }` with per-tab versioned history + per-tab UI
     state (selected gate, picked step, paramValues). Storage key
-    `quantiom:tabs:v1`; migrates legacy `quantiom:circuit:v1`.
+    `quantiom:tabs:v1`; migrates legacy `quantiom:circuit:v1`. Actions
+    include `tab:close-all` (`closeAllTabs` — resets to one blank tab,
+    behind the File-menu **Close All** confirm).
   - `TabStrip.tsx`: pill UI for tabs; drag-to-reorder, double-click
     to rename, close button.
+  - `FileMenu.tsx`: the **File** dropdown — Examples/Open/Share, the
+    eight export emitters, **Save Circuit (QASM)…** (native Save-As via
+    `showSaveFilePicker`, falling back to download), **Download QASM**,
+    and **Close All** (custom Yes/Cancel `ConfirmDialog`, since
+    `window.confirm` can't relabel its buttons). The gate palette and the
+    right panel column are each whole-column collapsible (a ◂/▸ button →
+    a thin reopen strip; `quantiom:palette-collapsed` /
+    `quantiom:panels-collapsed`), driven by `--palette-w` / `--panels-w`
+    CSS vars on `.editor` so the collapse wins at every breakpoint.
   - `shareLink.ts`: gzip + base64url URL-hash encoding for the
     circuit IR.
   - `customGates.ts`: user-defined custom gate blocks;
@@ -486,7 +497,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (885 tests): the simulator core is deeply covered —
+- **What's covered** (899 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
@@ -519,7 +530,9 @@ host plus `/api/health`.
   F≈1, noise→λ<1), `simultaneousRb` (paired runs ⇒ addressability=1 at
   crosstalk 0, >1 with crosstalk+coupling), `t1t2` (T1≈−1/ln(1−γ), stronger
   damping→shorter T1), `pauliBudget` (depol→X=Y=Z=p₁/3, phase→pure Z) — each
-  against analytic ground truth.
+  against analytic ground truth. The AI-dialogue pure core is covered too
+  (`dialogue.ts`: `buildTurnMessages` alternation, `mergeConsecutive`,
+  `nextSpeakerOf`, `turnsAreConverging`, `dialogueToMarkdown`).
   `npm run test:coverage` reports ~96% statements (core modules are
   95–100%; the remaining tail is the React `useReducer`/`useEffect` hook
   bodies and DOM-only `exportSvg`, which the Node-only suite can't exercise
