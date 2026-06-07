@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { version as APP_VERSION } from "../../package.json";
 
 const GITHUB_URL = "https://github.com/thepacket/quantiom";
+const DISCUSSIONS_URL = "https://github.com/thepacket/quantiom/discussions";
 
 /**
  * About dialog — surfaced from the toolbar's About button (after Help).
@@ -67,6 +68,12 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
           <p style={{ margin: "14px 0 0" }}>
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
               {GITHUB_URL.replace("https://", "")}
+            </a>
+          </p>
+          <p style={{ margin: "4px 0 0" }}>
+            Questions &amp; ideas →{" "}
+            <a href={DISCUSSIONS_URL} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+              GitHub Discussions
             </a>
           </p>
 

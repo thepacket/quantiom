@@ -121,6 +121,13 @@ menu. They're imported at build time, no network fetch. The **About**
 item (next to Help) shows the version, GitHub link, authorship, and
 licence.
 
+## Community
+
+Questions, ideas, and show-and-tell go in
+**[GitHub Discussions](https://github.com/thepacket/quantiom/discussions)**;
+bug reports and feature requests in
+**[Issues](https://github.com/thepacket/quantiom/issues)**.
+
 Quantiom is moving fast and the surface to verify is wide — 64 gates,
 three simulator backends, an AI chat assistant, ~65 panels (40 of them
 entanglement / dynamics / state visualisers), OpenQASM 3 round-trip,

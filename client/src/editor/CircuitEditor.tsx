@@ -458,6 +458,17 @@ function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
                 <span className="export-picker__hint">{it.hint}</span>
               </button>
             ))}
+            <div className="examples-picker__cat-label">Community →</div>
+            <a
+              className="examples-picker__item"
+              href="https://github.com/thepacket/quantiom/discussions"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setOpen(false)}
+            >
+              <span>Discussions</span>
+              <span className="export-picker__hint">ask questions &amp; share on GitHub</span>
+            </a>
           </div>
         </div>
       )}
