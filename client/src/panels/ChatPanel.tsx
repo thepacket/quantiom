@@ -98,6 +98,19 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
   const dialogueAbortRef = useRef<boolean>(false);
   const topicRef = useRef<string>("");
   const abortRef = useRef<AbortController | null>(null);
+  // Streaming throttle: tokens accumulate in a ref and flush to React state at
+  // ~12 fps, so a fast/long reply doesn't trigger a render per token (which,
+  // with the markdown/KaTeX pass, can lock the main thread). The in-progress
+  // bubble renders plain text; the final message re-renders as markdown.
+  const streamAccumRef = useRef<string>("");
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleFlush = useCallback((flush: () => void) => {
+    if (flushTimerRef.current != null) return; // a flush is already pending
+    flushTimerRef.current = setTimeout(() => { flushTimerRef.current = null; flush(); }, 80);
+  }, []);
+  const cancelFlush = useCallback(() => {
+    if (flushTimerRef.current != null) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
+  }, []);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const chatRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -155,27 +168,35 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
     setInput("");
     setStreaming(true);
     setStreamBuf("");
+    streamAccumRef.current = "";
 
     abortRef.current = streamChat(apiKey, model, msgs, {
-      onDelta: (chunk) => setStreamBuf((b) => b + chunk),
+      onDelta: (chunk) => {
+        streamAccumRef.current += chunk;
+        scheduleFlush(() => setStreamBuf(streamAccumRef.current));
+      },
       onDone: (full) => {
+        cancelFlush();
         setStreaming(false);
         abortRef.current = null;
         if (full.length > 0) setHistory((h) => [...h, { role: "assistant", content: full }]);
         setStreamBuf("");
+        streamAccumRef.current = "";
         // Auto-open every detected QASM block as a new tab. Done here
         // (not in render) so reloading the page from history doesn't
         // re-open already-shown circuits.
         autoOpenQasmBlocks(full, onLoadInNewTab);
       },
       onError: (msg) => {
+        cancelFlush();
         setStreaming(false);
         abortRef.current = null;
         setError(msg);
         setStreamBuf("");
+        streamAccumRef.current = "";
       },
     });
-  }, [input, streaming, apiKey, model, circuit, history, onLoadInNewTab, attached, simResult, noise]);
+  }, [input, streaming, apiKey, model, circuit, history, onLoadInNewTab, attached, simResult, noise, scheduleFlush, cancelFlush]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -249,9 +270,13 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
         const role = speaker === "A" ? roleA : roleB;
         const msgs = buildTurnMessages(speaker, { roleA, roleB }, contextBlock, seed, transcript);
         setDialogueBuf({ speaker, name: role.name, content: "" });
-        const full = await runTurn(role, msgs, (chunk) =>
-          setDialogueBuf((b) => (b ? { ...b, content: b.content + chunk } : b)),
-        );
+        streamAccumRef.current = "";
+        const full = await runTurn(role, msgs, (chunk) => {
+          streamAccumRef.current += chunk;
+          scheduleFlush(() => setDialogueBuf({ speaker, name: role.name, content: streamAccumRef.current }));
+        });
+        cancelFlush();
+        streamAccumRef.current = "";
         setDialogueBuf(null);
         if (full == null) break; // error already surfaced
         const turn: DialogueTurn = { speaker, name: role.name, content: full };
@@ -271,7 +296,7 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
       setDialogueRunning(false);
       setDialogueProgress(null);
     })();
-  }, [dialogueRunning, streaming, apiKey, dialogueCfg, input, dialogue, buildContextBlock, runTurn]);
+  }, [dialogueRunning, streaming, apiKey, dialogueCfg, input, dialogue, buildContextBlock, runTurn, scheduleFlush, cancelFlush]);
 
   const stopDialogue = useCallback(() => {
     dialogueAbortRef.current = true;
@@ -365,13 +390,11 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
           open={showContext}
           onToggle={() => setShowContext((s) => !s)}
         />
-        {mode === "chat" && (
-          <PromptPicker
-            open={showPrompts}
-            onToggle={() => setShowPrompts((s) => !s)}
-            onPick={insertPrompt}
-          />
-        )}
+        <PromptPicker
+          open={showPrompts}
+          onToggle={() => setShowPrompts((s) => !s)}
+          onPick={insertPrompt}
+        />
         <button className="chat__btn" onClick={() => setShowSettings((s) => !s)} title="API key & options">
           ⚙
         </button>
@@ -514,11 +537,15 @@ function Message({
   message: ChatMessage;
   inProgress?: boolean;
 }) {
-  const parts = useMemo(() => splitFencedBlocks(message.content), [message.content]);
+  const parts = useMemo(() => (inProgress ? [] : splitFencedBlocks(message.content)), [message.content, inProgress]);
   return (
     <div className={`chat__msg chat__msg--${message.role}${inProgress ? " chat__msg--streaming" : ""}`}>
       <div className="chat__msg-role">{message.role === "assistant" ? "ai" : message.role}</div>
       <div className="chat__msg-body">
+        {/* While streaming, render plain text — markdown/KaTeX re-parsing on
+            every token (and on partial $$…$$) can lock the main thread. The
+            finished message re-renders as markdown below. */}
+        {inProgress && <div className="chat__text">{message.content}</div>}
         {parts.map((part, i) =>
           part.kind === "text" ? (
             message.role === "assistant" ? (
@@ -556,7 +583,7 @@ function DialogueTurnView({
   onLoadInNewTab: (circuit: Circuit, name?: string) => void;
   inProgress?: boolean;
 }) {
-  const parts = useMemo(() => splitFencedBlocks(turn.content), [turn.content]);
+  const parts = useMemo(() => (inProgress ? [] : splitFencedBlocks(turn.content)), [turn.content, inProgress]);
   const openQasm = (text: string) => {
     const result = parseQasm3(text);
     if (result.ok) onLoadInNewTab(result.circuit, turn.name);
@@ -565,6 +592,8 @@ function DialogueTurnView({
     <div className={`chat__turn chat__turn--${turn.speaker}${inProgress ? " chat__msg--streaming" : ""}`}>
       <div className="chat__turn-name">{turn.name}</div>
       <div className="chat__msg-body">
+        {/* Plain text while streaming (markdown/KaTeX per token can freeze). */}
+        {inProgress && <div className="chat__text">{turn.content}</div>}
         {parts.map((part, i) =>
           part.kind === "text" ? (
             turn.speaker === "user" ? (
