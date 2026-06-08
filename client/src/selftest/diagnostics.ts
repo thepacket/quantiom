@@ -2,7 +2,7 @@
  * In-browser self-test: a broad, live cross-section of Quantiom's numeric
  * core, runnable from the app's "Self-test" button.
  *
- * This is a *subset* of the project's full ~740-case Vitest suite (run in
+ * This is a *subset* of the project's full ~900-case Vitest suite (run in
  * Node and in CI on every commit — see `client/test/` and
  * `.github/workflows/ci.yml`), reimplemented with plain assertions so it can
  * run in the browser against the very modules powering the user's session.
