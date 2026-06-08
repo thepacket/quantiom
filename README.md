@@ -124,6 +124,12 @@ menu. They're imported at build time, no network fetch. The **About**
 item (next to Help) shows the version, GitHub link, authorship, and
 licence.
 
+New to quantum computing? Start with the illustrated primer
+**[Intro to Quantum Computing](https://quantiom.fly.dev/learn/quantum-computing-intro.html)**
+([source](client/public/learn/quantum-computing-intro.html)) — qubits, the
+full gate set, and a gallery of worked circuits (Bell, GHZ, teleportation,
+Grover, QFT). It's also the first item in the in-app **Help** menu.
+
 ## Community
 
 Questions, ideas, and show-and-tell go in

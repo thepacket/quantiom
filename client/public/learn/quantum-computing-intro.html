@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>An Introduction to Quantum Computing</title>
+<style>
+  :root{
+    --ink:#1a1d29;--muted:#5b6478;--line:#e2e6ef;--accent:#5b6cff;--accent2:#9b6cff;
+    --bg:#fff;--soft:#f6f7fb;--code:#eef0f7;
+    --x:#e05b5b;--xbg:#ffecec;--z:#8b6ce0;--zbg:#f0ecff;--h:#5b6cff;--hbg:#eef0ff;
+    --r:#3fae6a;--rbg:#e9f7ee;--y:#e0995b;--ybg:#fff3e6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--ink);background:var(--bg);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .page{max-width:780px;margin:0 auto;padding:56px 28px 80px}
+  header.cover{text-align:center;padding:28px 0 36px;border-bottom:1px solid var(--line);margin-bottom:40px}
+  .badge{display:inline-block;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:14px}
+  h1{font-size:38px;line-height:1.15;margin:0 0 10px;letter-spacing:-0.5px}
+  .subtitle{color:var(--muted);font-size:18px;margin:0}
+  h2{font-size:24px;margin:52px 0 12px;letter-spacing:-0.3px;padding-top:10px;border-top:1px solid var(--line)}
+  h2 .num{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:10px}
+  h3{font-size:18px;margin:30px 0 6px}
+  p{margin:12px 0}
+  a{color:var(--accent)}
+  .lead{font-size:18px;color:#2b3146}
+  .muted{color:var(--muted)}
+  strong{font-weight:650}
+  ket{font-family:"Cambria Math","Latin Modern Math",Georgia,serif;font-style:normal;white-space:nowrap}
+  .eq{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:16px 0;
+    font-size:17px;text-align:center;font-family:"Cambria Math",Georgia,serif;overflow-x:auto}
+  figure{margin:24px 0;text-align:center}
+  figure svg{max-width:100%;height:auto}
+  figcaption{color:var(--muted);font-size:14px;margin-top:8px}
+  .circ{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:14px;margin:20px 0}
+  .circ h3{margin:0 0 2px}
+  .circ .note{color:var(--muted);font-size:14px;margin:0 0 10px}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  th{background:var(--soft);font-weight:650}
+  td.m{font-family:"Cambria Math",Georgia,serif;white-space:nowrap;font-size:14px}
+  .callout{border-left:4px solid var(--accent);background:var(--soft);padding:14px 18px;border-radius:0 10px 10px 0;margin:22px 0}
+  .callout b{color:var(--accent)}
+  code{background:var(--code);padding:1px 6px;border-radius:5px;font-size:0.92em}
+  ul{margin:12px 0}
+  li{margin:5px 0}
+  .toc{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:14px 22px;margin:26px 0}
+  .toc ol{margin:6px 0;padding-left:22px;columns:2;column-gap:30px}
+  .toc a{text-decoration:none}
+  footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+  @media (max-width:560px){h1{font-size:30px}.toc ol{columns:1}}
+  @media print{
+    .page{max-width:none;padding:0 12mm}
+    h2{break-after:avoid;border-top:none}
+    figure,table,.eq,.callout,.circ{break-inside:avoid}
+    a{color:var(--ink);text-decoration:none}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="cover">
+  <div class="badge">A primer</div>
+  <h1>An Introduction to&nbsp;Quantum&nbsp;Computing</h1>
+  <p class="subtitle">Qubits, gates, and circuits — from first principles, with worked examples.</p>
+</header>
+
+<p class="lead">A classical computer manipulates <strong>bits</strong>, each definitely 0 or 1. A quantum computer manipulates <strong>qubits</strong>, which can exist in a blend of 0 and 1 at once and become correlated in ways no classical system can reproduce. This primer builds the core ideas in order — what a qubit is, the full vocabulary of quantum <em>gates</em>, and a gallery of small circuits that show those gates in action.</p>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#qubit">The qubit</a></li>
+    <li><a href="#bloch">The Bloch sphere</a></li>
+    <li><a href="#single">Single-qubit gates</a></li>
+    <li><a href="#multi">Multi-qubit gates</a></li>
+    <li><a href="#reading">Reading a circuit</a></li>
+    <li><a href="#gallery">A gallery of circuits</a></li>
+    <li><a href="#measure">Measurement</a></li>
+    <li><a href="#why">Why it matters</a></li>
+    <li><a href="#next">Where to go next</a></li>
+  </ol>
+</div>
+
+<!-- ========================= 1 ========================= -->
+<h2 id="qubit"><span class="num">1</span>The qubit</h2>
+<p>A single qubit&rsquo;s state is written in <em>Dirac (bra–ket) notation</em> as a combination of the two basis states <ket>|0&rang;</ket> and <ket>|1&rang;</ket>:</p>
+<div class="eq">|ψ&rang; = α |0&rang; + β |1&rang;</div>
+<p>α and β are <strong>complex amplitudes</strong>. They are not probabilities directly — their squared magnitudes give the probability of each outcome <em>when you measure</em>:</p>
+<div class="eq">P(0) = |α|²,  P(1) = |β|²,  with |α|² + |β|² = 1</div>
+<p>A bit has two possible values; a qubit has a continuum of states (all valid α, β), yet a single measurement still yields just one classical bit. The constraint that probabilities sum to 1 means the state is a unit-length vector.</p>
+<div class="callout"><b>Key idea.</b> Superposition is <em>not</em> &ldquo;the qubit is secretly 0 or 1 and we don&rsquo;t know which.&rdquo; The amplitudes are physically real and can <em>interfere</em> — add and cancel — which is exactly what quantum algorithms exploit.</div>
+
+<!-- ========================= 2 ========================= -->
+<h2 id="bloch"><span class="num">2</span>Picturing a qubit: the Bloch sphere</h2>
+<p>A pure single-qubit state has two complex amplitudes constrained to unit length, with an irrelevant overall phase — so it maps to a point on the surface of a sphere, the <strong>Bloch sphere</strong>. The north pole is <ket>|0&rang;</ket>, the south pole is <ket>|1&rang;</ket>, and equal superpositions live on the equator.</p>
+<figure>
+  <svg width="340" height="340" viewBox="0 0 360 360" role="img" aria-label="Bloch sphere">
+    <defs><radialGradient id="sph" cx="40%" cy="35%" r="75%">
+      <stop offset="0%" stop-color="#eef0ff"/><stop offset="100%" stop-color="#dfe3f5"/></radialGradient></defs>
+    <circle cx="180" cy="180" r="120" fill="url(#sph)" stroke="#c7cce0" stroke-width="1.5"/>
+    <ellipse cx="180" cy="180" rx="120" ry="40" fill="none" stroke="#9aa3c4" stroke-width="1.4"/>
+    <ellipse cx="180" cy="180" rx="40" ry="120" fill="none" stroke="#c7cce0" stroke-width="1" stroke-dasharray="3 4"/>
+    <line x1="180" y1="60" x2="180" y2="300" stroke="#8b93b5" stroke-width="1.2" stroke-dasharray="4 4"/>
+    <line x1="60" y1="180" x2="300" y2="180" stroke="#8b93b5" stroke-width="1.2" stroke-dasharray="4 4"/>
+    <line x1="180" y1="180" x2="252" y2="120" stroke="#5b6cff" stroke-width="3"/>
+    <circle cx="252" cy="120" r="6" fill="#5b6cff"/>
+    <path d="M 180 120 A 60 60 0 0 1 232 150" fill="none" stroke="#9b6cff" stroke-width="1.6"/>
+    <text x="205" y="138" font-size="14" fill="#9b6cff" font-style="italic">θ</text>
+    <text x="180" y="50" text-anchor="middle" font-size="15" font-weight="700">|0&#10217;</text>
+    <text x="180" y="320" text-anchor="middle" font-size="15" font-weight="700">|1&#10217;</text>
+    <text x="312" y="184" font-size="14" fill="#5b6478">|+&#10217;</text>
+    <text x="30" y="184" font-size="14" fill="#5b6478">|&minus;&#10217;</text>
+    <text x="258" y="118" font-size="14" font-weight="700" fill="#5b6cff">|ψ&#10217;</text>
+    <text x="186" y="232" font-size="13" fill="#5b6478" font-style="italic">φ</text>
+  </svg>
+  <figcaption>The polar angle θ sets the 0-vs-1 balance; the azimuthal angle φ sets the relative phase. Single-qubit gates are simply <em>rotations</em> of this sphere.</figcaption>
+</figure>
+
+<!-- ========================= 3 ========================= -->
+<h2 id="single"><span class="num">3</span>Single-qubit gates</h2>
+<p>A gate is a reversible operation — formally a <strong>unitary matrix</strong>. Single-qubit gates are 2&times;2 matrices, and each corresponds to a rotation of the Bloch sphere.</p>
+
+<h3>The Pauli gates</h3>
+<table>
+  <thead><tr><th>Gate</th><th>Matrix</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><strong>I</strong> — identity</td><td class="m">[ 1&nbsp;&nbsp;0 ;&nbsp; 0&nbsp;&nbsp;1 ]</td><td>Does nothing (a &ldquo;wait&rdquo;).</td></tr>
+    <tr><td><strong>X</strong> — bit flip (NOT)</td><td class="m">[ 0&nbsp;&nbsp;1 ;&nbsp; 1&nbsp;&nbsp;0 ]</td><td>Swaps <ket>|0&rang;</ket> ↔ <ket>|1&rang;</ket>. A 180° turn about the X axis.</td></tr>
+    <tr><td><strong>Y</strong></td><td class="m">[ 0&nbsp;&minus;i ;&nbsp; i&nbsp;&nbsp;&nbsp;0 ]</td><td>Bit flip <em>and</em> phase flip. A 180° turn about Y.</td></tr>
+    <tr><td><strong>Z</strong> — phase flip</td><td class="m">[ 1&nbsp;&nbsp;&nbsp;0 ;&nbsp; 0&nbsp;&minus;1 ]</td><td>Leaves <ket>|0&rang;</ket>, negates <ket>|1&rang;</ket>. A 180° turn about Z.</td></tr>
+  </tbody>
+</table>
+
+<h3>Superposition and phase gates</h3>
+<table>
+  <thead><tr><th>Gate</th><th>Matrix</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><strong>H</strong> — Hadamard</td><td class="m">(1/√2) [ 1&nbsp;&nbsp;&nbsp;1 ;&nbsp; 1&nbsp;&minus;1 ]</td><td>Creates an equal superposition: <ket>|0&rang;</ket> → <ket>|+&rang;</ket>, <ket>|1&rang;</ket> → <ket>|−&rang;</ket>. Maps the Z axis to the X axis.</td></tr>
+    <tr><td><strong>S</strong> — phase (√Z)</td><td class="m">[ 1&nbsp;&nbsp;0 ;&nbsp; 0&nbsp;&nbsp;i ]</td><td>A 90° phase on <ket>|1&rang;</ket> (quarter turn about Z).</td></tr>
+    <tr><td><strong>S†</strong></td><td class="m">[ 1&nbsp;&nbsp;&nbsp;0 ;&nbsp; 0&nbsp;&minus;i ]</td><td>The inverse of S (&minus;90° phase).</td></tr>
+    <tr><td><strong>T</strong> — π/8 (√S)</td><td class="m">[ 1&nbsp;&nbsp;0 ;&nbsp; 0&nbsp;&nbsp;e<sup>iπ/4</sup> ]</td><td>A 45° phase on <ket>|1&rang;</ket>. With H, the set {H, T} is <em>universal</em>.</td></tr>
+    <tr><td><strong>T†</strong></td><td class="m">[ 1&nbsp;&nbsp;0 ;&nbsp; 0&nbsp;&nbsp;e<sup>&minus;iπ/4</sup> ]</td><td>The inverse of T.</td></tr>
+    <tr><td><strong>P(λ)</strong> — phase</td><td class="m">[ 1&nbsp;&nbsp;0 ;&nbsp; 0&nbsp;&nbsp;e<sup>iλ</sup> ]</td><td>A tunable phase by angle λ on <ket>|1&rang;</ket>. Z, S, T are P(π), P(π/2), P(π/4).</td></tr>
+  </tbody>
+</table>
+
+<h3>Continuous rotations</h3>
+<p>For arbitrary angles, the rotation gates turn the Bloch vector by θ about a chosen axis. They are the building blocks of <em>variational</em> and <em>hardware-native</em> circuits.</p>
+<table>
+  <thead><tr><th>Gate</th><th>Matrix</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><strong>R<sub>x</sub>(θ)</strong></td><td class="m">[ cos(θ/2)&nbsp;&minus;i&nbsp;sin(θ/2) ;&nbsp; &minus;i&nbsp;sin(θ/2)&nbsp;&nbsp;cos(θ/2) ]</td><td>Rotate θ about the X axis.</td></tr>
+    <tr><td><strong>R<sub>y</sub>(θ)</strong></td><td class="m">[ cos(θ/2)&nbsp;&minus;sin(θ/2) ;&nbsp; sin(θ/2)&nbsp;&nbsp;cos(θ/2) ]</td><td>Rotate θ about Y (keeps amplitudes real — handy for real-valued states).</td></tr>
+    <tr><td><strong>R<sub>z</sub>(θ)</strong></td><td class="m">[ e<sup>&minus;iθ/2</sup>&nbsp;&nbsp;0 ;&nbsp; 0&nbsp;&nbsp;e<sup>iθ/2</sup> ]</td><td>Rotate θ about Z (a relative phase).</td></tr>
+  </tbody>
+</table>
+<div class="callout"><b>Universality.</b> Any single-qubit gate can be built from rotations, and <strong>any</strong> quantum computation can be approximated to arbitrary accuracy with just <strong>H, T, and CNOT</strong>. That tiny set is enough to express everything.</div>
+
+<!-- ========================= 4 ========================= -->
+<h2 id="multi"><span class="num">4</span>Multi-qubit gates</h2>
+<p>Single-qubit gates never create correlations between qubits. For that you need gates that act on two or more qubits at once — typically a <em>controlled</em> operation, where one qubit conditions an action on another.</p>
+<table>
+  <thead><tr><th>Gate</th><th>Qubits</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><strong>CNOT / CX</strong></td><td>2</td><td>Applies X to the <em>target</em> only when the <em>control</em> is <ket>|1&rang;</ket>. The fundamental entangling gate.</td></tr>
+    <tr><td><strong>CZ</strong></td><td>2</td><td>Applies a phase flip (Z) to the target when the control is <ket>|1&rang;</ket>. Symmetric — control and target are interchangeable.</td></tr>
+    <tr><td><strong>CP(λ) / controlled-S, -T</strong></td><td>2</td><td>A controlled phase by λ. The core ingredient of the Quantum Fourier Transform.</td></tr>
+    <tr><td><strong>SWAP</strong></td><td>2</td><td>Exchanges the states of two qubits. Equals three CNOTs back-to-back.</td></tr>
+    <tr><td><strong>iSWAP</strong></td><td>2</td><td>Swaps and adds an <em>i</em> phase — a common hardware-native two-qubit gate.</td></tr>
+    <tr><td><strong>Toffoli / CCX</strong></td><td>3</td><td>Flips the target only when <em>both</em> controls are <ket>|1&rang;</ket> — a reversible AND. Key to arithmetic and error correction.</td></tr>
+    <tr><td><strong>Fredkin / CSWAP</strong></td><td>3</td><td>Swaps two targets when the control is <ket>|1&rang;</ket>. Used in the SWAP test.</td></tr>
+  </tbody>
+</table>
+
+<!-- ========================= 5 ========================= -->
+<h2 id="reading"><span class="num">5</span>Reading a circuit diagram</h2>
+<p>A circuit is read <strong>left to right</strong> in time. Each horizontal line is a qubit&rsquo;s &ldquo;wire,&rdquo; usually starting in <ket>|0&rang;</ket>. Boxes are single-qubit gates; a filled dot is a control; the symbols below show the common notation:</p>
+<figure>
+  <svg width="560" height="92" viewBox="0 0 560 92" role="img" aria-label="Circuit symbol legend">
+    <!-- gate box -->
+    <line x1="20" y1="40" x2="90" y2="40" stroke="#1a1d29" stroke-width="1.4"/>
+    <rect x="38" y="23" width="34" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.5"/>
+    <text x="55" y="46" text-anchor="middle" font-size="16" font-weight="700" fill="#3a3f63">H</text>
+    <text x="55" y="80" text-anchor="middle" font-size="12" fill="#5b6478">gate</text>
+    <!-- control dot -->
+    <line x1="110" y1="40" x2="160" y2="40" stroke="#1a1d29" stroke-width="1.4"/>
+    <circle cx="135" cy="40" r="5.5" fill="#1a1d29"/>
+    <text x="135" y="80" text-anchor="middle" font-size="12" fill="#5b6478">control</text>
+    <!-- CNOT target -->
+    <line x1="180" y1="40" x2="230" y2="40" stroke="#1a1d29" stroke-width="1.4"/>
+    <circle cx="205" cy="40" r="13" fill="#fff" stroke="#1a1d29" stroke-width="1.6"/>
+    <line x1="205" y1="28" x2="205" y2="52" stroke="#1a1d29" stroke-width="1.6"/>
+    <line x1="193" y1="40" x2="217" y2="40" stroke="#1a1d29" stroke-width="1.6"/>
+    <text x="205" y="80" text-anchor="middle" font-size="12" fill="#5b6478">X target (⊕)</text>
+    <!-- swap -->
+    <line x1="250" y1="40" x2="300" y2="40" stroke="#1a1d29" stroke-width="1.4"/>
+    <line x1="269" y1="33" x2="281" y2="47" stroke="#1a1d29" stroke-width="1.8"/>
+    <line x1="281" y1="33" x2="269" y2="47" stroke="#1a1d29" stroke-width="1.8"/>
+    <text x="275" y="80" text-anchor="middle" font-size="12" fill="#5b6478">swap node</text>
+    <!-- measurement -->
+    <line x1="320" y1="40" x2="390" y2="40" stroke="#1a1d29" stroke-width="1.4"/>
+    <rect x="345" y="23" width="40" height="34" rx="5" fill="#f6f7fb" stroke="#8b93b5" stroke-width="1.4"/>
+    <path d="M 353 47 A 12 12 0 0 1 377 47" fill="none" stroke="#5b6478" stroke-width="1.4"/>
+    <line x1="365" y1="47" x2="375" y2="35" stroke="#5b6478" stroke-width="1.4"/>
+    <text x="365" y="80" text-anchor="middle" font-size="12" fill="#5b6478">measure</text>
+    <!-- classical wire -->
+    <line x1="410" y1="38" x2="470" y2="38" stroke="#8b93b5" stroke-width="1.2"/>
+    <line x1="410" y1="42" x2="470" y2="42" stroke="#8b93b5" stroke-width="1.2"/>
+    <text x="440" y="80" text-anchor="middle" font-size="12" fill="#5b6478">classical bit</text>
+    <!-- phase Z control -->
+    <line x1="490" y1="40" x2="540" y2="40" stroke="#1a1d29" stroke-width="1.4"/>
+    <circle cx="515" cy="40" r="5.5" fill="#1a1d29"/>
+    <text x="515" y="80" text-anchor="middle" font-size="12" fill="#5b6478">…</text>
+  </svg>
+  <figcaption>Common circuit symbols. A vertical line joins the qubits a two-qubit gate acts on.</figcaption>
+</figure>
+
+<!-- ========================= 6 ========================= -->
+<h2 id="gallery"><span class="num">6</span>A gallery of circuits</h2>
+<p>Each example below is a complete, runnable circuit. Together they exercise every gate above.</p>
+
+<!-- A: superposition -->
+<div class="circ">
+  <h3>A · Make a superposition</h3>
+  <p class="note">One Hadamard turns a definite bit into a 50/50 coin.</p>
+  <svg width="240" height="70" viewBox="0 0 240 70" role="img">
+    <line x1="40" y1="35" x2="210" y2="35" stroke="#1a1d29" stroke-width="1.5"/>
+    <text x="6" y="40" font-size="13">q₀</text><text x="24" y="22" font-size="11" fill="#5b6478">|0&#10217;</text>
+    <rect x="90" y="18" width="34" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.5"/>
+    <text x="107" y="41" text-anchor="middle" font-size="16" font-weight="700" fill="#3a3f63">H</text>
+  </svg>
+  <p>Result: <ket>|+&rang;</ket> = (<ket>|0&rang;</ket> + <ket>|1&rang;</ket>)/√2. Measuring gives 0 or 1 with equal probability. Apply a second H and the two paths interfere — you return to <ket>|0&rang;</ket> exactly, not a random bit.</p>
+</div>
+
+<!-- B: interference HZH = X -->
+<div class="circ">
+  <h3>B · Interference: H · Z · H = X</h3>
+  <p class="note">A phase flip sandwiched between Hadamards becomes a bit flip — pure interference.</p>
+  <svg width="320" height="70" viewBox="0 0 320 70" role="img">
+    <line x1="40" y1="35" x2="290" y2="35" stroke="#1a1d29" stroke-width="1.5"/>
+    <text x="6" y="40" font-size="13">q₀</text>
+    <rect x="70" y="18" width="34" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.5"/>
+    <text x="87" y="41" text-anchor="middle" font-size="16" font-weight="700" fill="#3a3f63">H</text>
+    <rect x="140" y="18" width="34" height="34" rx="5" fill="#f0ecff" stroke="#8b6ce0" stroke-width="1.5"/>
+    <text x="157" y="41" text-anchor="middle" font-size="16" font-weight="700" fill="#5b3fae">Z</text>
+    <rect x="210" y="18" width="34" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.5"/>
+    <text x="227" y="41" text-anchor="middle" font-size="16" font-weight="700" fill="#3a3f63">H</text>
+  </svg>
+  <p>The Z gate flips the sign of <ket>|−&rang;</ket>. Conjugated by Hadamards, that sign-flip on the X axis acts as a flip on the Z axis: the whole circuit equals a single X. (Likewise H·X·H = Z.) This identity is the simplest demonstration that <em>phase</em> and <em>amplitude</em> are two views of the same thing.</p>
+</div>
+
+<!-- C: Bell -->
+<div class="circ">
+  <h3>C · Bell state — two-qubit entanglement</h3>
+  <p class="note">Hadamard then CNOT: the canonical entangling circuit.</p>
+  <svg width="320" height="130" viewBox="0 0 320 130" role="img">
+    <line x1="40" y1="40" x2="290" y2="40" stroke="#1a1d29" stroke-width="1.5"/>
+    <line x1="40" y1="95" x2="290" y2="95" stroke="#1a1d29" stroke-width="1.5"/>
+    <text x="6" y="45" font-size="13">q₀</text><text x="6" y="100" font-size="13">q₁</text>
+    <rect x="70" y="23" width="34" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.5"/>
+    <text x="87" y="46" text-anchor="middle" font-size="16" font-weight="700" fill="#3a3f63">H</text>
+    <line x1="160" y1="40" x2="160" y2="95" stroke="#1a1d29" stroke-width="1.5"/>
+    <circle cx="160" cy="40" r="5.5" fill="#1a1d29"/>
+    <circle cx="160" cy="95" r="13" fill="#fff" stroke="#1a1d29" stroke-width="1.6"/>
+    <line x1="160" y1="83" x2="160" y2="107" stroke="#1a1d29" stroke-width="1.6"/>
+    <line x1="148" y1="95" x2="172" y2="95" stroke="#1a1d29" stroke-width="1.6"/>
+    <!-- meters -->
+    <rect x="240" y="23" width="40" height="34" rx="5" fill="#fff" stroke="#8b93b5" stroke-width="1.4"/>
+    <path d="M 248 47 A 12 12 0 0 1 272 47" fill="none" stroke="#5b6478" stroke-width="1.4"/><line x1="260" y1="47" x2="270" y2="35" stroke="#5b6478" stroke-width="1.4"/>
+    <rect x="240" y="78" width="40" height="34" rx="5" fill="#fff" stroke="#8b93b5" stroke-width="1.4"/>
+    <path d="M 248 102 A 12 12 0 0 1 272 102" fill="none" stroke="#5b6478" stroke-width="1.4"/><line x1="260" y1="102" x2="270" y2="90" stroke="#5b6478" stroke-width="1.4"/>
+  </svg>
+  <p>Result: <ket>|Φ⁺&rang;</ket> = (<ket>|00&rang;</ket> + <ket>|11&rang;</ket>)/√2. The qubits are <strong>entangled</strong> — always measured equal (both 0 or both 1), though each alone is random. There is no way to describe either qubit on its own.</p>
+</div>
+
+<!-- D: GHZ -->
+<div class="circ">
+  <h3>D · GHZ state — three-way entanglement</h3>
+  <p class="note">Extend the Bell idea with a CNOT chain.</p>
+  <svg width="340" height="180" viewBox="0 0 340 180" role="img">
+    <line x1="40" y1="40" x2="310" y2="40" stroke="#1a1d29" stroke-width="1.5"/>
+    <line x1="40" y1="90" x2="310" y2="90" stroke="#1a1d29" stroke-width="1.5"/>
+    <line x1="40" y1="140" x2="310" y2="140" stroke="#1a1d29" stroke-width="1.5"/>
+    <text x="6" y="45" font-size="13">q₀</text><text x="6" y="95" font-size="13">q₁</text><text x="6" y="145" font-size="13">q₂</text>
+    <rect x="60" y="23" width="34" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.5"/>
+    <text x="77" y="46" text-anchor="middle" font-size="16" font-weight="700" fill="#3a3f63">H</text>
+    <!-- CNOT 0->1 -->
+    <line x1="150" y1="40" x2="150" y2="90" stroke="#1a1d29" stroke-width="1.5"/>
+    <circle cx="150" cy="40" r="5.5" fill="#1a1d29"/>
+    <circle cx="150" cy="90" r="13" fill="#fff" stroke="#1a1d29" stroke-width="1.6"/><line x1="150" y1="78" x2="150" y2="102" stroke="#1a1d29" stroke-width="1.6"/><line x1="138" y1="90" x2="162" y2="90" stroke="#1a1d29" stroke-width="1.6"/>
+    <!-- CNOT 1->2 -->
+    <line x1="225" y1="90" x2="225" y2="140" stroke="#1a1d29" stroke-width="1.5"/>
+    <circle cx="225" cy="90" r="5.5" fill="#1a1d29"/>
+    <circle cx="225" cy="140" r="13" fill="#fff" stroke="#1a1d29" stroke-width="1.6"/><line x1="225" y1="128" x2="225" y2="152" stroke="#1a1d29" stroke-width="1.6"/><line x1="213" y1="140" x2="237" y2="140" stroke="#1a1d29" stroke-width="1.6"/>
+  </svg>
+  <p>Result: <ket>|GHZ&rang;</ket> = (<ket>|000&rang;</ket> + <ket>|111&rang;</ket>)/√2. All three qubits flip together. GHZ states are maximally entangled and central to tests of quantum non-locality and to error-correction codes.</p>
+</div>
+
+<!-- E: SWAP -->
+<div class="circ">
+  <h3>E · SWAP — exchange two qubits (= three CNOTs)</h3>
+  <p class="note">A SWAP can be built from three alternating CNOTs.</p>
+  <svg width="360" height="130" viewBox="0 0 360 130" role="img">
+    <line x1="40" y1="40" x2="330" y2="40" stroke="#1a1d29" stroke-width="1.5"/>
+    <line x1="40" y1="95" x2="330" y2="95" stroke="#1a1d29" stroke-width="1.5"/>
+    <text x="6" y="45" font-size="13">q₀</text><text x="6" y="100" font-size="13">q₁</text>
+    <!-- CNOT 0->1 -->
+    <line x1="100" y1="40" x2="100" y2="95" stroke="#1a1d29" stroke-width="1.5"/><circle cx="100" cy="40" r="5.5" fill="#1a1d29"/>
+    <circle cx="100" cy="95" r="13" fill="#fff" stroke="#1a1d29" stroke-width="1.6"/><line x1="100" y1="83" x2="100" y2="107" stroke="#1a1d29" stroke-width="1.6"/><line x1="88" y1="95" x2="112" y2="95" stroke="#1a1d29" stroke-width="1.6"/>
+    <!-- CNOT 1->0 -->
+    <line x1="185" y1="40" x2="185" y2="95" stroke="#1a1d29" stroke-width="1.5"/><circle cx="185" cy="95" r="5.5" fill="#1a1d29"/>
+    <circle cx="185" cy="40" r="13" fill="#fff" stroke="#1a1d29" stroke-width="1.6"/><line x1="185" y1="28" x2="185" y2="52" stroke="#1a1d29" stroke-width="1.6"/><line x1="173" y1="40" x2="197" y2="40" stroke="#1a1d29" stroke-width="1.6"/>
+    <!-- CNOT 0->1 -->
+    <line x1="270" y1="40" x2="270" y2="95" stroke="#1a1d29" stroke-width="1.5"/><circle cx="270" cy="40" r="5.5" fill="#1a1d29"/>
+    <circle cx="270" cy="95" r="13" fill="#fff" stroke="#1a1d29" stroke-width="1.6"/><line x1="270" y1="83" x2="270" y2="107" stroke="#1a1d29" stroke-width="1.6"/><line x1="258" y1="95" x2="282" y2="95" stroke="#1a1d29" stroke-width="1.6"/>
+  </svg>
+  <p>The two qubits end up exchanged. SWAP matters on real hardware, where qubits that aren&rsquo;t physically adjacent must be shuttled next to each other before a two-qubit gate can act — the job of a <em>router</em>.</p>
+</div>
+
+<!-- F: Toffoli AND -->
+<div class="circ">
+  <h3>F · Toffoli — a reversible AND</h3>
+  <p class="note">Flip the target only when both controls are 1.</p>
+  <svg width="300" height="180" viewBox="0 0 300 180" role="img">
+    <line x1="40" y1="40" x2="270" y2="40" stroke="#1a1d29" stroke-width="1.5"/>
+    <line x1="40" y1="90" x2="270" y2="90" stroke="#1a1d29" stroke-width="1.5"/>
+    <line x1="40" y1="140" x2="270" y2="140" stroke="#1a1d29" stroke-width="1.5"/>
+    <text x="0" y="45" font-size="13">a</text><text x="0" y="95" font-size="13">b</text>
+    <text x="0" y="145" font-size="13">t</text><text x="12" y="158" font-size="10" fill="#5b6478">|0&#10217;</text>
+    <line x1="150" y1="40" x2="150" y2="140" stroke="#1a1d29" stroke-width="1.5"/>
+    <circle cx="150" cy="40" r="5.5" fill="#1a1d29"/>
+    <circle cx="150" cy="90" r="5.5" fill="#1a1d29"/>
+    <circle cx="150" cy="140" r="13" fill="#fff" stroke="#1a1d29" stroke-width="1.6"/><line x1="150" y1="128" x2="150" y2="152" stroke="#1a1d29" stroke-width="1.6"/><line x1="138" y1="140" x2="162" y2="140" stroke="#1a1d29" stroke-width="1.6"/>
+  </svg>
+  <p>With target <em>t</em> starting in <ket>|0&rang;</ket>, it ends as <strong>t = a AND b</strong> — computed reversibly, with the inputs preserved. Toffoli gates make classical logic (and thus arithmetic) expressible inside a quantum circuit, and they appear throughout quantum error correction.</p>
+</div>
+
+<!-- G: Teleportation -->
+<div class="circ">
+  <h3>G · Quantum teleportation</h3>
+  <p class="note">Move an unknown state from q₀ to q₂ using entanglement + 2 classical bits.</p>
+  <svg width="520" height="190" viewBox="0 0 520 190" role="img">
+    <line x1="56" y1="38" x2="470" y2="38" stroke="#1a1d29" stroke-width="1.5"/>
+    <line x1="56" y1="92" x2="470" y2="92" stroke="#1a1d29" stroke-width="1.5"/>
+    <line x1="56" y1="146" x2="500" y2="146" stroke="#1a1d29" stroke-width="1.5"/>
+    <text x="6" y="42" font-size="12">q₀ |ψ&#10217;</text>
+    <text x="14" y="96" font-size="12">q₁</text><text x="14" y="150" font-size="12">q₂</text>
+    <!-- Bell pair on q1,q2 -->
+    <rect x="70" y="75" width="30" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.4"/><text x="85" y="98" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3f63">H</text>
+    <line x1="120" y1="92" x2="120" y2="146" stroke="#1a1d29" stroke-width="1.5"/><circle cx="120" cy="92" r="5" fill="#1a1d29"/>
+    <circle cx="120" cy="146" r="12" fill="#fff" stroke="#1a1d29" stroke-width="1.5"/><line x1="120" y1="135" x2="120" y2="157" stroke="#1a1d29" stroke-width="1.5"/><line x1="109" y1="146" x2="131" y2="146" stroke="#1a1d29" stroke-width="1.5"/>
+    <!-- Bell measurement on q0,q1 -->
+    <line x1="170" y1="38" x2="170" y2="92" stroke="#1a1d29" stroke-width="1.5"/><circle cx="170" cy="38" r="5" fill="#1a1d29"/>
+    <circle cx="170" cy="92" r="12" fill="#fff" stroke="#1a1d29" stroke-width="1.5"/><line x1="170" y1="81" x2="170" y2="103" stroke="#1a1d29" stroke-width="1.5"/><line x1="159" y1="92" x2="181" y2="92" stroke="#1a1d29" stroke-width="1.5"/>
+    <rect x="205" y="21" width="30" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.4"/><text x="220" y="44" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3f63">H</text>
+    <!-- meters q0,q1 -->
+    <rect x="255" y="21" width="36" height="34" rx="5" fill="#fff" stroke="#8b93b5" stroke-width="1.3"/><path d="M 262 44 A 11 11 0 0 1 284 44" fill="none" stroke="#5b6478" stroke-width="1.3"/><line x1="273" y1="44" x2="282" y2="33" stroke="#5b6478" stroke-width="1.3"/>
+    <rect x="255" y="75" width="36" height="34" rx="5" fill="#fff" stroke="#8b93b5" stroke-width="1.3"/><path d="M 262 98 A 11 11 0 0 1 284 98" fill="none" stroke="#5b6478" stroke-width="1.3"/><line x1="273" y1="98" x2="282" y2="87" stroke="#5b6478" stroke-width="1.3"/>
+    <!-- classical wires to corrections -->
+    <line x1="291" y1="90" x2="360" y2="90" stroke="#8b93b5" stroke-width="1"/><line x1="291" y1="94" x2="360" y2="94" stroke="#8b93b5" stroke-width="1"/>
+    <line x1="360" y1="90" x2="360" y2="138" stroke="#8b93b5" stroke-width="1"/><line x1="364" y1="92" x2="364" y2="138" stroke="#8b93b5" stroke-width="1"/>
+    <line x1="291" y1="36" x2="420" y2="36" stroke="#8b93b5" stroke-width="1"/><line x1="291" y1="40" x2="420" y2="40" stroke="#8b93b5" stroke-width="1"/>
+    <line x1="420" y1="40" x2="420" y2="138" stroke="#8b93b5" stroke-width="1"/><line x1="424" y1="40" x2="424" y2="138" stroke="#8b93b5" stroke-width="1"/>
+    <!-- classically controlled X then Z on q2 -->
+    <rect x="345" y="129" width="34" height="34" rx="5" fill="#ffecec" stroke="#e05b5b" stroke-width="1.4"/><text x="362" y="152" text-anchor="middle" font-size="15" font-weight="700" fill="#b23">X</text>
+    <rect x="405" y="129" width="34" height="34" rx="5" fill="#f0ecff" stroke="#8b6ce0" stroke-width="1.4"/><text x="422" y="152" text-anchor="middle" font-size="15" font-weight="700" fill="#5b3fae">Z</text>
+    <text x="470" y="150" font-size="12" fill="#5b6478">= |ψ&#10217;</text>
+  </svg>
+  <p>q₁ and q₂ start as a Bell pair. The sender entangles the unknown state q₀ with q₁, measures both (a <em>Bell measurement</em>), and sends the two classical outcome bits to the receiver, who applies a conditional X and/or Z to q₂ — which now holds the exact original state <ket>|ψ&rang;</ket>. Nothing faster-than-light happens: the classical bits must travel, and q₀&rsquo;s state is destroyed in the process (the <em>no-cloning</em> theorem is respected).</p>
+</div>
+
+<!-- H: Grover -->
+<div class="circ">
+  <h3>H · Grover search (2 qubits, one iteration)</h3>
+  <p class="note">Amplify the marked answer <ket>|11&rang;</ket> so a single measurement finds it.</p>
+  <svg width="500" height="130" viewBox="0 0 500 130" role="img">
+    <line x1="40" y1="45" x2="470" y2="45" stroke="#1a1d29" stroke-width="1.5"/>
+    <line x1="40" y1="95" x2="470" y2="95" stroke="#1a1d29" stroke-width="1.5"/>
+    <text x="6" y="50" font-size="13">q₀</text><text x="6" y="100" font-size="13">q₁</text>
+    <!-- H H -->
+    <rect x="60" y="28" width="30" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.4"/><text x="75" y="51" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3f63">H</text>
+    <rect x="60" y="78" width="30" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.4"/><text x="75" y="101" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3f63">H</text>
+    <!-- oracle: CZ -->
+    <line x1="130" y1="45" x2="130" y2="95" stroke="#1a1d29" stroke-width="1.5"/><circle cx="130" cy="45" r="5.5" fill="#1a1d29"/><circle cx="130" cy="95" r="5.5" fill="#1a1d29"/>
+    <text x="130" y="122" text-anchor="middle" font-size="11" fill="#5b6478">oracle (CZ)</text>
+    <!-- diffusion: H X CZ X H on both -->
+    <g>
+      <rect x="170" y="28" width="26" height="34" rx="4" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.3"/><text x="183" y="51" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3f63">H</text>
+      <rect x="170" y="78" width="26" height="34" rx="4" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.3"/><text x="183" y="101" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3f63">H</text>
+      <rect x="208" y="28" width="26" height="34" rx="4" fill="#ffecec" stroke="#e05b5b" stroke-width="1.3"/><text x="221" y="51" text-anchor="middle" font-size="13" font-weight="700" fill="#b23">X</text>
+      <rect x="208" y="78" width="26" height="34" rx="4" fill="#ffecec" stroke="#e05b5b" stroke-width="1.3"/><text x="221" y="101" text-anchor="middle" font-size="13" font-weight="700" fill="#b23">X</text>
+      <line x1="256" y1="45" x2="256" y2="95" stroke="#1a1d29" stroke-width="1.5"/><circle cx="256" cy="45" r="5.5" fill="#1a1d29"/><circle cx="256" cy="95" r="5.5" fill="#1a1d29"/>
+      <rect x="278" y="28" width="26" height="34" rx="4" fill="#ffecec" stroke="#e05b5b" stroke-width="1.3"/><text x="291" y="51" text-anchor="middle" font-size="13" font-weight="700" fill="#b23">X</text>
+      <rect x="278" y="78" width="26" height="34" rx="4" fill="#ffecec" stroke="#e05b5b" stroke-width="1.3"/><text x="291" y="101" text-anchor="middle" font-size="13" font-weight="700" fill="#b23">X</text>
+      <rect x="316" y="28" width="26" height="34" rx="4" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.3"/><text x="329" y="51" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3f63">H</text>
+      <rect x="316" y="78" width="26" height="34" rx="4" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.3"/><text x="329" y="101" text-anchor="middle" font-size="13" font-weight="700" fill="#3a3f63">H</text>
+      <text x="256" y="122" text-anchor="middle" font-size="11" fill="#5b6478">diffusion</text>
+    </g>
+    <!-- meters -->
+    <rect x="420" y="28" width="34" height="34" rx="5" fill="#fff" stroke="#8b93b5" stroke-width="1.3"/><path d="M 427 51 A 11 11 0 0 1 449 51" fill="none" stroke="#5b6478" stroke-width="1.3"/><line x1="438" y1="51" x2="447" y2="40" stroke="#5b6478" stroke-width="1.3"/>
+    <rect x="420" y="78" width="34" height="34" rx="5" fill="#fff" stroke="#8b93b5" stroke-width="1.3"/><path d="M 427 101 A 11 11 0 0 1 449 101" fill="none" stroke="#5b6478" stroke-width="1.3"/><line x1="438" y1="101" x2="447" y2="90" stroke="#5b6478" stroke-width="1.3"/>
+  </svg>
+  <p>Start in a uniform superposition (the two H gates). The <em>oracle</em> flips the phase of the marked state (here a CZ marks <ket>|11&rang;</ket>); the <em>diffusion</em> operator then reflects all amplitudes about their average, converting that hidden phase into amplitude. For two qubits one round is enough — measuring yields <ket>|11&rang;</ket> with certainty. For N items Grover needs only ≈√N rounds, a quadratic speed-up over checking them one by one.</p>
+</div>
+
+<!-- I: QFT -->
+<div class="circ">
+  <h3>I · Quantum Fourier Transform (2 qubits)</h3>
+  <p class="note">The quantum analogue of the discrete Fourier transform — the engine inside Shor&rsquo;s algorithm and phase estimation.</p>
+  <svg width="420" height="130" viewBox="0 0 420 130" role="img">
+    <line x1="40" y1="45" x2="390" y2="45" stroke="#1a1d29" stroke-width="1.5"/>
+    <line x1="40" y1="95" x2="390" y2="95" stroke="#1a1d29" stroke-width="1.5"/>
+    <text x="6" y="50" font-size="13">q₀</text><text x="6" y="100" font-size="13">q₁</text>
+    <rect x="60" y="28" width="30" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.4"/><text x="75" y="51" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3f63">H</text>
+    <!-- controlled-S from q1 to q0 -->
+    <line x1="150" y1="45" x2="150" y2="95" stroke="#1a1d29" stroke-width="1.5"/><circle cx="150" cy="95" r="5.5" fill="#1a1d29"/>
+    <rect x="133" y="28" width="34" height="34" rx="5" fill="#f0ecff" stroke="#8b6ce0" stroke-width="1.4"/><text x="150" y="51" text-anchor="middle" font-size="14" font-weight="700" fill="#5b3fae">S</text>
+    <!-- H on q1 -->
+    <rect x="210" y="78" width="30" height="34" rx="5" fill="#eef0ff" stroke="#5b6cff" stroke-width="1.4"/><text x="225" y="101" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3f63">H</text>
+    <!-- SWAP -->
+    <line x1="300" y1="45" x2="300" y2="95" stroke="#1a1d29" stroke-width="1.4"/>
+    <line x1="294" y1="39" x2="306" y2="51" stroke="#1a1d29" stroke-width="1.8"/><line x1="306" y1="39" x2="294" y2="51" stroke="#1a1d29" stroke-width="1.8"/>
+    <line x1="294" y1="89" x2="306" y2="101" stroke="#1a1d29" stroke-width="1.8"/><line x1="306" y1="89" x2="294" y2="101" stroke="#1a1d29" stroke-width="1.8"/>
+  </svg>
+  <p>Each qubit gets a Hadamard, then <em>controlled phase rotations</em> (here a controlled-S) imprint the relative phases that encode frequency, and a final SWAP reverses the qubit order. On <em>n</em> qubits the QFT needs only ≈n²/2 gates to transform a 2ⁿ-dimensional state — exponentially fewer operations than the classical FFT touches numbers, which is what gives Shor&rsquo;s algorithm its power.</p>
+</div>
+
+<!-- ========================= 7 ========================= -->
+<h2 id="measure"><span class="num">7</span>Measurement</h2>
+<p>Measurement is where the quantum world meets ordinary data. Measuring a qubit in the standard basis returns <strong>0 or 1</strong>, with probabilities set by the squared amplitudes — and it <em>collapses</em> the state to the matching basis state. You don&rsquo;t read out α and β; you get one sampled bit. So you run a circuit many times (&ldquo;shots&rdquo;) and study the <strong>statistics</strong>. For the Bell circuit, that distribution is the fingerprint of its entanglement:</p>
+<figure>
+  <svg width="420" height="180" viewBox="0 0 420 190" role="img" aria-label="Bell-state histogram">
+    <line x1="60" y1="20" x2="60" y2="150" stroke="#8b93b5" stroke-width="1.2"/>
+    <line x1="60" y1="150" x2="400" y2="150" stroke="#8b93b5" stroke-width="1.2"/>
+    <text x="22" y="26" font-size="12" fill="#5b6478">50%</text><text x="34" y="154" font-size="12" fill="#5b6478">0</text>
+    <rect x="92" y="22" width="56" height="128" rx="3" fill="#5b6cff"/>
+    <rect x="172" y="148" width="56" height="2" rx="1" fill="#c7cce0"/>
+    <rect x="252" y="148" width="56" height="2" rx="1" fill="#c7cce0"/>
+    <rect x="332" y="22" width="56" height="128" rx="3" fill="#9b6cff"/>
+    <text x="120" y="16" text-anchor="middle" font-size="12" fill="#3a3f63">~50%</text>
+    <text x="360" y="16" text-anchor="middle" font-size="12" fill="#3a3f63">~50%</text>
+    <text x="120" y="168" text-anchor="middle" font-size="13" font-family="monospace">00</text>
+    <text x="200" y="168" text-anchor="middle" font-size="13" font-family="monospace" fill="#9aa3c4">01</text>
+    <text x="280" y="168" text-anchor="middle" font-size="13" font-family="monospace" fill="#9aa3c4">10</text>
+    <text x="360" y="168" text-anchor="middle" font-size="13" font-family="monospace">11</text>
+    <text x="230" y="186" text-anchor="middle" font-size="12" fill="#5b6478">measured bitstring</text>
+  </svg>
+  <figcaption>Only <code>00</code> and <code>11</code> appear — never <code>01</code> or <code>10</code>.</figcaption>
+</figure>
+<p>You can also measure in a <em>different basis</em> by applying a gate first: an H before measurement reads the qubit along the X axis (the <ket>|+&rang;</ket>/<ket>|−&rang;</ket> distinction), which is how many algorithms extract phase information.</p>
+
+<!-- ========================= 8 ========================= -->
+<h2 id="why"><span class="num">8</span>Why it matters</h2>
+<p>Superposition, interference, and entanglement together let certain problems be solved with far fewer steps than any known classical method:</p>
+<ul>
+  <li><strong>Shor&rsquo;s algorithm</strong> — factors large integers exponentially faster than the best classical methods, threatening today&rsquo;s public-key cryptography. (It runs on the QFT from example I.)</li>
+  <li><strong>Grover&rsquo;s algorithm</strong> — searches N unstructured items in ≈√N steps (example H).</li>
+  <li><strong>Quantum simulation</strong> — models molecules and materials whose quantum behaviour is intractable classically: chemistry, batteries, drug design.</li>
+</ul>
+<p>The catch is <strong>noise</strong>. Real qubits <em>decohere</em> — they lose their delicate amplitudes to the environment in microseconds — and gates are imperfect. Today&rsquo;s &ldquo;NISQ&rdquo; (noisy intermediate-scale quantum) devices have tens to a few hundred qubits with meaningful error rates. Turning them into reliable computers requires <strong>quantum error correction</strong>, which spreads one logical qubit across many physical ones using circuits built largely from the CNOT and Toffoli gates above — the central engineering challenge of the field.</p>
+
+<!-- ========================= 9 ========================= -->
+<h2 id="next"><span class="num">9</span>Where to go next</h2>
+<p>The fastest way to build intuition is to <em>play</em> with these circuits and watch the state respond. Drop a Hadamard onto a wire, add a CNOT, and see the Bloch vectors, amplitudes, and measurement statistics update live — superposition, interference, and entanglement become things you can see rather than memorise.</p>
+<div class="callout"><b>Try it in the browser.</b> <a href="https://quantiom.fly.dev">Quantiom</a> is a free, no-install quantum circuit editor, simulator, and visualizer. Every circuit in this primer — Bell, GHZ, teleportation, Grover, the QFT — can be built in seconds and explored interactively, gate by gate.</div>
+
+<h3>A short glossary</h3>
+<table>
+  <tbody>
+    <tr><td><strong>Qubit</strong></td><td>The quantum unit of information; a superposition of <ket>|0&rang;</ket> and <ket>|1&rang;</ket>.</td></tr>
+    <tr><td><strong>Superposition</strong></td><td>A weighted combination of basis states existing simultaneously.</td></tr>
+    <tr><td><strong>Amplitude</strong></td><td>The complex weight of a basis state; its squared magnitude is a probability.</td></tr>
+    <tr><td><strong>Interference</strong></td><td>Amplitudes adding or cancelling — the source of quantum advantage.</td></tr>
+    <tr><td><strong>Entanglement</strong></td><td>Correlation between qubits with no independent description of each.</td></tr>
+    <tr><td><strong>Gate</strong></td><td>A reversible (unitary) operation transforming a state.</td></tr>
+    <tr><td><strong>Control</strong></td><td>A qubit that conditions a gate on another qubit (the filled dot).</td></tr>
+    <tr><td><strong>Universal set</strong></td><td>A handful of gates (e.g. H, T, CNOT) that can build any computation.</td></tr>
+    <tr><td><strong>Measurement</strong></td><td>Sampling a classical bit from the state and collapsing it.</td></tr>
+    <tr><td><strong>Decoherence</strong></td><td>Loss of quantum information to the environment (noise).</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  An Introduction to Quantum Computing · all figures are exact, hand-drawn vector diagrams.
+  Build and explore every example interactively at <a href="https://quantiom.fly.dev">quantiom.fly.dev</a>.
+</footer>
+
+</div>
+</body>
+</html>

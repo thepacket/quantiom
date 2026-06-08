@@ -449,6 +449,17 @@ function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
       {open && (
         <div className="examples-picker__pop" style={{ top: "100%", marginTop: 4 }}>
           <div className="examples-picker__list">
+            <a
+              className="examples-picker__item"
+              href="/learn/quantum-computing-intro.html"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setOpen(false)}
+            >
+              <span>Intro to quantum computing</span>
+              <span className="export-picker__hint">a primer — qubits, gates, and circuits</span>
+            </a>
+            <div className="examples-picker__cat-label">Reference →</div>
             {items.map((it) => (
               <button
                 key={it.id}
