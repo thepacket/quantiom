@@ -65,6 +65,14 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
             install and no account.
           </p>
 
+          <p style={{ margin: "10px 0 0" }}>
+            Built with an AI-assisted workflow, so new features and panels can
+            be added quickly on demand — request one via{" "}
+            <a href={DISCUSSIONS_URL} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+              GitHub Discussions
+            </a>.
+          </p>
+
           <p style={{ margin: "14px 0 0" }}>
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
               {GITHUB_URL.replace("https://", "")}
