@@ -515,7 +515,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .examples-picker__list { overflow-y: auto; flex: 1; padding: 4px 0; }
 .examples-picker__cat { padding: 4px 0; }
 .examples-picker__cat-label { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 10px 2px; }
-.examples-picker__item { display: block; width: auto; text-align: left; background: transparent; color: var(--fg); border: none; padding: 4px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.examples-picker__item { display: block; width: auto; text-align: left; background: transparent; color: var(--fg); border: none; padding: 4px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; text-decoration: none; }
 .examples-picker__item:hover { background: var(--bg-2); color: var(--accent); }
 .examples-picker__none { color: var(--muted); font-size: 11px; padding: 12px; text-align: center; font-style: italic; }
 .export-picker__hint { color: var(--muted); font-size: 10px; margin-left: 6px; }

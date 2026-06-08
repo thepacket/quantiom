@@ -456,8 +456,7 @@ function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
               rel="noreferrer"
               onClick={() => setOpen(false)}
             >
-              <span>Intro to quantum computing</span>
-              <span className="export-picker__hint">a primer — qubits, gates, and circuits</span>
+              <span>Introduction</span>
             </a>
             <div className="examples-picker__cat-label">Reference →</div>
             {items.map((it) => (
