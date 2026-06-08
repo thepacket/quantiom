@@ -115,8 +115,11 @@ Live: **<https://quantiom.fly.dev>**
 - **[OpenQASM & export](docs/qasm.md)** — the round-trip contract,
   the `// qubit_names:` / `// note:` comment directives, and the
   conventions of all eight SDK / LaTeX emitters.
+- **[Precision & limits](docs/precision.md)** — per-panel qubit caps,
+  where results are sampled vs exact, and the deliberate approximations
+  (Trotter, Pauli-twirl, discrete Wigner, ZNE/PEC, sampled equivalence).
 
-All four are also rendered inside the app — open the toolbar **Help**
+All five are also rendered inside the app — open the toolbar **Help**
 menu. They're imported at build time, no network fetch. The **About**
 item (next to Help) shows the version, GitHub link, authorship, and
 licence.

@@ -439,6 +439,7 @@ function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
     { id: "panels", label: "Panel reference", hint: "what every right-side panel shows" },
     { id: "architecture", label: "Architecture", hint: "codebase map: where things live, how they connect" },
     { id: "qasm", label: "OpenQASM & export", hint: "round-trip rules + the eight code emitters" },
+    { id: "precision", label: "Precision & limits", hint: "per-panel qubit caps + sampling / approximation caveats" },
   ];
   return (
     <span style={{ position: "relative" }} ref={wrapRef}>
