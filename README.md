@@ -14,10 +14,14 @@ workstation, and visualizer.**
 ![Quantiom — the circuit editor with an analysis panel enlarged in a dock beside the circuit, the gate palette, the right-hand panel column, and the AI assistant](screenshots/quantiom2.png)
 
 Quantiom is a quantum circuit workstation that runs entirely in your
-browser — no install, no account. It's built for people already
-comfortable with quantum computing: the editor is never simplified to
-accommodate beginners, and the analysis panels are treated as peers of
-the editor, not afterthoughts.
+browser — no install, no account. It serves a broad audience: researchers
+and engineers who need a serious, full-featured tool, and students,
+educators, and self-learners who want to explore quantum computing and
+grow into one. The analysis panels are treated as peers of the editor, not
+afterthoughts, so the same workspace that runs a research workflow also
+*shows you what's happening* — and a built-in tutorial (with a gentle
+newcomer's introduction) and a short intro video help you get started.
+Nothing is dumbed down; it's just made approachable.
 
 **Editor.** A multi-tab editor over a 64-gate palette, with
 arbitrary-angle rotations, arbitrary unitary matrices, custom gates and
@@ -99,12 +103,14 @@ Live: **<https://quantiom.fly.dev>**
 
 ## Documentation
 
-- **[Tutorial walkthrough](docs/tutorial.md)** — a workflow-based tour
-  in six parts: foundations (build/edit), reading the state (the
-  visualisers by task), noise & mitigation, optimisation & algorithms
-  (VQE, Trotter, the Clifford fast path), hardware & interop
-  (transpile/export), and the AI assistant. Every section ends with
-  "what to look at" and links to the panel reference for detail.
+- **[Tutorial walkthrough](docs/tutorial.md)** — opens with a gentle
+  **newcomer's introduction** (a qubit as an arrow on a ball, gates as
+  moves, your first Bell pair) and then a workflow-based tour in six parts:
+  foundations (build/edit), reading the state (the visualisers by task),
+  noise & mitigation, optimisation & algorithms (VQE, Trotter, the Clifford
+  fast path), hardware & interop (transpile/export), and the AI assistant.
+  Every section ends with "what to look at" and links to the panel
+  reference for detail.
 - **[Panel reference](docs/panels.md)** — every user-facing panel:
   what it shows, when it's available, key controls, default-fast
   behaviour, and a "Tip" callout for the non-obvious things.
