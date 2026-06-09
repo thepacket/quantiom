@@ -10,6 +10,7 @@ import { emitQSharp } from "../qasm/emitQSharp";
 import { emitPyQuil } from "../qasm/emitPyQuil";
 import { emitPytket } from "../qasm/emitPytket";
 import { emitQuantikz } from "../qasm/emitQuantikz";
+import { emitStim } from "../qasm/emitStim";
 import { parseQasm3 } from "../qasm/parse";
 import { EXAMPLE_CATEGORIES, type Example } from "../examples";
 import { downloadCanvasSvg } from "./exportSvg";
@@ -130,6 +131,7 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab, paramValues, onClo
   const onDownloadPyQuil = () => downloadText(emitPyQuil(circuit), "_pyquil.py", "text/x-python;charset=utf-8");
   const onDownloadPytket = () => downloadText(emitPytket(circuit), "_pytket.py", "text/x-python;charset=utf-8");
   const onDownloadQuantikz = () => downloadText(emitQuantikz(circuit), ".tex", "text/x-tex;charset=utf-8");
+  const onDownloadStim = () => downloadText(emitStim(circuit), ".stim", "text/plain;charset=utf-8");
   const onDownloadJson = () => downloadText(JSON.stringify(circuit, null, 2), ".json", "application/json;charset=utf-8");
 
   const onShare = async () => {
@@ -177,6 +179,7 @@ export function FileMenu({ circuit, dispatch, onLoadInNewTab, paramValues, onClo
         onPyQuil={onDownloadPyQuil}
         onPytket={onDownloadPytket}
         onQuantikz={onDownloadQuantikz}
+        onStim={onDownloadStim}
         onJson={onDownloadJson}
         onSvg={() => downloadCanvasSvg(circuit.name)}
       />
@@ -243,6 +246,7 @@ function FileDropdown({
   onPyQuil,
   onPytket,
   onQuantikz,
+  onStim,
   onJson,
   onSvg,
 }: {
@@ -261,6 +265,7 @@ function FileDropdown({
   onPyQuil: () => void;
   onPytket: () => void;
   onQuantikz: () => void;
+  onStim: () => void;
   onJson: () => void;
   onSvg: () => void;
 }) {
@@ -313,6 +318,7 @@ function FileDropdown({
             {item("PyQuil", "_pyquil.py — Rigetti", onPyQuil)}
             {item("pytket", "_pytket.py — Quantinuum", onPytket)}
             {item("LaTeX (quantikz)", ".tex — for papers", onQuantikz)}
+            {item("Stim", ".stim — Clifford / QEC", onStim)}
             {item("JSON", ".json — raw IR", onJson)}
             {item("SVG", "vector canvas image", onSvg)}
           </div>

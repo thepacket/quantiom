@@ -418,7 +418,7 @@ host plus `/api/health`.
   parts, covering the full feature breadth incl. the visualisers,
   cross-linked to panels.md),
   `architecture.md` (codebase map / data flow / fast paths),
-  `qasm.md` (OpenQASM round-trip + the eight SDK emitters), and
+  `qasm.md` (OpenQASM round-trip + the nine SDK / LaTeX emitters), and
   `precision.md` (per-panel qubit caps + sampling/approximation caveats).
   All five are imported into the app via `client/src/editor/DocsModal.tsx`
   and surfaced as tabs through the toolbar **Help** menu. The markdown
@@ -590,7 +590,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (970 tests): the simulator core is deeply covered —
+- **What's covered** (975 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
@@ -599,7 +599,7 @@ host plus `/api/health`.
   single-qubit Bloch reduction, and the noisy Pauli-frame rules),
   `resources`, `equivalence`, `inverse` (U†·U = I, the `inverseGates`
   range/re-pack path, every angle family), the OpenQASM round-trip +
-  the `parse.ts` statement/modifier-chain/error branches, all eight SDK
+  the `parse.ts` statement/modifier-chain/error branches, all nine SDK / LaTeX
   emitters (a dedicated per-gate-family suite each), `transpile`/`router`/
   `trotter`, the noisy simulator (incl. `noisyPauliExpectation` /
   `noisyExpectationObservable` with post-selection + custom Kraus), the

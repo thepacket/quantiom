@@ -29,7 +29,7 @@ basics it covers.
 - **Part II — Reading the state:** entanglement structure · dynamics · phase space & magic · the operator · structure graphs
 - **Part III — Noise & error mitigation:** noise · ZNE · PEC
 - **Part IV — Optimisation & algorithms:** VQE & the optimiser toolbox · Hamiltonian → Trotter · the Clifford fast path & syndromes
-- **Part V — Hardware & interop:** transpile / route / compile · OpenQASM 3 & the nine exports
+- **Part V — Hardware & interop:** transpile / route / compile · OpenQASM 3 & the ten exports
 - **Part VI — The AI assistant**
 - Reference: gate cheat-sheet · common gotchas (FAQ) · keyboard shortcuts · where to look when you're stuck
 
@@ -732,7 +732,7 @@ up to global phase.
 See [`panels.md`](panels.md) → Resources / Equivalence; and
 [`qasm.md`](qasm.md) for the transpile targets.
 
-## 16. OpenQASM 3 round-trip & the nine exports (5 min)
+## 16. OpenQASM 3 round-trip & the ten exports (5 min)
 
 Goal: get your circuit out of Quantiom and into your real toolchain.
 

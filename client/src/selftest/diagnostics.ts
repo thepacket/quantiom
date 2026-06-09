@@ -40,6 +40,7 @@ import { emitPyQuil } from "../qasm/emitPyQuil";
 import { emitPytket } from "../qasm/emitPytket";
 import { emitQasm2 } from "../qasm/emitQasm2";
 import { emitQuantikz } from "../qasm/emitQuantikz";
+import { emitStim } from "../qasm/emitStim";
 import { transpile } from "../sim/transpile";
 import { parsePauliSum, buildTrotterCircuit } from "../sim/trotter";
 import { noisyPauliExpectation, noisyExpectationObservable } from "../sim/simulateNoisy";
@@ -564,6 +565,7 @@ export function runSelfTest(): SelfTestReport {
     s.check("Braket Bell emits h and cnot", () => { const o = emitBraket(bell); return o.includes("circuit.h(0)") && o.includes("circuit.cnot(0, 1)"); });
     s.check("OpenQASM 2 Bell emits qreg/creg-free h and cx", () => { const o = emitQasm2(bell); return o.includes("h q[0];") && o.includes("cx q[0], q[1];"); });
     s.check("quantikz Bell emits a gate and a CNOT target", () => { const o = emitQuantikz(bell); return o.includes("\\gate{H}") && o.includes("\\targ{}"); });
+    s.check("Stim Bell emits H 0 and CX 0 1", () => { const o = emitStim(bell); return /^H 0$/m.test(o) && /^CX 0 1$/m.test(o); });
   }
 
   // ── Custom plots: the on-demand plot engine + program sandbox ──────

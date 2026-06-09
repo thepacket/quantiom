@@ -54,7 +54,7 @@ client/src/
   editor/       circuit IR, undo, tabs, drag-and-drop, custom gates,
                 share links, recorder, docs modal, the main editor shell
   sim/          the simulator core (this is the brain)
-  qasm/         OpenQASM 3 parse + emit + eight SDK / LaTeX emitters
+  qasm/         OpenQASM 3 parse + emit + nine SDK / LaTeX emitters
   panels/       ~66 collapsible peer panels (40 visualisers)
   styles.css    all styles in one file
 server/         FastAPI shell — static host + health endpoint
@@ -462,7 +462,7 @@ Quantiom ships with a comprehensive automated test suite. The numeric
 core — the part where correctness actually matters — is covered
 thoroughly and verified against analytic ground truth.
 
-- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **970
+- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **975
   tests (~96% statement coverage)** cover the statevector simulator
   (Bell / GHZ / rotations / measurement / the `initialize()` gate /
   big-endian), the X/Y-basis measurement primitives, every gate's matrix
@@ -485,7 +485,7 @@ thoroughly and verified against analytic ground truth.
   DOM-only `exportSvg`, which the Node-only suite can't reach.
 - **Continuous integration.** `.github/workflows/ci.yml` type-checks
   the source and the tests, runs the full suite, and builds the client
-  on **every push and pull request**. A green build means all 970 tests
+  on **every push and pull request**. A green build means all 975 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
   **380-check** browser-side cross-section of the same engine the
