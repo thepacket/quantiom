@@ -47,6 +47,8 @@ import { pecExpectation } from "../sim/pec";
 import { processTomography } from "../sim/tomography";
 import { decomposeKAK4x4 } from "../sim/kak";
 import { mutualInformationMatrix, entropyProfile } from "../sim/entanglement";
+import { computePlot, validatePlotSpec, coercePlotSpec, type PlotSpec } from "../sim/plotSpec";
+import { sanitizeColor, sanitizePathD, sanitizePlotScene } from "../sim/plotProgram";
 import { DEFAULT_NOISE, type NoiseModel } from "../sim/noise";
 import type { Complex } from "../sim/complex";
 import type { Circuit, PlacedGate, GateId } from "../editor/types";
@@ -562,6 +564,87 @@ export function runSelfTest(): SelfTestReport {
     s.check("Braket Bell emits h and cnot", () => { const o = emitBraket(bell); return o.includes("circuit.h(0)") && o.includes("circuit.cnot(0, 1)"); });
     s.check("OpenQASM 2 Bell emits qreg/creg-free h and cx", () => { const o = emitQasm2(bell); return o.includes("h q[0];") && o.includes("cx q[0], q[1];"); });
     s.check("quantikz Bell emits a gate and a CNOT target", () => { const o = emitQuantikz(bell); return o.includes("\\gate{H}") && o.includes("\\targ{}"); });
+  }
+
+  // ── Custom plots: the on-demand plot engine + program sandbox ──────
+  s.group("Custom plots (plot engine)");
+  {
+    const bell = circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+    // 1-D series value at a given index, or NaN on error / wrong shape.
+    const v0 = (spec: PlotSpec, i = 0): number => {
+      const r = computePlot(spec, bell, {}, []);
+      if ("error" in r || r.data.kind !== "series1d") return NaN;
+      return r.data.values[i];
+    };
+    const matEl = (spec: PlotSpec, i: number, j: number): number => {
+      const r = computePlot(spec, bell, {}, []);
+      if ("error" in r || r.data.kind !== "matrix") return NaN;
+      return r.data.z[i][j];
+    };
+    const sp = (quantity: PlotSpec["quantity"], extra: Partial<PlotSpec> = {}): PlotSpec =>
+      ({ quantity, sweep: "none", chart: "bars", ...extra });
+
+    s.check("⟨Z⟩ per qubit on a Bell pair is 0", () => close(v0(sp("expZ")), 0));
+    s.check("probabilities: |00⟩ = ½", () => close(v0(sp("prob", { chart: "bars" })), 0.5));
+    s.check("single-qubit entropy S(ρ_q) = 1 bit", () => close(v0(sp("qubitEntropy")), 1, 1e-7));
+    s.check("mutual information I(0:1) = 2 bits", () => close(matEl(sp("mutualInfo", { chart: "heatmap" }), 0, 1), 2, 1e-7));
+    s.check("log-negativity E_N(0:1) = 1 ebit", () => close(matEl(sp("negativity", { chart: "heatmap" }), 0, 1), 1, 1e-7));
+    s.check("concurrence C(0:1) = 1", () => close(matEl(sp("concurrence", { chart: "heatmap" }), 0, 1), 1, 1e-7));
+    s.check("connected ⟨X₀X₁⟩ = +1", () => close(matEl(sp("xxCorr", { chart: "heatmap" }), 0, 1), 1, 1e-7));
+    s.check("connected ⟨Y₀Y₁⟩ = −1", () => close(matEl(sp("yyCorr", { chart: "heatmap" }), 0, 1), -1, 1e-7));
+    s.check("mid-cut entropy = 1 bit", () => close(v0(sp("midEntropy")), 1, 1e-7));
+    s.check("Meyer–Wallach Q = 1", () => close(v0(sp("meyerWallach")), 1, 1e-7));
+    s.check("participation entropy = 1 bit", () => close(v0(sp("participationEntropy")), 1, 1e-7));
+    s.check("magic M₂ = 0 for a Clifford state", () => close(v0(sp("magic")), 0, 1e-6));
+    s.check("custom ⟨ZZ⟩ = 1", () => close(v0(sp("pauli", { args: { pauli: "ZZ" } })), 1, 1e-7));
+    s.check("energy ⟨ZZ + XX⟩ = 2", () => close(v0(sp("energy", { args: { hamiltonian: "ZZ + XX" } })), 2, 1e-7));
+    s.check("entanglement spectrum at the cut is {½, ½}", () => {
+      const r = computePlot(sp("schmidt", { args: { cut: 1 } }), bell, {}, []);
+      return !("error" in r) && r.data.kind === "series1d" && close(r.data.values[0], 0.5, 1e-7) && close(r.data.values[1], 0.5, 1e-7);
+    });
+    s.check("amplitude scatter puts |00⟩ at Re ≈ 1/√2", () => {
+      const r = computePlot(sp("ampScatter", { chart: "scatter" }), bell, {}, []);
+      return !("error" in r) && r.data.kind === "scatter" && close(r.data.points[0].x, Math.SQRT1_2, 1e-7);
+    });
+    s.check("unitary |U_ij| of H is 1/√2", () => {
+      const hc = circ(1, [gate("h", [0])]);
+      const r = computePlot(sp("unitaryMag", { chart: "heatmap" }), hc, {}, []);
+      return !("error" in r) && r.data.kind === "matrix" && close(r.data.z[0][0], Math.SQRT1_2, 1e-7);
+    });
+    s.check("energy spectrum of H = Z is {−1, +1}", () => {
+      const r = computePlot(sp("energySpectrum", { args: { hamiltonian: "Z" } }), circ(1, []), {}, []);
+      return !("error" in r) && r.data.kind === "series1d" && close(Math.min(...r.data.values), -1, 1e-7) && close(Math.max(...r.data.values), 1, 1e-7);
+    });
+    // validation + coercion
+    s.check("validate rejects a matrix quantity drawn as bars", () => validatePlotSpec(sp("mutualInfo")) !== null);
+    s.check("validate rejects a pauli plot with no args", () => validatePlotSpec(sp("pauli")) !== null);
+    s.check("coerce repairs an impossible chart (matrix → heatmap)", () => coercePlotSpec({ quantity: "zzCorr", chart: "bars" })?.chart === "heatmap");
+    s.check("coerce normalises a Pauli arg to upper-case", () => coercePlotSpec({ quantity: "pauli", args: { pauli: "zx" } })?.args?.pauli === "ZX");
+  }
+
+  // ── Custom plots: the program sandbox sanitisers ───────────────────
+  s.group("Custom plots (sandbox sanitisers)");
+  {
+    s.check("colour: hex accepted", () => sanitizeColor("#1a2b3c") === "#1a2b3c");
+    s.check("colour: var(--accent) accepted", () => sanitizeColor("var(--accent)") === "var(--accent)");
+    s.check("colour: url(...) injection → fallback", () => sanitizeColor("url(http://evil)") === "var(--accent)");
+    s.check("colour: javascript: → fallback", () => sanitizeColor("javascript:alert(1)") === "var(--accent)");
+    s.check("path: valid SVG data accepted", () => sanitizePathD("M0 0 L10 10 Z") === "M0 0 L10 10 Z");
+    s.check("path: markup injection → null", () => sanitizePathD("M0 0 </path><script>") === null);
+    s.check("scene: missing elements → error", () => "error" in sanitizePlotScene({ width: 100 }));
+    s.check("scene: unknown element type dropped, valid kept", () => {
+      const r = sanitizePlotScene({ elements: [{ type: "bogus" }, { type: "line", x1: 0, y1: 0, x2: 1, y2: 1 }] });
+      return !("error" in r) && r.scene.elements.length === 1;
+    });
+    s.check("scene: NaN coordinates clamped finite", () => {
+      const r = sanitizePlotScene({ elements: [{ type: "circle", cx: Infinity, cy: NaN, r: 5 }] });
+      return !("error" in r) && r.scene.elements[0].type === "circle" && Number.isFinite((r.scene.elements[0] as { cx: number }).cx);
+    });
+    s.check("scene: element count capped at 4000", () => {
+      const many = Array.from({ length: 9000 }, () => ({ type: "line", x1: 0, y1: 0, x2: 1, y2: 1 }));
+      const r = sanitizePlotScene({ elements: many });
+      return !("error" in r) && r.scene.elements.length <= 4000;
+    });
   }
 
   let passed = 0, failed = 0;
