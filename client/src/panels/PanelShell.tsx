@@ -90,13 +90,11 @@ function persistCollapsed(id: string, collapsed: boolean) {
   }
 }
 
-export function PanelShell({ id, title, children, toolbar, getCopyText, defaultCollapsed = false, className }: Props) {
+export function PanelShell({ id, title, children, toolbar, defaultCollapsed = false, className }: Props) {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     const map = loadCollapsedMap();
     return id in map ? map[id] : defaultCollapsed;
   });
-  const [copied, setCopied] = useState(false);
-
   useEffect(() => {
     persistCollapsed(id, collapsed);
   }, [id, collapsed]);
@@ -120,19 +118,6 @@ export function PanelShell({ id, title, children, toolbar, getCopyText, defaultC
     window.addEventListener(SET_ONE_EVENT, onSetOne);
     return () => window.removeEventListener(SET_ONE_EVENT, onSetOne);
   }, [id]);
-
-  const onCopy = async () => {
-    if (!getCopyText) return;
-    const text = getCopyText();
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      /* clipboard may be unavailable */
-    }
-  };
 
   const spotlight = useSpotlight();
   const isSpotlit = spotlight.id === id;
@@ -161,11 +146,6 @@ export function PanelShell({ id, title, children, toolbar, getCopyText, defaultC
         </button>
         <div className="panel__toolbar">
           {toolbar}
-          {getCopyText && (
-            <button className="panel__copy" onClick={onCopy} title="Copy to clipboard">
-              {copied ? "✓" : "copy"}
-            </button>
-          )}
           <span
             className="panel__spotlight-grip"
             draggable

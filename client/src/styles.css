@@ -612,8 +612,11 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
  * fill its panel, preserving aspect ratio, instead of sitting at its small
  * design width. Applied to the static heatmap / line-chart / diagram panels. */
 .plot-fill { display: block; width: 100%; height: auto; margin: 0 auto; }
-.panel__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.panel__collapse { display: flex; align-items: center; gap: 6px; background: transparent; border: none; padding: 0; cursor: pointer; flex: 1; min-width: 0; }
+.panel__head { display: flex; justify-content: space-between; align-items: center; gap: 8px 6px; flex-wrap: wrap; }
+/* The title has top priority — it is never shrunk or truncated. It keeps its
+   full content width (flex 0 0 auto); a header toolbar that doesn't fit beside
+   it wraps to its own line below instead (the header has flex-wrap). */
+.panel__collapse { display: flex; align-items: center; gap: 6px; background: transparent; border: none; padding: 0; cursor: pointer; flex: 0 0 auto; }
 .panel__collapse:hover { background: transparent; }
 .panel__collapse h2 { font-size: 11px; margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 1.2px; }
 .panel__chevron { color: var(--border-strong); font-size: 9px; min-width: 10px; text-align: center; }
@@ -624,7 +627,11 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .panel__body { margin-top: 8px; }
 .panel--error { background: rgba(255, 122, 122, 0.05); }
 .panel__head h2 { font-size: 11px; margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 1.2px; }
-.panel__toolbar { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 11px; }
+/* Compact, right-aligned panel-header actions. When the title + toolbar don't
+   fit the (often narrow) panel column, the header wraps and the toolbar drops
+   below the fully-visible title, reflowing its buttons to the right. */
+.panel__toolbar { display: flex; gap: 5px; align-items: center; justify-content: flex-end; flex-wrap: wrap; color: var(--muted); font-size: 11px; margin-left: auto; }
+.panel__toolbar button { font-size: 10px; padding: 1px 5px; line-height: 1.5; white-space: nowrap; }
 .panel__toggle { display: flex; gap: 4px; align-items: center; cursor: pointer; user-select: none; }
 .panel__toggle input { margin: 0; }
 .panel__spinner { color: var(--accent); }

@@ -485,7 +485,7 @@ The right column stacks collapsible panels under 12 sticky category
 headers, and the **whole column collapses** to a thin "PANELS" reopen
 strip (▸ in the panel bar) to give the canvas more room. Each panel
 persists its collapsed state per panel id in `localStorage`. Every panel
-has a **copy-to-clipboard** button in its header, and a **⤢ spotlight
+header has a **⤢ spotlight
 grip** — drag it onto the circuit (or click it) to enlarge that panel in a
 resizable dock on the left of the canvas, beside the circuit. Collapsed
 panels cost nothing per frame — `SimResult` exposes `amplitudes`,
