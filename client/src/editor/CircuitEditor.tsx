@@ -117,6 +117,7 @@ import { BranchTreePanel } from "../panels/BranchTreePanel";
 import { DecoherencePanel } from "../panels/DecoherencePanel";
 import { FidelityPanel } from "../panels/FidelityPanel";
 import { ReadoutMitigationPanel } from "../panels/ReadoutMitigationPanel";
+import { ClassicalShadowsPanel } from "../panels/ClassicalShadowsPanel";
 import { CoherencePanel } from "../panels/CoherencePanel";
 import { sampleAveragedAmplitudeProbabilities } from "../sim/measurementShots";
 import { TomographyPanel } from "../panels/TomographyPanel";
@@ -1533,6 +1534,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="t1-t2"><T1T2Panel noise={noise} /></ErrorBoundary>
         <ErrorBoundary label="pauli-budget"><PauliBudgetPanel circuit={circuit} noise={noise} /></ErrorBoundary>
         <ErrorBoundary label="qec-workbench"><QecPanel /></ErrorBoundary>
+        <ErrorBoundary label="classical-shadows">
+          <ClassicalShadowsPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="tomography">
           <TomographyPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
         </ErrorBoundary>
