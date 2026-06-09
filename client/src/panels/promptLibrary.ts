@@ -161,6 +161,42 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
         title: "Time-average magnetisation",
         text: "Plot ⟨Z⟩ of each qubit versus the t clock, then describe the time-averaged magnetisation and any qubit that stays frozen.",
       },
+      {
+        title: "Per-qubit entanglement S(ρ_q)",
+        text: "Plot the single-qubit entanglement entropy S(ρ_q) for each qubit as bars — which qubits are most entangled with the rest?",
+      },
+      {
+        title: "Entanglement front S(ρ_q) vs depth",
+        text: "Plot a heatmap of the single-qubit entanglement entropy S(ρ_q) versus circuit depth and point out the entanglement-growth front.",
+      },
+      {
+        title: "Log-negativity heatmap",
+        text: "Plot the pairwise log-negativity E_N(i:j) heatmap of this state — genuine (distillable) entanglement between each pair.",
+      },
+      {
+        title: "Concurrence heatmap",
+        text: "Plot the pairwise concurrence C(i:j) heatmap and comment on what monogamy implies for the strongly-paired qubits.",
+      },
+      {
+        title: "Negativity vs mutual information",
+        text: "Plot both the log-negativity and the mutual-information heatmaps, then explain where pairs share classical correlation without genuine entanglement.",
+      },
+      {
+        title: "Mid-cut entropy growth",
+        text: "Plot the mid-cut entanglement entropy versus circuit depth and tell me whether it grows linearly (volume law) or saturates (area law).",
+      },
+      {
+        title: "Mid-cut entropy vs t",
+        text: "Plot the mid-cut entanglement entropy versus the t clock over one period and describe the entanglement dynamics.",
+      },
+      {
+        title: "Magic M₂ (single value)",
+        text: "Compute and plot the stabilizer-Rényi magic M₂ of this state, then say whether it is a stabilizer state (M₂ = 0) and how much non-Clifford resource it carries.",
+      },
+      {
+        title: "Magic M₂ growth vs depth",
+        text: "Plot the stabilizer-Rényi magic M₂ versus circuit depth and identify which gates inject the non-stabilizerness.",
+      },
     ],
   },
   {
