@@ -52,7 +52,9 @@ faithful Cirq port) for the IBM and Rigetti targets. The Hamiltonian
 panel builds Trotter circuits (order 1, 2 Strang, 4 Suzuki, or QDrift).
 Process tomography reconstructs the χ matrix in a heatmap or Hinton view;
 equivalence-checking compares two open tabs by process fidelity and trace
-distance.
+distance. **State-preparation synthesis** turns a target statevector into an
+RY/RZ/CX circuit (Möttönen), and **unitary synthesis** re-expresses any
+circuit's unitary as two-level controlled gates (Gray-ordered Givens).
 
 **Characterization & benchmarking.** Randomized benchmarking fits the
 single-qubit Clifford fidelity decay to a SPAM-robust error-per-Clifford —
@@ -65,7 +67,10 @@ measures crosstalk / addressability; T1 / T2 experiments fit the coherence-time
 decays; a Pauli error budget breaks the noise model into per-qubit X/Y/Z
 contributions. A QEC workbench runs a repetition-code syndrome-lookup decoder
 and plots the logical-error curves crossing the threshold; syndrome sampling
-exercises stabilizer codes under a Pauli-frame noise tracker.
+exercises stabilizer codes under a Pauli-frame noise tracker. **Classical
+shadows** estimate observables from randomized single-qubit measurements, and
+**readout-error mitigation** inverts the measurement confusion matrix to
+correct a noisy distribution.
 
 **Visualisers.** A column of 30-plus entanglement, dynamics, and
 diagnostic visualisers sits alongside the statevector / probability /
@@ -143,7 +148,7 @@ bug reports and feature requests in
 **[Issues](https://github.com/thepacket/quantiom/issues)**.
 
 Quantiom is moving fast and the surface to verify is wide — 64 gates,
-three simulator backends, an AI chat assistant, ~66 panels (40 of them
+three simulator backends, an AI chat assistant, ~70 panels (40 of them
 entanglement / dynamics / state visualisers), OpenQASM 3 round-trip,
 and nine code/format emitters. Expect rough edges; bug
 reports against any of it are welcome.
@@ -151,7 +156,7 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**975 tests (~96% statement coverage)** that run in continuous integration
+**991 tests (~96% statement coverage)** that run in continuous integration
 on **every push** (`.github/workflows/ci.yml`). They verify the statevector
 simulator (incl. the `initialize()` gate and X/Y-basis measurement), every
 gate's matrix unitarity and algebra, the Clifford tableau (with the
@@ -166,9 +171,9 @@ form factor, level statistics, the diagonal ensemble, and the dynamic branch
 tree — each checked against analytic ground truth.
 
 You don't have to take that on faith: the toolbar **Self-test** button
-re-runs a **380-check** cross-section of the same engine **live in your
+re-runs a **413-check** cross-section of the same engine **live in your
 browser** in ~10 ms and shows the pass/fail report — itself a subset of
-the full **975-test** suite that runs in CI on every commit. See
+the full **991-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 
@@ -203,7 +208,7 @@ archived version. Each release also gets its own version-specific DOI.
 ## Shape
 
 - **client/** — Vite + React + TypeScript. UI, simulators, parameter
-  expression evaluator, OpenQASM 3 round-trip, eight SDK / LaTeX
+  expression evaluator, OpenQASM 3 round-trip, nine SDK / LaTeX
   emitters, share links, noise model, autodiff optimiser, transpiler, router,
   Trotter / Hamiltonian builder, tomography, equivalence checker.
 - **server/** — minimal FastAPI app whose only job is `/api/health`
@@ -494,7 +499,7 @@ short-circuit their `useMemo`s when hidden.
   pushes new t values directly into the React state at ~15 fps — the
   Bloch vectors orbit and the probability bars pulse.
 - **Custom plots** — build a chart on demand from a small validated
-  *spec*: pick a quantity from a catalog of 23 — per qubit (⟨X⟩/⟨Y⟩/⟨Z⟩,
+  *spec*: pick a quantity from a catalog of 33 — per qubit (⟨X⟩/⟨Y⟩/⟨Z⟩,
   entanglement entropy S(ρ_q), purity, l₁ coherence), per basis
   (probability / |amplitude| / phase), a 1-D profile (entropy / 2-Rényi
   per cut, Pauli-weight distribution), a pairwise matrix (mutual
@@ -783,8 +788,8 @@ or capability tradeoff fits the task.
 
 ## Examples
 
-The Examples picker is a typeahead search across 70 hand-written
-circuits in 8 categories:
+The Examples picker is a typeahead search across 93 hand-written
+circuits in 10 categories:
 
 - **Intro** — coin flip, Walsh–Hadamard, magic state.
 - **Entanglement** — Bell, GHZ (incl. 8q / 12q / 16q), W state, linear

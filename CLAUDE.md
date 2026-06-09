@@ -252,6 +252,23 @@ host plus `/api/health`.
     prob, numColumns, numClbits, clbits, counts, shots, rho1 (per-qubit
     2×2 reduced density matrices), width, height, palette }. AI-emittable
     via a ```plotjs block.
+  - `readoutMitigation.ts`: readout-error mitigation by confusion-matrix
+    inversion (independent symmetric per-qubit bit-flip). Tensor-structured
+    (`applyReadoutError` forward; `mitigateReadout` inverts per qubit,
+    O(n·2ⁿ), clip-negatives + renormalise). Powers `ReadoutMitigationPanel`.
+  - `classicalShadows.ts`: random single-qubit Pauli-basis classical shadows
+    (Huang–Kueng–Preskill). `buildClassicalShadows` (seedable),
+    `estimatePauli` (median-of-means inverse-channel estimator),
+    `estimateAllZ`. Powers `ClassicalShadowsPanel`.
+  - `statePrep.ts`: state-preparation synthesis (Möttönen) — a target
+    statevector → RY/RZ/CX via uniformly-controlled rotations (magnitudes =
+    norm-tree RY; phases = diagonal RZ cascade). `parseTargetState` reads an
+    amplitude list or basis label. Exact up to global phase, ≤ 8 qubits.
+    Powers `StatePrepPanel`.
+  - `unitarySynth.ts`: arbitrary-unitary synthesis — Gray-ordered Givens
+    decomposition into two-level controlled-`u_arb` gates (universal, not
+    CNOT-optimal), ≤ 4 qubits. (Needed `buildMatrix` to honour controls on
+    `u_arb`.) Powers `UnitarySynthPanel`.
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
     anti-controls and `if (c[k] == v) …` wrappers for conditional
@@ -267,6 +284,10 @@ host plus `/api/health`.
   - `emitPyQuil.ts`: PyQuil (Rigetti) codegen.
   - `emitPytket.ts`: pytket (Quantinuum) codegen, with half-turn
     angle convention.
+  - `emitStim.ts`: Stim circuit (`.stim`) — the Clifford fragment
+    (H/X/Y/Z/S/√X/√Y/CX/CY/CZ/SWAP/ISWAP/M/MX/MY/R/TICK), with a `#`-comment
+    for non-Clifford / multi-control / anti-control / conditioned gates.
+    Export-only (no round-trip); for QEC research in Stim.
 - `client/src/editor/`
   - `state.ts`: undo/redo reducer with consecutive-keystroke
     coalescing. Reducer actions include `compact-columns`,
@@ -400,7 +421,7 @@ host plus `/api/health`.
     `sim/t1t2.ts`), `PauliBudgetPanel` (**Pauli error budget** — per-qubit X/Y/Z
     error stacked bars via the Pauli-twirl approx of depol+amp+phase damping,
     exact/instant; `sim/pauliBudget.ts`).
-  - The right column groups all ~66 panels under 12 sticky **category headers**
+  - The right column groups all ~70 panels under 12 sticky **category headers**
     (Controls / State / Measurement / Phase space & magic / Expectation &
     metrology / Entanglement & correlations / Dynamics / Operator & spectrum /
     Circuit structure / Noise & error / Characterization & benchmarking /
@@ -590,7 +611,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (975 tests): the simulator core is deeply covered —
+- **What's covered** (991 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
@@ -629,6 +650,11 @@ host plus `/api/health`.
   sweeps, validation/coercion) and `plotProgram` (the security-critical pure
   sanitisers `sanitizeColor`/`sanitizePathD`/`sanitizePlotScene` — injection→
   fallback, clamps, caps — plus `buildPlotProgramInput` clbits/counts). The
+  newer synthesis / characterization features are each fidelity- or
+  ground-truth-tested: `emitStim`, `readoutMitigation` (forward∘inverse =
+  identity, clip→valid), `classicalShadows` (Bell ⟨ZZ⟩/⟨XX⟩/⟨YY⟩ estimates),
+  `statePrep` (synthesized circuit reproduces random targets at fidelity 1),
+  and `unitarySynth` (synthesized unitary matches at process fidelity 1). The
   AI-dialogue pure core is covered too
   (`dialogue.ts`: `buildTurnMessages` alternation, `mergeConsecutive`,
   `nextSpeakerOf`, `turnsAreConverging`, `dialogueToMarkdown`).

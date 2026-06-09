@@ -27,13 +27,13 @@ their compute when collapsed.
         │            client/ (Vite + React + TS)           │
         │                                                  │
         │  editor/    ←→   sim/       ←→   panels/         │
-        │   IR, tabs,      simulate +      ~66 panels,     │
+        │   IR, tabs,      simulate +      ~70 panels,     │
         │   undo, DnD,     stabilizer +    each pure       │
         │   QASM round-    noisy traj +    function of     │
         │   trip glue,     WebGPU paths    SimResult       │
         │   docs modal                                     │
         │                                                  │
-        │  qasm/  ← OpenQASM 3 parse/emit, 8 SDK emitters  │
+        │  qasm/  ← OpenQASM 3 parse/emit, 9 SDK emitters  │
         └─────────────────────────────────────────────────┘
                                 ↑
                                 │ static files
@@ -55,7 +55,7 @@ client/src/
                 share links, recorder, docs modal, the main editor shell
   sim/          the simulator core (this is the brain)
   qasm/         OpenQASM 3 parse + emit + nine SDK / LaTeX emitters
-  panels/       ~66 collapsible peer panels (40 visualisers)
+  panels/       ~70 collapsible peer panels (40 visualisers)
   styles.css    all styles in one file
 server/         FastAPI shell — static host + health endpoint
 examples/       93 .qasm files in 10 categories, imported via Vite ?raw
@@ -186,6 +186,14 @@ sim/tsweep.ts           per-qubit ⟨Z⟩ vs the t clock
 sim/plotSpec.ts         on-demand custom plots: validated PlotSpec →
                         computePlot → generic PlotData (CustomPlotPanel;
                         AI-emittable via a ```plotspec block, no code run)
+sim/readoutMitigation.ts confusion-matrix inversion for readout bit-flip
+                        (tensor-structured per-qubit inverse, clip+renorm)
+sim/classicalShadows.ts random-Pauli classical shadows: buildClassicalShadows
+                        + estimatePauli (median-of-means) + estimateAllZ
+sim/statePrep.ts        state-prep synthesis (Möttönen): target statevector →
+                        RY/RZ/CX (uniformly-controlled rotations)
+sim/unitarySynth.ts     arbitrary unitary → controlled-u_arb two-level gates
+                        (Gray-ordered Givens; universal, non-CNOT-optimal)
 sim/plotProgram.ts      sandboxed "plot programs": runPlotProgram runs
                         AI/user code (data)=>scene in a Web Worker (globals
                         neutered, timeout), sanitizePlotScene validates the
@@ -462,7 +470,7 @@ Quantiom ships with a comprehensive automated test suite. The numeric
 core — the part where correctness actually matters — is covered
 thoroughly and verified against analytic ground truth.
 
-- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **975
+- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **991
   tests (~96% statement coverage)** cover the statevector simulator
   (Bell / GHZ / rotations / measurement / the `initialize()` gate /
   big-endian), the X/Y-basis measurement primitives, every gate's matrix
@@ -485,7 +493,7 @@ thoroughly and verified against analytic ground truth.
   DOM-only `exportSvg`, which the Node-only suite can't reach.
 - **Continuous integration.** `.github/workflows/ci.yml` type-checks
   the source and the tests, runs the full suite, and builds the client
-  on **every push and pull request**. A green build means all 975 tests
+  on **every push and pull request**. A green build means all 991 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
   **380-check** browser-side cross-section of the same engine the

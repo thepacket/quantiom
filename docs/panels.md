@@ -1439,6 +1439,54 @@ on which qubits.
 
 ---
 
+## Readout-error mitigation
+
+Real measurement is noisy — a prepared |0⟩ is sometimes read as 1. This
+panel takes the ideal output distribution, applies the noise model's
+symmetric readout bit-flip to get the "measured" distribution, then inverts
+the (tensor-structured) confusion matrix to recover a corrected estimate.
+Ideal / measured / corrected are shown as three bars per top basis state,
+with the L1 error to the ideal before and after, and any negative mass that
+was clipped (a flag that the inversion is getting ill-conditioned). Needs
+the Noise panel enabled with a non-zero readout rate; statevector path; ≤ 8
+qubits.
+
+---
+
+## Classical shadows
+
+Randomized-measurement state estimation (Huang–Kueng–Preskill). Click to
+sample N snapshots, each measuring every qubit in a random X/Y/Z basis;
+from those snapshots the panel estimates observables with no tailored
+circuit per observable. It plots the per-qubit ⟨Z⟩ shadow estimate (dot)
+against the exact value (marker) on a [−1, 1] axis, and estimates any Pauli
+string you type (shadow vs exact). Increase the shot count to tighten the
+estimates. Run on click; statevector path; ≤ 12 qubits.
+
+---
+
+## State preparation (synthesis)
+
+Type a target statevector — an amplitude list of 2ⁿ values (reals or `a+bi`
+complex) or a basis-state label like `011` — and synthesize a circuit of
+RY/RZ/CX gates that prepares it from |0…0⟩ (Möttönen amplitude/phase
+encoding). Presets cover Bell, W, GHZ, a basis state, and a phased pair.
+Shows the synthesized gate / CX / depth counts and opens the result in a new
+tab. Exact up to global phase; ≤ 8 qubits.
+
+---
+
+## Unitary synthesis (two-level)
+
+One click re-expresses the current circuit's full 2ⁿ×2ⁿ unitary as an
+equivalent circuit of controlled-`u_arb` two-level gates (Gray-ordered
+Givens decomposition) — a *universal* decomposition, though not
+CNOT-optimal like Quantum Shannon Decomposition. The result opens in a new
+tab; the Equivalence panel confirms it matches the original. ≤ 4 qubits
+(the gate count grows as O(4ⁿ)).
+
+---
+
 ## QEC workbench (repetition)
 
 A quantum-error-correction workbench for the **bit-flip repetition code** with
