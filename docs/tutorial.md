@@ -824,8 +824,12 @@ chatbot:
   circuit depth" (or use a **Plot on demand** prompt) and it replies with a
   `plotspec` block — a one-click **+ add plot** button that draws the chart
   in the **Custom plots** panel (under Controls). No code runs; the model
-  only fills a small validated spec (quantity × sweep × chart). You can
-  also build the same plot by hand from the panel's dropdowns.
+  only fills a small validated spec (quantity × sweep × chart) from a catalog
+  of 23 quantities. You can also build the same plot by hand from the panel's
+  dropdowns. For a visual the catalog can't express, the panel's **+ code**
+  button (or the AI's `plotjs` block) runs a short `(data) => scene` snippet
+  in a **sandboxed Web Worker** — no DOM, no network, hard timeout — and the
+  returned scene is sanitised before drawing.
 
 Replies render as **markdown + LaTeX** (KaTeX, including Dirac braket
 notation), so derivations come back formatted. Treat answers as

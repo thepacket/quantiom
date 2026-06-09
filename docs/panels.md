@@ -1566,6 +1566,16 @@ its collapsed state via `usePanelCollapsed()`, and every expensive
 to keep dozens of tabs open with many panels each; closed panels are
 free.
 
+**Enlarge a panel (spotlight).** Every panel header has a **⤢ grip** —
+drag it onto the circuit, or click it, to enlarge that panel in a
+resizable dock on the left of the canvas, right beside the circuit. The
+panel keeps its exact state; the spot it left shows a click-to-restore
+note. Drag the vertical splitter to size the dock (`quantiom:spotlight-w`),
+and click the grip again (or the dock's ×) to put it back. Good for
+watching one heatmap or trajectory closely while you edit. Each header
+also has a **copy** button where a text payload (LaTeX, values) makes
+sense.
+
 **Plot sizing.** The data-plot panels (heatmaps, line charts, the
 space-time maps) render as responsive SVGs that scale to fill the panel
 width while preserving aspect ratio, so a wider window gives you bigger
