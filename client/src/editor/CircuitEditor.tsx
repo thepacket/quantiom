@@ -51,7 +51,7 @@ import { randomCliffordCircuit } from "../sim/randomClifford";
 import { compileForDevice } from "../sim/compile";
 import { recordAnimationWebM } from "./recordAnimation";
 import { EndiannessToggle } from "../panels/endianness";
-import { setAllPanelsCollapsed } from "../panels/PanelShell";
+import { setAllPanelsCollapsed, SpotlightProvider, SPOTLIGHT_DND_MIME } from "../panels/PanelShell";
 import { HoverTip } from "./HoverTip";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
@@ -451,7 +451,7 @@ function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
           <div className="examples-picker__list">
             <a
               className="examples-picker__item"
-              href="/learn/quantum-computing-intro.html"
+              href="https://www.youtube.com/watch?v=tsbCSkvHhMo"
               target="_blank"
               rel="noreferrer"
               onClick={() => setOpen(false)}
@@ -553,6 +553,47 @@ function guessCurrentInspectorWidth(): number {
   return el ? el.getBoundingClientRect().width : 300;
 }
 
+/** Vertical splitter between the spotlight dock (left) and the circuit. Drag
+ *  right → the enlarged panel grows. Width persists in `--spotlight-w`. */
+function SpotlightSplitter() {
+  const STORAGE_KEY = "quantiom:spotlight-w";
+  const draggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startWRef = useRef(0);
+  useEffect(() => {
+    const saved = parseInt(localStorage.getItem(STORAGE_KEY) ?? "", 10);
+    if (Number.isFinite(saved) && saved > 0) document.documentElement.style.setProperty("--spotlight-w", `${saved}px`);
+  }, []);
+  const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    draggingRef.current = true;
+    startXRef.current = e.clientX;
+    const cur = getComputedStyle(document.documentElement).getPropertyValue("--spotlight-w").trim();
+    const px = parseInt(cur.endsWith("px") ? cur : "0", 10);
+    const el = document.querySelector(".editor__spotlight") as HTMLElement | null;
+    startWRef.current = px || (el ? Math.round(el.getBoundingClientRect().width) : 420);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    const next = clamp(startWRef.current + (e.clientX - startXRef.current), 240, window.innerWidth * 0.7);
+    document.documentElement.style.setProperty("--spotlight-w", `${Math.round(next)}px`);
+  };
+  const onUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    const cur = getComputedStyle(document.documentElement).getPropertyValue("--spotlight-w").trim();
+    const px = parseInt(cur.endsWith("px") ? cur : "0", 10);
+    if (px > 0) { try { localStorage.setItem(STORAGE_KEY, String(px)); } catch { /* ignore */ } }
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  };
+  return (
+    <div className="editor__vsplitter editor__spotlight-splitter"
+      onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+      title="Drag to resize the enlarged panel" />
+  );
+}
+
 export function CircuitEditor() {
   const t = useTabs();
   const circuit = t.activeCircuit;
@@ -611,6 +652,23 @@ export function CircuitEditor() {
   useEffect(() => {
     try { localStorage.setItem("quantiom:inspector-collapsed", inspectorCollapsed ? "1" : "0"); } catch { /* ignore */ }
   }, [inspectorCollapsed]);
+
+  // "Spotlight": an analysis panel enlarged in a dock on the left of the
+  // circuit (drag a panel header onto the canvas, or click its ⤢ grip).
+  const [spotlightId, setSpotlightId] = useState<string | null>(null);
+  const [spotlightEl, setSpotlightEl] = useState<HTMLElement | null>(null);
+  const [spotlightDragOver, setSpotlightDragOver] = useState(false);
+  const onSpotlightDragOver = useCallback((e: React.DragEvent) => {
+    if (!Array.from(e.dataTransfer.types).includes(SPOTLIGHT_DND_MIME)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setSpotlightDragOver(true);
+  }, []);
+  const onSpotlightDrop = useCallback((e: React.DragEvent) => {
+    const id = e.dataTransfer.getData(SPOTLIGHT_DND_MIME);
+    setSpotlightDragOver(false);
+    if (id) { e.preventDefault(); setSpotlightId(id); }
+  }, []);
 
   // Shared gate-clipboard ops (used by both the Edit menu and keyboard).
   const copySelection = useCallback(() => {
@@ -898,6 +956,7 @@ export function CircuitEditor() {
   }, [t]);
 
   return (
+    <SpotlightProvider value={{ id: spotlightId, container: spotlightEl, setId: setSpotlightId }}>
     <div className={`editor${paletteCollapsed ? " editor--palette-collapsed" : ""}${panelsCollapsed ? " editor--panels-collapsed" : ""}`}>
       <HoverTip />
       {showDocs !== null && <DocsModal initialTab={showDocs} onClose={() => setShowDocs(null)} />}
@@ -1190,7 +1249,20 @@ export function CircuitEditor() {
             )}
           </div>
         </div>
-        <div className="editor__canvas-row">
+        <div
+          className={`editor__canvas-row${spotlightDragOver ? " editor__canvas-row--drop" : ""}`}
+          onDragOver={onSpotlightDragOver}
+          onDrop={onSpotlightDrop}
+          onDragLeave={() => setSpotlightDragOver(false)}
+        >
+          {spotlightId && (
+            <>
+              <aside className="editor__spotlight">
+                <div className="editor__spotlight-mount" ref={setSpotlightEl} />
+              </aside>
+              <SpotlightSplitter />
+            </>
+          )}
           <div className="editor__canvas-scroll">
             <div className="editor__canvas-zoom" style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}>
               <CircuitCanvas
@@ -1485,6 +1557,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>
+    </SpotlightProvider>
   );
 }
 

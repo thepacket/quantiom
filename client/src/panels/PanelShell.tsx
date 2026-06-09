@@ -1,4 +1,24 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+
+/**
+ * "Spotlight" lets a single analysis panel render its body enlarged in a dock
+ * beside the circuit. Rather than a per-panel registry, the spotlit PanelShell
+ * portals its *own* body into the dock's mount node — so any panel works with
+ * zero extra wiring and keeps its exact props/state.
+ */
+export type SpotlightState = {
+  /** id of the panel currently shown in the dock, or null. */
+  id: string | null;
+  /** DOM node to portal the spotlit panel's card into. */
+  container: HTMLElement | null;
+  setId: (id: string | null) => void;
+};
+const SpotlightContext = createContext<SpotlightState>({ id: null, container: null, setId: () => {} });
+export const SpotlightProvider = SpotlightContext.Provider;
+export function useSpotlight(): SpotlightState { return useContext(SpotlightContext); }
+/** Drag MIME carrying a panel id from a panel header to the spotlight dock. */
+export const SPOTLIGHT_DND_MIME = "application/x-quantiom-panel";
 
 /**
  * Collapsed-state context. PanelShell publishes its current collapsed
@@ -97,8 +117,21 @@ export function PanelShell({ id, title, children, toolbar, getCopyText, defaultC
     }
   };
 
+  const spotlight = useSpotlight();
+  const isSpotlit = spotlight.id === id;
+  const onDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData(SPOTLIGHT_DND_MIME, id);
+    e.dataTransfer.setData("text/plain", title);
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  // While spotlit, force the body to compute (not collapsed) and render it in
+  // the dock via a portal; the inline slot shows a small placeholder instead.
+  const bodyContext = isSpotlit ? false : collapsed;
+  const inlineHidden = collapsed && !isSpotlit;
+
   return (
-    <section className={`panel${className ? " " + className : ""}`}>
+    <section className={`panel${className ? " " + className : ""}${isSpotlit ? " panel--spotlit" : ""}`}>
       <header className="panel__head">
         <button
           className="panel__collapse"
@@ -116,17 +149,36 @@ export function PanelShell({ id, title, children, toolbar, getCopyText, defaultC
               {copied ? "✓" : "copy"}
             </button>
           )}
+          <span
+            className="panel__spotlight-grip"
+            draggable
+            onDragStart={onDragStart}
+            onClick={() => spotlight.setId(isSpotlit ? null : id)}
+            title={isSpotlit ? "Close the enlarged view" : "Drag onto the circuit (or click) to enlarge beside it"}
+            role="button"
+            aria-label="Enlarge panel beside the circuit"
+          >⤢</span>
         </div>
       </header>
-      <CollapsedContext.Provider value={collapsed}>
-        <div
-          className="panel__body"
-          style={collapsed ? { display: "none" } : undefined}
-          aria-hidden={collapsed}
-        >
-          {children}
+      <CollapsedContext.Provider value={bodyContext}>
+        <div className="panel__body" style={inlineHidden ? { display: "none" } : undefined} aria-hidden={inlineHidden}>
+          {isSpotlit
+            ? <button className="panel__spotlit-note" onClick={() => spotlight.setId(null)} title="Restore here">shown enlarged beside the circuit — click to restore</button>
+            : children}
         </div>
       </CollapsedContext.Provider>
+      {isSpotlit && spotlight.container && createPortal(
+        <section className="spotlight-card">
+          <header className="spotlight-card__head">
+            <h2>{title}</h2>
+            <button className="spotlight-card__close" onClick={() => spotlight.setId(null)} title="Close (restore to the panel column)">×</button>
+          </header>
+          <CollapsedContext.Provider value={false}>
+            <div className="spotlight-card__body">{children}</div>
+          </CollapsedContext.Provider>
+        </section>,
+        spotlight.container,
+      )}
     </section>
   );
 }

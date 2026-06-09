@@ -504,7 +504,16 @@ host plus `/api/health`.
   `quantiom:palette-collapsed` (whole gate-palette collapse),
   `quantiom:panels-collapsed` (whole right-panel-column collapse),
   `quantiom:inspector-w` (Inspector side-panel width),
-  `quantiom:inspector-collapsed` (Inspector collapse).
+  `quantiom:inspector-collapsed` (Inspector collapse),
+  `quantiom:spotlight-w` (enlarged-panel dock width).
+- **Panel spotlight**: drag any analysis panel's header ⤢ grip onto the
+  circuit (or click it) to enlarge that panel in a resizable dock on the
+  left of the canvas (vertical splitter; `quantiom:spotlight-w`). Built in
+  `PanelShell` via a `SpotlightProvider`/`useSpotlight` context — the
+  spotlit shell `createPortal`s its OWN body into the dock mount node, so
+  there's no per-panel registry and the panel keeps its exact props/state
+  (its `CollapsedContext` is forced to `false` while spotlit so it
+  computes). The right-column slot shows a click-to-restore note.
 
 ## Testing
 
