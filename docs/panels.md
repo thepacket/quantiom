@@ -18,14 +18,17 @@ This page is a tour of every panel.
 ## Custom plots
 
 Build a plot on demand instead of hunting for the right dedicated panel.
-Pick a **quantity** (⟨Z⟩/⟨X⟩/⟨Y⟩ per qubit, probability or |amplitude|
-per basis state, entanglement-entropy profile across every cut, pairwise
-mutual information, or the connected ⟨ZᵢZⱼ⟩ correlation), an optional
-**sweep** (none, vs circuit *depth*, or vs the *t* clock over one period —
-sweeps apply to the per-qubit quantities), and a **chart** (bars, line, or
-heatmap). The panel re-simulates as needed and draws the result; matrix
-quantities render as a heatmap, swept quantities as a multi-line plot
-(one line per qubit) or a qubit × step heatmap.
+Pick a **quantity** — per qubit (⟨Z⟩/⟨X⟩/⟨Y⟩ or the single-qubit
+entanglement entropy S(ρ_q)), per basis state (probability or |amplitude|),
+the entanglement-entropy profile across every cut, a pairwise matrix
+(mutual information, connected ⟨ZᵢZⱼ⟩, log-negativity, or concurrence), or
+a single scalar (mid-cut entanglement entropy, stabilizer-Rényi magic M₂) —
+an optional **sweep** (none, vs circuit *depth*, or vs the *t* clock over
+one period — sweeps apply to the per-qubit and scalar quantities), and a
+**chart** (bars, line, or heatmap). The panel re-simulates as needed and
+draws the result: matrix quantities render as a heatmap, swept per-qubit
+quantities as a multi-line plot (one line per qubit) or a qubit × step
+heatmap, and a swept scalar as a single curve over depth/time.
 
 The plot is described by a small validated *spec*, never executable code,
 so the **AI assistant can create one from a plain-English request** — ask

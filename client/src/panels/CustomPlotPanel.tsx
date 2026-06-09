@@ -4,6 +4,8 @@ import {
   computePlot,
   coercePlotSpec,
   defaultChart,
+  chartChoicesFor,
+  isSweepable,
   plotTitle,
   PLOT_QUANTITIES,
   QUANTITY_LABELS,
@@ -99,12 +101,11 @@ function Body({ circuit, customGates, paramValues }: Props) {
     return () => window.removeEventListener(ADD_PLOT_EVENT, onAdd);
   }, []);
 
-  // Keep the draft chart compatible when the quantity/sweep change.
-  const perQubit = quantity === "expZ" || quantity === "expX" || quantity === "expY";
-  const matrix = quantity === "mutualInfo" || quantity === "zzCorr";
+  // Keep the draft chart/sweep compatible when the quantity/sweep change.
+  const sweepable = isSweepable(quantity);
   useEffect(() => {
-    if (!perQubit && sweep !== "none") setSweep("none");
-  }, [perQubit, sweep]);
+    if (!sweepable && sweep !== "none") setSweep("none");
+  }, [sweepable, sweep]);
   useEffect(() => {
     setChart(defaultChart(quantity, sweep));
   }, [quantity, sweep]);
@@ -114,11 +115,7 @@ function Body({ circuit, customGates, paramValues }: Props) {
   };
   const removeAt = (i: number) => setSpecs((prev) => prev.filter((_, k) => k !== i));
 
-  const chartChoices: PlotChart[] = matrix
-    ? ["heatmap"]
-    : sweep !== "none"
-      ? ["line", "heatmap"]
-      : ["bars", "line"];
+  const chartChoices: PlotChart[] = chartChoicesFor(quantity, sweep);
 
   return (
     <div className="cplot">
@@ -135,7 +132,7 @@ function Body({ circuit, customGates, paramValues }: Props) {
         </label>
         <label className="cplot__field">
           <span>sweep</span>
-          <select value={sweep} onChange={(e) => setSweep(e.target.value as PlotSweep)} disabled={!perQubit}>
+          <select value={sweep} onChange={(e) => setSweep(e.target.value as PlotSweep)} disabled={!sweepable}>
             <option value="none">none</option>
             <option value="column">circuit depth</option>
             <option value="t">t clock (0…2π)</option>

@@ -508,10 +508,11 @@ host plus `/api/health`.
   `quantiom:spotlight-w` (enlarged-panel dock width),
   `quantiom:custom-plots:v1` (saved custom-plot specs).
 - **Custom plots (on-demand visualisation)**: `sim/plotSpec.ts` defines a
-  small validated `PlotSpec` (`quantity` ∈ ⟨Z⟩/⟨X⟩/⟨Y⟩ per qubit · prob ·
-  |amp| · entropy profile · mutual info · ZZ corr; optional `sweep` ∈
-  none/column/t — column & t only with per-qubit quantities; `chart` ∈
-  bars/line/heatmap). `computePlot(spec, circuit, params, customGates)`
+  small validated `PlotSpec` (`quantity` ∈ ⟨Z⟩/⟨X⟩/⟨Y⟩/S(ρ_q) per qubit ·
+  prob · |amp| · entropy profile · mutual info · ZZ corr · log-negativity ·
+  concurrence · mid-cut entropy · magic M₂; optional `sweep` ∈
+  none/column/t — sweep only with the per-qubit or the scalar quantities;
+  `chart` ∈ bars/line/heatmap). `computePlot(spec, circuit, params, customGates)`
   re-simulates as needed and returns a generic `PlotData`
   (series1d/multiline/matrix); `validatePlotSpec`/`coercePlotSpec` reject or
   repair impossible combos — **no code execution**, only a constrained spec.

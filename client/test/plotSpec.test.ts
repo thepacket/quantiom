@@ -161,6 +161,73 @@ describe("plotSpec — sweeps", () => {
   });
 });
 
+describe("plotSpec — added batch: per-qubit entropy, matrices, scalars", () => {
+  const bell = () => circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+
+  it("single-qubit entanglement entropy of a Bell pair is 1 bit on each qubit", () => {
+    const d = data(computePlot(spec("qubitEntropy"), bell(), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values[0]).toBeCloseTo(1, 8);
+    expect(d.values[1]).toBeCloseTo(1, 8);
+    expect(d.signed).toBe(false); // entropy ≥ 0 → sequential scale
+  });
+
+  it("log-negativity of a Bell pair is 1 ebit off-diagonal", () => {
+    const d = data(computePlot(spec("negativity"), bell(), {}, []));
+    if (d.kind !== "matrix") throw new Error("shape");
+    expect(d.z[0][1]).toBeCloseTo(1, 8);
+    expect(d.signed).toBe(false);
+  });
+
+  it("concurrence of a Bell pair is 1 off-diagonal", () => {
+    const d = data(computePlot(spec("concurrence"), bell(), {}, []));
+    if (d.kind !== "matrix") throw new Error("shape");
+    expect(d.z[0][1]).toBeCloseTo(1, 8);
+  });
+
+  it("mid-cut entropy is a single-value series for a Bell pair (= 1 bit)", () => {
+    const d = data(computePlot(spec("midEntropy"), bell(), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values.length).toBe(1);
+    expect(d.values[0]).toBeCloseTo(1, 8);
+  });
+
+  it("mid-cut entropy swept over depth is a single-series line", () => {
+    const c = circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+    const d = data(computePlot(spec("midEntropy", "column", "line"), c, {}, []));
+    if (d.kind !== "multiline") throw new Error("shape");
+    expect(d.series.length).toBe(1);
+    // entropy rises from 0 (after H) to 1 (after CX)
+    expect(d.series[0].values[0]).toBeCloseTo(0, 8);
+    expect(d.series[0].values[1]).toBeCloseTo(1, 8);
+  });
+
+  it("magic M₂ is 0 for a Clifford (Bell) state and > 0 for a T-injected state", () => {
+    const clifford = data(computePlot(spec("magic"), bell(), {}, []));
+    if (clifford.kind !== "series1d") throw new Error("shape");
+    expect(clifford.values[0]).toBeCloseTo(0, 6);
+
+    const tstate = circ(1, [gate("h", [0]), gate("t", [0])]);
+    const m = data(computePlot(spec("magic"), tstate, {}, []));
+    if (m.kind !== "series1d") throw new Error("shape");
+    expect(m.values[0]).toBeGreaterThan(0.01);
+  });
+
+  it("validates scalar + swept + heatmap → must be a line", () => {
+    expect(validatePlotSpec({ quantity: "magic", sweep: "column", chart: "heatmap" })).toMatch(/line/);
+  });
+
+  it("coerces scalar specs: none→bars, swept-heatmap→line", () => {
+    expect(coercePlotSpec({ quantity: "magic" })?.chart).toBe("bars");
+    expect(coercePlotSpec({ quantity: "midEntropy", sweep: "t", chart: "heatmap" })?.chart).toBe("line");
+  });
+
+  it("allows a sweep on qubitEntropy (per-qubit) but not on a matrix quantity", () => {
+    expect(validatePlotSpec({ quantity: "qubitEntropy", sweep: "column", chart: "line" })).toBeNull();
+    expect(validatePlotSpec({ quantity: "negativity", sweep: "t", chart: "heatmap" })).toMatch(/sweep/);
+  });
+});
+
 describe("plotSpec — error paths", () => {
   it("reports the cap for too many qubits on a basis plot", () => {
     const c = circ(11, []);
