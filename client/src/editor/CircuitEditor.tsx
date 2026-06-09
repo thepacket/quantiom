@@ -116,6 +116,7 @@ import { MeasurementCountsPanel } from "../panels/MeasurementCountsPanel";
 import { BranchTreePanel } from "../panels/BranchTreePanel";
 import { DecoherencePanel } from "../panels/DecoherencePanel";
 import { FidelityPanel } from "../panels/FidelityPanel";
+import { ReadoutMitigationPanel } from "../panels/ReadoutMitigationPanel";
 import { CoherencePanel } from "../panels/CoherencePanel";
 import { sampleAveragedAmplitudeProbabilities } from "../sim/measurementShots";
 import { TomographyPanel } from "../panels/TomographyPanel";
@@ -1515,6 +1516,9 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="fidelity">
           <FidelityPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
+        </ErrorBoundary>
+        <ErrorBoundary label="readout-mitigation">
+          <ReadoutMitigationPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
         </ErrorBoundary>
 
         <div className="panels-cat">Characterization &amp; benchmarking</div>
