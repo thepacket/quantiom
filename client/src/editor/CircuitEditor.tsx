@@ -119,6 +119,7 @@ import { FidelityPanel } from "../panels/FidelityPanel";
 import { ReadoutMitigationPanel } from "../panels/ReadoutMitigationPanel";
 import { ClassicalShadowsPanel } from "../panels/ClassicalShadowsPanel";
 import { StatePrepPanel } from "../panels/StatePrepPanel";
+import { UnitarySynthPanel } from "../panels/UnitarySynthPanel";
 import { CoherencePanel } from "../panels/CoherencePanel";
 import { sampleAveragedAmplitudeProbabilities } from "../sim/measurementShots";
 import { TomographyPanel } from "../panels/TomographyPanel";
@@ -1499,6 +1500,9 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="state-prep">
           <StatePrepPanel onLoadInNewTab={(c, n) => t.newTab(c, n)} />
+        </ErrorBoundary>
+        <ErrorBoundary label="unitary-synth">
+          <UnitarySynthPanel circuit={circuit} customGates={customGates} paramValues={paramValues} onLoadInNewTab={(c, n) => t.newTab(c, n)} />
         </ErrorBoundary>
         <ErrorBoundary label="ham-spectrum"><HamSpectrumPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="diagonal-ensemble"><DiagonalEnsemblePanel state={simState} /></ErrorBoundary>

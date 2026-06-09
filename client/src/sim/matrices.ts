@@ -367,10 +367,17 @@ export function buildMatrix(
     case "u1": return M_U1(params[0]);
     case "u2": return M_U2(params[0], params[1]);
     case "u3": return M_U3(params[0], params[1], params[2]);
-    case "u_arb": return [
-      [c(params[0], params[1]), c(params[2], params[3])],
-      [c(params[4], params[5]), c(params[6], params[7])],
-    ];
+    case "u_arb": {
+      const Marb: Matrix = [
+        [c(params[0], params[1]), c(params[2], params[3])],
+        [c(params[4], params[5]), c(params[6], params[7])],
+      ];
+      // Honour controls so an arbitrary 2×2 can be applied conditionally
+      // (used by unitary synthesis). Anti-controls are X-bracketed in
+      // simulate; the 2×2's global phase is preserved — it acts only when the
+      // controls fire, i.e. exactly a controlled-arbitrary-unitary.
+      return nControls ? controlled(Marb, nControls) : Marb;
+    }
     case "u_arb_2": {
       // 32 params = Re/Im for each of 16 cells, row-major.
       const M: Complex[][] = [];
