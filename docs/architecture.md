@@ -404,6 +404,7 @@ All persistence is `localStorage`. Keys, in alphabetical order:
 quantiom:circuit:v1          legacy single-circuit IR (migrated to tabs:v1)
 quantiom:clipboard:v1        cross-tab gate-rectangle clipboard
 quantiom:custom-gates:v1     user-defined custom gate library
+quantiom:custom-plots:v1     saved custom plots (specs + sandboxed programs)
 quantiom:inspector-w         Inspector side-panel width (px)
 quantiom:spotlight-w         enlarged-panel (spotlight) dock width (px)
 quantiom:inspector-collapsed Inspector side-panel collapse

@@ -230,6 +230,19 @@ host plus `/api/health`.
     Optimise / Landscape / Plateau / ZNE loops in `optimize.ts` are now
     async and route each noisy evaluation through this GPU path (with
     CPU fallback), so the K× Pauli-sum speedup is live there.
+  - `plotSpec.ts`: on-demand custom plots from a validated `PlotSpec`
+    (23 `quantity` values across per-qubit / per-basis / 1-D-profile /
+    pairwise-matrix / scalar domains; optional `sweep`; `chart`).
+    `computePlot` re-simulates as needed → generic `PlotData`
+    (series1d / multiline / matrix). No code execution. Powers
+    `CustomPlotPanel`; AI-emittable via a ```plotspec block.
+  - `plotProgram.ts`: the sandboxed escape hatch. `runPlotProgram` runs
+    AI/user code `(data) => scene` in a **Web Worker** (network/storage
+    globals neutered, 2.5 s timeout → terminate); `sanitizePlotScene`
+    validates the returned declarative scene before it's drawn.
+    `buildPlotProgramInput` hands the program { n, dim, ampRe, ampIm,
+    prob, numColumns, numClbits, clbits, counts, shots, width, height,
+    palette }. AI-emittable via a ```plotjs block.
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
     anti-controls and `if (c[k] == v) …` wrappers for conditional
@@ -594,7 +607,13 @@ host plus `/api/health`.
   F≈1, noise→λ<1), `simultaneousRb` (paired runs ⇒ addressability=1 at
   crosstalk 0, >1 with crosstalk+coupling), `t1t2` (T1≈−1/ln(1−γ), stronger
   damping→shorter T1), `pauliBudget` (depol→X=Y=Z=p₁/3, phase→pure Z) — each
-  against analytic ground truth. The AI-dialogue pure core is covered too
+  against analytic ground truth. The custom-plot engine is covered too —
+  `plotSpec` (every quantity vs analytic ground truth: Bell entropy/MI/
+  negativity/concurrence/Meyer–Wallach, XX/YY correlators, magic 0-vs-T,
+  sweeps, validation/coercion) and `plotProgram` (the security-critical pure
+  sanitisers `sanitizeColor`/`sanitizePathD`/`sanitizePlotScene` — injection→
+  fallback, clamps, caps — plus `buildPlotProgramInput` clbits/counts). The
+  AI-dialogue pure core is covered too
   (`dialogue.ts`: `buildTurnMessages` alternation, `mergeConsecutive`,
   `nextSpeakerOf`, `turnsAreConverging`, `dialogueToMarkdown`).
   `npm run test:coverage` reports ~96% statements (core modules are

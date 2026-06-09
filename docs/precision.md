@@ -64,6 +64,7 @@ diagonalization), not by any loss of accuracy.
 | Quantum Fisher information | 14 | collective-spin variance |
 | Coherence | 16 pure / 6 noisy | ρ off-diagonals (noisy uses averaged ρ) |
 | Participation/IPR · Symmetry sectors · Structure factor | 16 | probability moments |
+| Custom plots (per quantity) | basis 10 · matrix 12 · magic/Pauli-weight 6 · per-qubit/scalar 16 · code program 14 | each quantity inherits its own cap; the sandboxed code path clones 2ⁿ amplitudes |
 
 Diagonalization-based panels (Hamiltonian spectrum, SFF, level statistics,
 diagonal ensemble, Krylov) inherit the **O((2ⁿ)³)** dense-eigensolver cost, so
