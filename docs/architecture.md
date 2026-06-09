@@ -186,6 +186,10 @@ sim/tsweep.ts           per-qubit ⟨Z⟩ vs the t clock
 sim/plotSpec.ts         on-demand custom plots: validated PlotSpec →
                         computePlot → generic PlotData (CustomPlotPanel;
                         AI-emittable via a ```plotspec block, no code run)
+sim/plotProgram.ts      sandboxed "plot programs": runPlotProgram runs
+                        AI/user code (data)=>scene in a Web Worker (globals
+                        neutered, timeout), sanitizePlotScene validates the
+                        declarative scene; AI-emittable via a ```plotjs block
 sim/participation.ts    IPR / participation ratio + per-column sweep
 sim/concurrence.ts      pairwise Wootters concurrence (√ρ via the embedding)
 sim/qfi.ts              quantum Fisher information (collective-spin generator)
@@ -457,7 +461,7 @@ Quantiom ships with a comprehensive automated test suite. The numeric
 core — the part where correctness actually matters — is covered
 thoroughly and verified against analytic ground truth.
 
-- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **940
+- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **953
   tests (~96% statement coverage)** cover the statevector simulator
   (Bell / GHZ / rotations / measurement / the `initialize()` gate /
   big-endian), the X/Y-basis measurement primitives, every gate's matrix
@@ -480,7 +484,7 @@ thoroughly and verified against analytic ground truth.
   DOM-only `exportSvg`, which the Node-only suite can't reach.
 - **Continuous integration.** `.github/workflows/ci.yml` type-checks
   the source and the tests, runs the full suite, and builds the client
-  on **every push and pull request**. A green build means all 940 tests
+  on **every push and pull request**. A green build means all 953 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
   **380-check** browser-side cross-section of the same engine the

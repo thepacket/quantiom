@@ -144,7 +144,7 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**940 tests (~96% statement coverage)** that run in continuous integration
+**953 tests (~96% statement coverage)** that run in continuous integration
 on **every push** (`.github/workflows/ci.yml`). They verify the statevector
 simulator (incl. the `initialize()` gate and X/Y-basis measurement), every
 gate's matrix unitarity and algebra, the Clifford tableau (with the
@@ -161,7 +161,7 @@ tree — each checked against analytic ground truth.
 You don't have to take that on faith: the toolbar **Self-test** button
 re-runs a **380-check** cross-section of the same engine **live in your
 browser** in ~10 ms and shows the pass/fail report — itself a subset of
-the full **940-test** suite that runs in CI on every commit. See
+the full **953-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 
@@ -497,7 +497,11 @@ short-circuit their `useMemo`s when hidden.
   circuit depth, or vs the `t` clock), and a chart (bars / line / heatmap).
   No code runs, so the **AI assistant can create a plot from a plain
   description** — it replies with a `plotspec` block carrying a one-click
-  **+ add plot** button. Saved plots persist across sessions.
+  **+ add plot** button. For visuals the catalog can't express, a **+ code**
+  plot (or the AI's `plotjs` block) runs a short `(data) => scene` snippet
+  in a **sandboxed Web Worker** — no DOM, no network, hard timeout, and the
+  returned scene is sanitised before drawing. Saved plots persist across
+  sessions.
 - **Statevector** — basis-state table with numeric `Re + Im·i` per
   amplitude, formatted to 4 decimals. Final classical-register values
   shown when the circuit has measurements. Notice cards in noise mode

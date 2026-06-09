@@ -527,6 +527,21 @@ host plus `/api/health`.
   window event; `PanelShell.setPanelCollapsed` then reveals the panel) — so
   "create a new plot from a textual description" works with zero arbitrary
   code.
+- **Plot programs (`sim/plotProgram.ts`)**: the escape hatch for plots the
+  spec catalog can't express — model- or user-written code. The "+ code"
+  button (and the AI's fenced ```plotjs block → `requestCustomPlotProgram`)
+  add a `{ kind: "program", code }` card. **Sandboxed**: `runPlotProgram`
+  executes the code as the body of `(data) => scene` in a **Web Worker**
+  (no DOM/React), with network/storage/nested-worker globals neutered
+  (fetch/XHR/WebSocket/importScripts/indexedDB/caches/navigator/Worker → 
+  undefined) and a 2.5 s **timeout → terminate** so a runaway loop can't
+  hang the main thread. The returned **declarative scene**
+  (line/rect/circle/path/polyline/text) is `sanitizePlotScene`d — element
+  types whitelisted, numbers clamped, colours restricted to hex/rgb/hsl/a
+  small `var(--…)` theme set, `path` d limited to SVG path tokens — then
+  rendered to SVG. `data` = { n, dim, ampRe[], ampIm[], prob[], numColumns,
+  width, height, palette }. The sanitisers are pure + unit-tested; the
+  worker itself is browser-verified (neutered fetch + loop-timeout).
 - **Panel spotlight**: drag any analysis panel's header ⤢ grip onto the
   circuit (or click it) to enlarge that panel in a resizable dock on the
   left of the canvas (vertical splitter; `quantiom:spotlight-w`). Built in
@@ -545,7 +560,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (940 tests): the simulator core is deeply covered —
+- **What's covered** (953 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),

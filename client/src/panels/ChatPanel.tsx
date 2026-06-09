@@ -18,7 +18,7 @@ import {
   type AttachKey,
 } from "./chatContext";
 import { PROMPT_LIBRARY } from "./promptLibrary";
-import { requestCustomPlot } from "./CustomPlotPanel";
+import { requestCustomPlot, requestCustomPlotProgram } from "./CustomPlotPanel";
 import { coercePlotSpec, plotTitle } from "../sim/plotSpec";
 import {
   DIALOGUE_PRESETS,
@@ -85,6 +85,18 @@ const SYSTEM_PROMPT =
   "scalar quantities). \"chart\": \"bars\"|\"line\"|\"heatmap\" (matrix " +
   "quantities must use heatmap; a swept quantity must use line or heatmap). " +
   "\"title\": optional string}. Add a one-line explanation before the block. " +
+  "For a plot the spec catalog can't express, you may instead emit a fenced " +
+  "```plotjs block: the BODY of a function (data) => scene that returns a " +
+  "declarative scene {width, height, title?, elements:[…]}. It runs in a " +
+  "sandboxed Web Worker (no DOM, network, or imports). `data` = {n, dim, " +
+  "ampRe[], ampIm[], prob[], numColumns, width, height, palette:{accent," +
+  "accent2,warm,muted,border}}. Element types: {type:'line',x1,y1,x2,y2," +
+  "stroke?,strokeWidth?}, {type:'rect',x,y,width,height,fill?,opacity?}, " +
+  "{type:'circle',cx,cy,r,fill?}, {type:'path',d,stroke?,fill?}, " +
+  "{type:'polyline',points:[[x,y]…],stroke?,fill?}, {type:'text',x,y,text," +
+  "fill?,anchor?,size?}. Coordinates are in the width×height space, y down. " +
+  "Prefer a ```plotspec block when a catalog quantity fits; use ```plotjs " +
+  "only for genuinely custom visuals. " +
   "Write mathematics in LaTeX: inline as $…$ and display as $$…$$ " +
   "(KaTeX renders it, including \\ket{}, \\bra{}, \\braket{}{}). Be " +
   "concise; do not over-explain quantum-computing basics.";
@@ -584,6 +596,8 @@ function Message({
             )
           ) : part.isPlotSpec ? (
             <PlotSpecBlock key={i} text={part.text} />
+          ) : part.isPlotProgram ? (
+            <PlotProgramBlock key={i} text={part.text} />
           ) : (
             <div key={i} className="chat__code-block">
               <div className="chat__code-bar">
@@ -634,6 +648,8 @@ function DialogueTurnView({
             )
           ) : part.isPlotSpec ? (
             <PlotSpecBlock key={i} text={part.text} />
+          ) : part.isPlotProgram ? (
+            <PlotProgramBlock key={i} text={part.text} />
           ) : (
             <div key={i} className="chat__code-block">
               <div className="chat__code-bar">
@@ -723,9 +739,32 @@ function PlotSpecBlock({ text }: { text: string }) {
   );
 }
 
+/** Render an AI-emitted ```plotjs block as a one-click "add plot" action that
+ *  adds a sandboxed code plot to the Custom plots panel. */
+function PlotProgramBlock({ text }: { text: string }) {
+  const [added, setAdded] = useState(false);
+  const add = () => { if (requestCustomPlotProgram(text)) setAdded(true); };
+  return (
+    <div className="chat__code-block chat__plotspec">
+      <div className="chat__code-bar">
+        <span className="chat__code-lang">plot code (sandboxed)</span>
+        <button
+          className="chat__open-tab chat__open-tab--btn"
+          onClick={add}
+          disabled={added}
+          title="Add this code plot to the Custom plots panel (runs in a sandbox)"
+        >
+          {added ? "✓ added to Custom plots" : "+ add plot"}
+        </button>
+      </div>
+      <pre className="chat__code"><code>{text}</code></pre>
+    </div>
+  );
+}
+
 type Part =
   | { kind: "text"; text: string }
-  | { kind: "code"; text: string; lang: string; isQasm: boolean; isPlotSpec: boolean };
+  | { kind: "code"; text: string; lang: string; isQasm: boolean; isPlotSpec: boolean; isPlotProgram: boolean };
 
 /**
  * Split a message into alternating text and fenced-code parts. Fenced
@@ -762,8 +801,9 @@ function splitFencedBlocks(src: string): Part[] {
       if (i < lines.length) i++;
       const text = codeLines.join("\n");
       const isQasm = isLikelyQasm(lang, text);
-      const isPlotSpec = /^(plotspec|plot)$/i.test(lang.trim());
-      out.push({ kind: "code", text, lang, isQasm, isPlotSpec });
+      const isPlotProgram = /^(plotjs|plotcode)$/i.test(lang.trim());
+      const isPlotSpec = !isPlotProgram && /^(plotspec|plot)$/i.test(lang.trim());
+      out.push({ kind: "code", text, lang, isQasm, isPlotSpec, isPlotProgram });
       continue;
     }
     textBuf.push(line);

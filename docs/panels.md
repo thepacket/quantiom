@@ -45,6 +45,17 @@ it to "plot ⟨X⟩ for each qubit vs circuit depth" and it replies with a
 chart into this panel (and reveals it). Saved plots persist across
 sessions. Like every analysis panel it runs only while open.
 
+**Plot programs (advanced).** For a plot the catalog can't express, the
+**+ code** button (or the AI's `plotjs` block) adds a code plot: a short
+snippet `(data) => scene` that computes a declarative scene
+(lines / rects / circles / paths / text) from the amplitudes. The code is
+**sandboxed** — it runs in a Web Worker with no DOM and with network /
+storage access removed, a hard timeout guards against infinite loops, and
+the returned scene is sanitised (whitelisted shapes, clamped numbers,
+restricted colours, SVG-only path data) before it's drawn. It cannot reach
+the page, the network, or your data beyond the read-only `data` it's given.
+Click **edit** on the card to tweak the code and watch it re-run.
+
 ---
 
 ## Statevector

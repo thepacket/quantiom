@@ -802,6 +802,11 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .cplot__legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 9px; color: var(--muted); }
 .cplot__legend span { display: inline-flex; align-items: center; gap: 3px; }
 .cplot__swatch { width: 9px; height: 3px; border-radius: 1px; display: inline-block; }
+.cplot__card-actions { display: inline-flex; align-items: center; gap: 6px; }
+.cplot__edit { font-size: 10px; padding: 0 5px; background: none; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
+.cplot__edit:hover { color: var(--accent); border-color: var(--accent-2); }
+.cplot__badge { font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; padding: 0 3px; vertical-align: middle; }
+.cplot__code { width: 100%; box-sizing: border-box; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 10.5px; line-height: 1.4; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 5px 6px; margin-bottom: 5px; resize: vertical; }
 
 /* ─── Entanglement spectrum (Schmidt) ──────────────────────────────── */
 .schmidt { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }

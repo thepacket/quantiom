@@ -7,7 +7,7 @@ const FAIL = "#f85149";
 /** Size of the full Vitest suite (run in Node/CI). The in-app dialog runs a
  *  deterministic, synchronous subset of it — keep this in step with
  *  `client/test/` when the suite grows. */
-const FULL_SUITE_TESTS = 940;
+const FULL_SUITE_TESTS = 953;
 
 /**
  * Self-test dialog — surfaced from the toolbar's "Self-test" button.

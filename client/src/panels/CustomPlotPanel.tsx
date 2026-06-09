@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PanelShell, usePanelCollapsed, setPanelCollapsed } from "./PanelShell";
 import {
   computePlot,
@@ -15,6 +15,12 @@ import {
   type PlotSpec,
   type PlotSweep,
 } from "../sim/plotSpec";
+import {
+  buildPlotProgramInput,
+  runPlotProgram,
+  type PlotProgramResult,
+  type PlotScene,
+} from "../sim/plotProgram";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 import type { ParameterValues } from "../sim/simulate";
@@ -25,29 +31,53 @@ type Props = {
   paramValues: ParameterValues;
 };
 
+/** A saved plot: either a validated spec, or a sandboxed code program. */
+type SavedPlot =
+  | { kind: "spec"; spec: PlotSpec }
+  | { kind: "program"; code: string; title?: string };
+
 const STORAGE_KEY = "quantiom:custom-plots:v1";
-/** Window event other code (the AI chat) can dispatch to add a plot on demand.
+/** Window event the AI chat dispatches to add a spec-based plot.
  *  detail: a raw object coerced through `coercePlotSpec`. */
 export const ADD_PLOT_EVENT = "quantiom:add-plot";
+/** Window event the AI chat dispatches to add a code (program) plot.
+ *  detail: { code: string, title?: string }. */
+export const ADD_PROGRAM_EVENT = "quantiom:add-plot-program";
 
-/** Dispatch a request to add a custom plot (used by the AI chat). Returns the
- *  coerced spec, or null if the raw value couldn't be understood. */
+/** Dispatch a request to add a spec plot (used by the AI chat). */
 export function requestCustomPlot(raw: unknown): PlotSpec | null {
   const spec = coercePlotSpec(raw);
   if (!spec) return null;
   window.dispatchEvent(new CustomEvent(ADD_PLOT_EVENT, { detail: spec }));
-  // Reveal the panel so the freshly-added plot is visible.
   setPanelCollapsed("custom-plots", false);
   return spec;
 }
 
-function loadSpecs(): PlotSpec[] {
+/** Dispatch a request to add a sandboxed code plot (used by the AI chat). */
+export function requestCustomPlotProgram(code: string, title?: string): boolean {
+  if (typeof code !== "string" || !code.trim()) return false;
+  window.dispatchEvent(new CustomEvent(ADD_PROGRAM_EVENT, { detail: { code, title } }));
+  setPanelCollapsed("custom-plots", false);
+  return true;
+}
+
+function loadPlots(): SavedPlot[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
-    return arr.map(coercePlotSpec).filter((s): s is PlotSpec => s !== null);
+    const out: SavedPlot[] = [];
+    for (const e of arr) {
+      if (e && typeof e === "object" && e.kind === "program" && typeof e.code === "string") {
+        out.push({ kind: "program", code: e.code, title: typeof e.title === "string" ? e.title : undefined });
+      } else {
+        // Bare spec (legacy) or { kind: "spec", spec }.
+        const spec = coercePlotSpec(e && e.kind === "spec" ? e.spec : e);
+        if (spec) out.push({ kind: "spec", spec });
+      }
+    }
+    return out;
   } catch {
     return [];
   }
@@ -71,9 +101,18 @@ export function CustomPlotPanel(props: Props) {
   );
 }
 
+const STARTER_CODE = `// data = { n, dim, ampRe[], ampIm[], prob[], numColumns, width, height, palette }
+// return { width, height, title?, elements:[...] }
+const W = data.width, H = data.height, bw = W / data.dim;
+const els = data.prob.map((p, i) => ({
+  type: "rect", x: i * bw, y: H - p * H, width: bw * 0.8, height: p * H,
+  fill: data.palette.accent,
+}));
+return { width: W, height: H, title: "probabilities", elements: els };`;
+
 function Body({ circuit, customGates, paramValues }: Props) {
   const collapsed = usePanelCollapsed();
-  const [specs, setSpecs] = useState<PlotSpec[]>(loadSpecs);
+  const [plots, setPlots] = useState<SavedPlot[]>(loadPlots);
 
   // Builder draft state.
   const [quantity, setQuantity] = useState<PlotQuantity>("expZ");
@@ -83,22 +122,30 @@ function Body({ circuit, customGates, paramValues }: Props) {
   // Persist.
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(specs));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(plots));
     } catch {
       /* ignore */
     }
-  }, [specs]);
+  }, [plots]);
 
-  // Listen for AI-/external-pushed plot specs.
+  // Listen for AI-/external-pushed plots (spec + program).
   useEffect(() => {
-    const onAdd = (e: Event) => {
+    const onAddSpec = (e: Event) => {
       const spec = (e as CustomEvent).detail as PlotSpec | undefined;
-      if (spec && PLOT_QUANTITIES.includes(spec.quantity)) {
-        setSpecs((prev) => [spec, ...prev]);
+      if (spec && PLOT_QUANTITIES.includes(spec.quantity)) setPlots((prev) => [{ kind: "spec", spec }, ...prev]);
+    };
+    const onAddProgram = (e: Event) => {
+      const d = (e as CustomEvent).detail as { code?: string; title?: string } | undefined;
+      if (d && typeof d.code === "string" && d.code.trim()) {
+        setPlots((prev) => [{ kind: "program", code: d.code as string, title: d.title }, ...prev]);
       }
     };
-    window.addEventListener(ADD_PLOT_EVENT, onAdd);
-    return () => window.removeEventListener(ADD_PLOT_EVENT, onAdd);
+    window.addEventListener(ADD_PLOT_EVENT, onAddSpec);
+    window.addEventListener(ADD_PROGRAM_EVENT, onAddProgram);
+    return () => {
+      window.removeEventListener(ADD_PLOT_EVENT, onAddSpec);
+      window.removeEventListener(ADD_PROGRAM_EVENT, onAddProgram);
+    };
   }, []);
 
   // Keep the draft chart/sweep compatible when the quantity/sweep change.
@@ -110,10 +157,11 @@ function Body({ circuit, customGates, paramValues }: Props) {
     setChart(defaultChart(quantity, sweep));
   }, [quantity, sweep]);
 
-  const addCurrent = () => {
-    setSpecs((prev) => [{ quantity, sweep, chart }, ...prev]);
-  };
-  const removeAt = (i: number) => setSpecs((prev) => prev.filter((_, k) => k !== i));
+  const addCurrent = () => setPlots((prev) => [{ kind: "spec", spec: { quantity, sweep, chart } }, ...prev]);
+  const addCode = () => setPlots((prev) => [{ kind: "program", code: STARTER_CODE, title: "code plot" }, ...prev]);
+  const removeAt = (i: number) => setPlots((prev) => prev.filter((_, k) => k !== i));
+  const updateCode = (i: number, code: string) =>
+    setPlots((prev) => prev.map((p, k) => (k === i && p.kind === "program" ? { ...p, code } : p)));
 
   const chartChoices: PlotChart[] = chartChoicesFor(quantity, sweep);
 
@@ -151,28 +199,149 @@ function Body({ circuit, customGates, paramValues }: Props) {
         <button className="cplot__add" onClick={addCurrent} title="Add this plot">
           + plot
         </button>
+        <button className="cplot__add" onClick={addCode} title="Add a sandboxed code plot (advanced)">
+          + code
+        </button>
       </div>
 
-      {specs.length === 0 ? (
+      {plots.length === 0 ? (
         <div className="panel__placeholder">
-          build a plot above, or ask the AI assistant (e.g. “plot ⟨X⟩ for each qubit vs circuit depth”)
+          build a plot above, add a <strong>+ code</strong> plot, or ask the AI assistant (e.g. “plot ⟨X⟩ for each qubit vs circuit depth”)
         </div>
       ) : (
         <div className="cplot__list">
-          {specs.map((spec, i) => (
-            <PlotCard
-              key={i}
-              spec={spec}
-              circuit={circuit}
-              customGates={customGates}
-              paramValues={paramValues}
-              collapsed={collapsed}
-              onRemove={() => removeAt(i)}
-            />
-          ))}
+          {plots.map((p, i) =>
+            p.kind === "spec" ? (
+              <PlotCard
+                key={i}
+                spec={p.spec}
+                circuit={circuit}
+                customGates={customGates}
+                paramValues={paramValues}
+                collapsed={collapsed}
+                onRemove={() => removeAt(i)}
+              />
+            ) : (
+              <ProgramCard
+                key={i}
+                code={p.code}
+                title={p.title}
+                circuit={circuit}
+                customGates={customGates}
+                paramValues={paramValues}
+                collapsed={collapsed}
+                onRemove={() => removeAt(i)}
+                onCode={(code) => updateCode(i, code)}
+              />
+            ),
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+// ─── program (sandboxed code) card ─────────────────────────────────────
+
+function ProgramCard({
+  code,
+  title,
+  circuit,
+  customGates,
+  paramValues,
+  collapsed,
+  onRemove,
+  onCode,
+}: {
+  code: string;
+  title?: string;
+  circuit: Circuit;
+  customGates: CustomGate[];
+  paramValues: ParameterValues;
+  collapsed: boolean;
+  onRemove: () => void;
+  onCode: (code: string) => void;
+}) {
+  const [result, setResult] = useState<PlotProgramResult | null>(null);
+  const [running, setRunning] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const runId = useRef(0);
+
+  // Re-run the program in the sandbox whenever the code/circuit/params change
+  // (and the panel is open). Stale runs are ignored via the run id.
+  useEffect(() => {
+    if (collapsed) return;
+    const input = buildPlotProgramInput(circuit, paramValues, customGates);
+    if ("error" in input) {
+      setResult({ error: input.error });
+      return;
+    }
+    const id = ++runId.current;
+    setRunning(true);
+    runPlotProgram(code, input).then((r) => {
+      if (runId.current === id) {
+        setResult(r);
+        setRunning(false);
+      }
+    });
+    return () => { runId.current++; }; // invalidate on unmount/dep change
+  }, [collapsed, code, circuit, paramValues, customGates]);
+
+  return (
+    <div className="cplot__card">
+      <div className="cplot__card-head">
+        <span className="cplot__card-title">{title || "code plot"} <span className="cplot__badge">sandbox</span></span>
+        <span className="cplot__card-actions">
+          <button className="cplot__edit" onClick={() => setEditing((e) => !e)} title="Edit the code">
+            {editing ? "done" : "edit"}
+          </button>
+          <button className="cplot__remove" onClick={onRemove} title="Remove this plot">×</button>
+        </span>
+      </div>
+      {editing && (
+        <textarea
+          className="cplot__code"
+          value={code}
+          spellCheck={false}
+          onChange={(e) => onCode(e.target.value)}
+          rows={Math.min(16, Math.max(6, code.split("\n").length + 1))}
+        />
+      )}
+      {running && !result ? (
+        <div className="panel__notice">running…</div>
+      ) : result && "error" in result ? (
+        <div className="panel__notice">{result.error}</div>
+      ) : result ? (
+        <ScenePlot scene={result.scene} />
+      ) : null}
+    </div>
+  );
+}
+
+/** Render a sanitised PlotScene to SVG. All values are already validated by
+ *  `sanitizePlotScene`; React escapes text, so this is purely declarative. */
+function ScenePlot({ scene }: { scene: PlotScene }) {
+  return (
+    <svg viewBox={`0 0 ${scene.width} ${scene.height}`} className="cplot__svg plot-fill" role="img">
+      {scene.elements.map((el, i) => {
+        switch (el.type) {
+          case "line":
+            return <line key={i} x1={el.x1} y1={el.y1} x2={el.x2} y2={el.y2} stroke={el.stroke} strokeWidth={el.strokeWidth} />;
+          case "rect":
+            return <rect key={i} x={el.x} y={el.y} width={el.width} height={el.height} fill={el.fill} stroke={el.stroke} fillOpacity={el.opacity} />;
+          case "circle":
+            return <circle key={i} cx={el.cx} cy={el.cy} r={el.r} fill={el.fill} stroke={el.stroke} fillOpacity={el.opacity} />;
+          case "path":
+            return <path key={i} d={el.d} stroke={el.stroke} fill={el.fill} strokeWidth={el.strokeWidth} />;
+          case "polyline":
+            return <polyline key={i} points={el.points.map((p) => `${p[0]},${p[1]}`).join(" ")} stroke={el.stroke} fill={el.fill} strokeWidth={el.strokeWidth} />;
+          case "text":
+            return <text key={i} x={el.x} y={el.y} fill={el.fill} textAnchor={el.anchor} fontSize={el.size}>{el.text}</text>;
+          default:
+            return null;
+        }
+      })}
+    </svg>
   );
 }
 
