@@ -18,14 +18,22 @@ This page is a tour of every panel.
 ## Custom plots
 
 Build a plot on demand instead of hunting for the right dedicated panel.
-Pick a **quantity** — per qubit (⟨Z⟩/⟨X⟩/⟨Y⟩ or the single-qubit
-entanglement entropy S(ρ_q)), per basis state (probability or |amplitude|),
-the entanglement-entropy profile across every cut, a pairwise matrix
-(mutual information, connected ⟨ZᵢZⱼ⟩, log-negativity, or concurrence), or
-a single scalar (mid-cut entanglement entropy, stabilizer-Rényi magic M₂) —
-an optional **sweep** (none, vs circuit *depth*, or vs the *t* clock over
-one period — sweeps apply to the per-qubit and scalar quantities), and a
-**chart** (bars, line, or heatmap). The panel re-simulates as needed and
+Pick a **quantity** from a catalog of 23, grouped by domain:
+
+- **Per qubit** — ⟨Z⟩/⟨X⟩/⟨Y⟩, single-qubit entanglement entropy S(ρ_q),
+  purity Tr(ρ_q²), or l₁ coherence.
+- **Per basis state** — probability, |amplitude|, or amplitude phase.
+- **1-D profile** — the entanglement-entropy or 2-Rényi-entropy profile
+  across every cut, or the Pauli-weight distribution.
+- **Pairwise matrix** — mutual information, connected ⟨ZᵢZⱼ⟩ / ⟨XᵢXⱼ⟩ /
+  ⟨YᵢYⱼ⟩ correlations, log-negativity, or concurrence.
+- **Single scalar** — mid-cut entanglement entropy, stabilizer-Rényi magic
+  M₂, Meyer–Wallach global entanglement Q, participation entropy, or global
+  l₁ coherence.
+
+Then an optional **sweep** (none, vs circuit *depth*, or vs the *t* clock
+over one period — sweeps apply to the per-qubit and scalar quantities), and
+a **chart** (bars, line, or heatmap). The panel re-simulates as needed and
 draws the result: matrix quantities render as a heatmap, swept per-qubit
 quantities as a multi-line plot (one line per qubit) or a qubit × step
 heatmap, and a swept scalar as a single curve over depth/time.

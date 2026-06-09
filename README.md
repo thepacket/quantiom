@@ -144,7 +144,7 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**930 tests (~96% statement coverage)** that run in continuous integration
+**940 tests (~96% statement coverage)** that run in continuous integration
 on **every push** (`.github/workflows/ci.yml`). They verify the statevector
 simulator (incl. the `initialize()` gate and X/Y-basis measurement), every
 gate's matrix unitarity and algebra, the Clifford tableau (with the
@@ -161,7 +161,7 @@ tree — each checked against analytic ground truth.
 You don't have to take that on faith: the toolbar **Self-test** button
 re-runs a **380-check** cross-section of the same engine **live in your
 browser** in ~10 ms and shows the pass/fail report — itself a subset of
-the full **930-test** suite that runs in CI on every commit. See
+the full **940-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 
@@ -487,10 +487,13 @@ short-circuit their `useMemo`s when hidden.
   pushes new t values directly into the React state at ~15 fps — the
   Bloch vectors orbit and the probability bars pulse.
 - **Custom plots** — build a chart on demand from a small validated
-  *spec*: pick a quantity (per-qubit ⟨X⟩/⟨Y⟩/⟨Z⟩ or entanglement entropy,
-  per-basis probability / |amplitude|, the entropy profile, a pairwise
-  matrix — mutual information, ⟨ZᵢZⱼ⟩, log-negativity, concurrence — or a
-  scalar like mid-cut entropy / magic M₂), an optional sweep (none, vs
+  *spec*: pick a quantity from a catalog of 23 — per qubit (⟨X⟩/⟨Y⟩/⟨Z⟩,
+  entanglement entropy S(ρ_q), purity, l₁ coherence), per basis
+  (probability / |amplitude| / phase), a 1-D profile (entropy / 2-Rényi
+  per cut, Pauli-weight distribution), a pairwise matrix (mutual
+  information, ⟨ZᵢZⱼ⟩/⟨XᵢXⱼ⟩/⟨YᵢYⱼ⟩ correlations, log-negativity,
+  concurrence), or a scalar (mid-cut entropy, magic M₂, Meyer–Wallach Q,
+  participation entropy, l₁ coherence) — an optional sweep (none, vs
   circuit depth, or vs the `t` clock), and a chart (bars / line / heatmap).
   No code runs, so the **AI assistant can create a plot from a plain
   description** — it replies with a `plotspec` block carrying a one-click

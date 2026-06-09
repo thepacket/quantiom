@@ -197,6 +197,42 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
         title: "Magic M₂ growth vs depth",
         text: "Plot the stabilizer-Rényi magic M₂ versus circuit depth and identify which gates inject the non-stabilizerness.",
       },
+      {
+        title: "Per-qubit purity",
+        text: "Plot the single-qubit purity Tr(ρ_q²) for each qubit — which qubits are pure (1) and which are mixed by entanglement?",
+      },
+      {
+        title: "Per-qubit coherence",
+        text: "Plot the l₁ coherence of each qubit as bars and say which qubits carry superposition in the computational basis.",
+      },
+      {
+        title: "Amplitude phases",
+        text: "Plot the amplitude phase arg(aᵢ) for each basis state — show the relative phases the circuit imprints.",
+      },
+      {
+        title: "2-Rényi entropy profile",
+        text: "Plot the 2-Rényi entanglement entropy S₂ across every contiguous cut and compare its shape to the von Neumann profile.",
+      },
+      {
+        title: "Pauli-weight distribution",
+        text: "Plot the Pauli-weight distribution of this state and read off how much weight sits at high Pauli weight (operator spreading / scrambling).",
+      },
+      {
+        title: "XX and YY correlations",
+        text: "Plot the connected ⟨XᵢXⱼ⟩ and ⟨YᵢYⱼ⟩ correlation heatmaps and compare them to the ⟨ZᵢZⱼ⟩ pattern — which basis carries the order?",
+      },
+      {
+        title: "Meyer–Wallach entanglement",
+        text: "Plot the Meyer–Wallach global entanglement Q versus circuit depth and describe how entanglement builds up across the register.",
+      },
+      {
+        title: "Participation entropy",
+        text: "Plot the participation (Shannon) entropy of the output distribution versus circuit depth — is the state localized on a few basis states or spread out?",
+      },
+      {
+        title: "Global l₁ coherence growth",
+        text: "Plot the global l₁ coherence versus the t clock and relate its peaks to where the state is most spread across the computational basis.",
+      },
     ],
   },
   {

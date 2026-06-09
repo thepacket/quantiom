@@ -228,6 +228,87 @@ describe("plotSpec — added batch: per-qubit entropy, matrices, scalars", () =>
   });
 });
 
+describe("plotSpec — long list: per-qubit purity/coherence, phase, profiles, corr, scalars", () => {
+  const bell = () => circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+
+  it("single-qubit purity: Bell = 1/2 each, product |0⟩ = 1", () => {
+    const d = data(computePlot(spec("purityQubit"), bell(), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values[0]).toBeCloseTo(0.5, 8);
+    expect(d.values[1]).toBeCloseTo(0.5, 8);
+    const prod = data(computePlot(spec("purityQubit"), circ(1, []), {}, []));
+    if (prod.kind !== "series1d") throw new Error("shape");
+    expect(prod.values[0]).toBeCloseTo(1, 10);
+  });
+
+  it("single-qubit l₁ coherence of |+⟩ is 1", () => {
+    const d = data(computePlot(spec("coherenceQubit"), circ(1, [gate("h", [0])]), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values[0]).toBeCloseTo(1, 8);
+  });
+
+  it("amplitude phase: H·S on q0 puts +π/2 on basis |1⟩", () => {
+    const d = data(computePlot(spec("phase"), circ(1, [gate("h", [0]), gate("s", [0])]), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values[1]).toBeCloseTo(Math.PI / 2, 6);
+    expect(d.signed).toBe(true);
+  });
+
+  it("2-Rényi entropy of a Bell pair is 1 bit at the cut", () => {
+    const d = data(computePlot(spec("renyi2"), bell(), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values[0]).toBeCloseTo(1, 8);
+  });
+
+  it("Pauli-weight distribution sums to 1 with weight-0 = 2⁻ⁿ", () => {
+    const d = data(computePlot(spec("pauliWeight"), bell(), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values.length).toBe(3); // weights 0,1,2
+    expect(d.values.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 8);
+    expect(d.values[0]).toBeCloseTo(0.25, 8);
+  });
+
+  it("connected ⟨XᵢXⱼ⟩ = +1 and ⟨YᵢYⱼ⟩ = −1 off-diagonal for a Bell pair", () => {
+    const xx = data(computePlot(spec("xxCorr"), bell(), {}, []));
+    const yy = data(computePlot(spec("yyCorr"), bell(), {}, []));
+    if (xx.kind !== "matrix" || yy.kind !== "matrix") throw new Error("shape");
+    expect(xx.z[0][1]).toBeCloseTo(1, 8);
+    expect(yy.z[0][1]).toBeCloseTo(-1, 8);
+    expect(xx.signed).toBe(true);
+  });
+
+  it("Meyer–Wallach Q: Bell = 1, product = 0", () => {
+    const b = data(computePlot(spec("meyerWallach"), bell(), {}, []));
+    if (b.kind !== "series1d") throw new Error("shape");
+    expect(b.values[0]).toBeCloseTo(1, 8);
+    const p = data(computePlot(spec("meyerWallach"), circ(2, [gate("x", [0])]), {}, []));
+    if (p.kind !== "series1d") throw new Error("shape");
+    expect(p.values[0]).toBeCloseTo(0, 8);
+  });
+
+  it("participation entropy: Bell = 1 bit, |0…0⟩ = 0", () => {
+    const b = data(computePlot(spec("participationEntropy"), bell(), {}, []));
+    if (b.kind !== "series1d") throw new Error("shape");
+    expect(b.values[0]).toBeCloseTo(1, 8);
+    const z = data(computePlot(spec("participationEntropy"), circ(2, []), {}, []));
+    if (z.kind !== "series1d") throw new Error("shape");
+    expect(z.values[0]).toBeCloseTo(0, 10);
+  });
+
+  it("global l₁ coherence of |+⟩ is 1", () => {
+    const d = data(computePlot(spec("l1Coherence"), circ(1, [gate("h", [0])]), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values[0]).toBeCloseTo(1, 8);
+  });
+
+  it("purity/coherence are sweepable; Pauli-weight and phase are not", () => {
+    expect(validatePlotSpec({ quantity: "purityQubit", sweep: "column", chart: "line" })).toBeNull();
+    expect(validatePlotSpec({ quantity: "meyerWallach", sweep: "t", chart: "line" })).toBeNull();
+    expect(validatePlotSpec({ quantity: "pauliWeight", sweep: "column", chart: "line" })).toMatch(/sweep/);
+    expect(validatePlotSpec({ quantity: "phase", sweep: "t", chart: "line" })).toMatch(/sweep/);
+  });
+});
+
 describe("plotSpec — error paths", () => {
   it("reports the cap for too many qubits on a basis plot", () => {
     const c = circ(11, []);

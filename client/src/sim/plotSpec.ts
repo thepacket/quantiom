@@ -21,7 +21,7 @@
 import { simulate, type ParameterValues } from "./simulate";
 import { paulis, type Pauli } from "./expectation";
 import { mutualInformationMatrix, entropyProfile, vonNeumannEntropy } from "./entanglement";
-import { reducedDensityMatrix } from "./density";
+import { reducedDensityMatrix, purity } from "./density";
 import { negativityMatrix } from "./negativity";
 import { concurrenceMatrix } from "./concurrence";
 import { magic } from "./magic";
@@ -35,19 +35,34 @@ import type { CustomGate } from "../editor/customGates";
 /** What to compute. Each quantity has a natural domain (qubit / basis / cut /
  *  pair) that, combined with the sweep, fixes the dataset shape. */
 export type PlotQuantity =
+  // per qubit (vector over qubits; sweepable)
   | "expZ" // ⟨Z_q⟩ per qubit, in [−1, +1]
   | "expX" // ⟨X_q⟩ per qubit
   | "expY" // ⟨Y_q⟩ per qubit
   | "qubitEntropy" // single-qubit entanglement entropy S(ρ_q) per qubit
+  | "purityQubit" // single-qubit purity Tr(ρ_q²) per qubit
+  | "coherenceQubit" // single-qubit l₁ coherence per qubit
+  // per basis state (vector over 2ⁿ)
   | "prob" // probability per computational basis state
   | "amp" // |amplitude| per computational basis state
+  | "phase" // amplitude phase arg(a) per computational basis state
+  // 1-D profiles (vector over a custom domain; not sweepable)
   | "entropy" // S(ρ_{[0..k]}) per contiguous cut k
-  | "mutualInfo" // pairwise mutual information I(i:j) (matrix)
-  | "zzCorr" // connected ⟨Z_iZ_j⟩−⟨Z_i⟩⟨Z_j⟩ (matrix)
-  | "negativity" // pairwise log-negativity E_N(i:j) (matrix)
-  | "concurrence" // pairwise concurrence C(i:j) (matrix)
-  | "midEntropy" // mid-cut entanglement entropy (scalar)
-  | "magic"; // stabilizer-Rényi magic M₂ (scalar)
+  | "renyi2" // 2-Rényi entanglement entropy per contiguous cut
+  | "pauliWeight" // Pauli-weight distribution Σ_{|P|=w} Ξ_P (over weight w)
+  // pairwise matrices (heatmaps)
+  | "mutualInfo" // pairwise mutual information I(i:j)
+  | "zzCorr" // connected ⟨Z_iZ_j⟩−⟨Z_i⟩⟨Z_j⟩
+  | "xxCorr" // connected ⟨X_iX_j⟩−⟨X_i⟩⟨X_j⟩
+  | "yyCorr" // connected ⟨Y_iY_j⟩−⟨Y_i⟩⟨Y_j⟩
+  | "negativity" // pairwise log-negativity E_N(i:j)
+  | "concurrence" // pairwise concurrence C(i:j)
+  // scalars (single value; sweepable into one curve)
+  | "midEntropy" // mid-cut entanglement entropy
+  | "magic" // stabilizer-Rényi magic M₂
+  | "meyerWallach" // Meyer–Wallach global entanglement Q
+  | "participationEntropy" // Shannon participation entropy of |a|² (localization)
+  | "l1Coherence"; // global l₁-norm coherence
 
 /** Optional second dimension. `column` re-runs the circuit truncated after
  *  each column; `t` sweeps the `t` clock over one period [0, 2π). Both only
@@ -69,15 +84,25 @@ export const PLOT_QUANTITIES: PlotQuantity[] = [
   "expX",
   "expY",
   "qubitEntropy",
+  "purityQubit",
+  "coherenceQubit",
   "prob",
   "amp",
+  "phase",
   "entropy",
+  "renyi2",
+  "pauliWeight",
   "mutualInfo",
   "zzCorr",
+  "xxCorr",
+  "yyCorr",
   "negativity",
   "concurrence",
   "midEntropy",
   "magic",
+  "meyerWallach",
+  "participationEntropy",
+  "l1Coherence",
 ];
 
 export const QUANTITY_LABELS: Record<PlotQuantity, string> = {
@@ -85,35 +110,37 @@ export const QUANTITY_LABELS: Record<PlotQuantity, string> = {
   expX: "⟨X⟩ per qubit",
   expY: "⟨Y⟩ per qubit",
   qubitEntropy: "entanglement entropy S(ρ_q) per qubit",
+  purityQubit: "purity Tr(ρ_q²) per qubit",
+  coherenceQubit: "l₁ coherence per qubit",
   prob: "probability per basis state",
   amp: "|amplitude| per basis state",
+  phase: "amplitude phase per basis state",
   entropy: "entanglement entropy per cut",
+  renyi2: "2-Rényi entropy per cut",
+  pauliWeight: "Pauli-weight distribution",
   mutualInfo: "mutual information I(i:j)",
   zzCorr: "connected ⟨ZᵢZⱼ⟩ correlation",
+  xxCorr: "connected ⟨XᵢXⱼ⟩ correlation",
+  yyCorr: "connected ⟨YᵢYⱼ⟩ correlation",
   negativity: "log-negativity E_N(i:j)",
   concurrence: "concurrence C(i:j)",
   midEntropy: "mid-cut entanglement entropy",
   magic: "stabilizer-Rényi magic M₂",
+  meyerWallach: "Meyer–Wallach global entanglement Q",
+  participationEntropy: "participation entropy (basis)",
+  l1Coherence: "l₁ coherence (global)",
 };
 
 // Per-qubit quantities form a vector over qubits and accept a sweep.
-const PER_QUBIT = new Set<PlotQuantity>(["expZ", "expX", "expY", "qubitEntropy"]);
-const PER_BASIS = new Set<PlotQuantity>(["prob", "amp"]);
-const MATRIX = new Set<PlotQuantity>(["mutualInfo", "zzCorr", "negativity", "concurrence"]);
+const PER_QUBIT = new Set<PlotQuantity>(["expZ", "expX", "expY", "qubitEntropy", "purityQubit", "coherenceQubit"]);
+const PER_BASIS = new Set<PlotQuantity>(["prob", "amp", "phase"]);
+// 1-D profiles over a custom domain (cut / Pauli weight); not sweepable.
+const PROFILE = new Set<PlotQuantity>(["entropy", "renyi2", "pauliWeight"]);
+const MATRIX = new Set<PlotQuantity>(["mutualInfo", "zzCorr", "xxCorr", "yyCorr", "negativity", "concurrence"]);
 // Scalar quantities are a single number; with a sweep they trace one line.
-const SCALAR = new Set<PlotQuantity>(["midEntropy", "magic"]);
-// Quantities whose values are ≥ 0 (sequential, not diverging, colour scale).
-const NONNEGATIVE = new Set<PlotQuantity>([
-  "qubitEntropy",
-  "prob",
-  "amp",
-  "entropy",
-  "mutualInfo",
-  "negativity",
-  "concurrence",
-  "midEntropy",
-  "magic",
-]);
+const SCALAR = new Set<PlotQuantity>(["midEntropy", "magic", "meyerWallach", "participationEntropy", "l1Coherence"]);
+// Signed quantities (diverging colour scale about 0); everything else is ≥ 0.
+const SIGNED = new Set<PlotQuantity>(["expZ", "expX", "expY", "phase", "zzCorr", "xxCorr", "yyCorr"]);
 /** Quantities that accept a `column`/`t` sweep. */
 const SWEEPABLE = new Set<PlotQuantity>([...PER_QUBIT, ...SCALAR]);
 
@@ -242,6 +269,7 @@ const PAULI_OF: Record<string, Pauli> = { expZ: "Z", expX: "X", expY: "Y" };
 
 const MAX_QUBITS_MAGIC = 6; // 4ⁿ Pauli expectations
 const MAX_QUBITS_MIDENT = 14; // mid-cut reduced DM of ≤ 7 qubits
+const MAX_QUBITS_SCALAR = 16; // meyer-wallach / participation / l1 over the full state
 
 /** One per-qubit Pauli expectation over the whole register. */
 function perQubitPauli(state: Float64Array, n: number, p: Pauli): number[] {
@@ -254,14 +282,67 @@ function perQubitPauli(state: Float64Array, n: number, p: Pauli): number[] {
   return out;
 }
 
-/** Per-qubit value vector for any per-qubit quantity (Pauli or entropy). */
+/** Single-qubit purity Tr(ρ_q²) for every qubit. */
+function perQubitPurity(state: Float64Array, n: number): number[] {
+  const out = new Array<number>(n);
+  for (let i = 0; i < n; i++) out[i] = purity(reducedDensityMatrix(state, n, [i]));
+  return out;
+}
+
+/** Per-qubit value vector for any per-qubit quantity. */
 function perQubitValue(state: Float64Array, n: number, q: PlotQuantity): number[] {
   if (q === "qubitEntropy") {
     const out = new Array<number>(n);
     for (let i = 0; i < n; i++) out[i] = vonNeumannEntropy(reducedDensityMatrix(state, n, [i]));
     return out;
   }
+  if (q === "purityQubit") return perQubitPurity(state, n);
+  if (q === "coherenceQubit") {
+    const out = new Array<number>(n);
+    for (let i = 0; i < n; i++) {
+      const rho = reducedDensityMatrix(state, n, [i]); // 2×2
+      out[i] = 2 * Math.hypot(rho[0][1].re, rho[0][1].im); // l₁ coherence = |ρ01| + |ρ10|
+    }
+    return out;
+  }
   return perQubitPauli(state, n, PAULI_OF[q]);
+}
+
+/** Connected single-Pauli correlator C(i,j) = ⟨P_iP_j⟩ − ⟨P_i⟩⟨P_j⟩ as a
+ *  symmetric matrix (diagonal = local variance 1 − ⟨P_i⟩²). */
+function connectedPauliCorr(state: Float64Array, n: number, p: Pauli): number[][] {
+  const single = perQubitPauli(state, n, p);
+  const conn: number[][] = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = i; j < n; j++) {
+      const arr: Pauli[] = new Array(n).fill("I");
+      arr[i] = p;
+      arr[j] = p; // for i === j this is P², i.e. ⟨I⟩ = 1
+      const pij = i === j ? 1 : paulis(state, n, arr);
+      const c = pij - single[i] * single[j];
+      conn[i][j] = c;
+      conn[j][i] = c;
+    }
+  }
+  return conn;
+}
+
+/** 2-Rényi entanglement entropy −log₂ Tr(ρ_A²) across every contiguous cut. */
+function renyi2Profile(state: Float64Array, n: number, maxSide = 8): number[] | null {
+  if (n < 2) return null;
+  const out = new Array<number>(n - 1).fill(0);
+  for (let k = 0; k < n - 1; k++) {
+    const sizeA = k + 1;
+    const sizeB = n - sizeA;
+    const side =
+      sizeA <= sizeB
+        ? Array.from({ length: sizeA }, (_, q) => q)
+        : Array.from({ length: sizeB }, (_, q) => sizeA + q);
+    if (side.length > maxSide) continue;
+    const p2 = purity(reducedDensityMatrix(state, n, side));
+    out[k] = p2 > 1e-12 ? -Math.log2(p2) : 0;
+  }
+  return out;
 }
 
 /** A scalar quantity of the whole state, or null if out of range / undefined. */
@@ -269,6 +350,32 @@ function scalarValue(state: Float64Array, n: number, q: PlotQuantity): number | 
   if (q === "magic") {
     if (n > MAX_QUBITS_MAGIC) return null;
     return magic(allPauliExpectations(state, n), n).m2;
+  }
+  if (q === "meyerWallach") {
+    if (n > MAX_QUBITS_SCALAR) return null;
+    const pur = perQubitPurity(state, n);
+    let s = 0;
+    for (const p of pur) s += 1 - p;
+    return (2 / n) * s; // Meyer–Wallach Q ∈ [0, 1]
+  }
+  if (q === "participationEntropy") {
+    if (n > MAX_QUBITS_SCALAR) return null;
+    const dim = 1 << n;
+    let s = 0;
+    for (let i = 0; i < dim; i++) {
+      const re = state[2 * i];
+      const im = state[2 * i + 1];
+      const p = re * re + im * im;
+      if (p > 1e-15) s -= p * Math.log2(p);
+    }
+    return s; // Shannon participation entropy in bits
+  }
+  if (q === "l1Coherence") {
+    if (n > MAX_QUBITS_SCALAR) return null;
+    const dim = 1 << n;
+    let sumAbs = 0;
+    for (let i = 0; i < dim; i++) sumAbs += Math.hypot(state[2 * i], state[2 * i + 1]);
+    return Math.max(0, sumAbs * sumAbs - 1); // pure-state l₁ coherence = (Σ|a_i|)² − 1
   }
   // midEntropy
   if (n < 2 || n > MAX_QUBITS_MIDENT) return null;
@@ -355,7 +462,7 @@ export function computePlot(
         values,
         xAxis: "qubit",
         yAxis: symbolFor(spec.quantity),
-        signed: !NONNEGATIVE.has(spec.quantity),
+        signed: SIGNED.has(spec.quantity),
       },
     };
   }
@@ -382,8 +489,9 @@ export function computePlot(
     for (let i = 0; i < dim; i++) {
       const re = state[2 * i];
       const im = state[2 * i + 1];
-      const mag2 = re * re + im * im;
-      values[i] = spec.quantity === "prob" ? mag2 : Math.sqrt(mag2);
+      if (spec.quantity === "prob") values[i] = re * re + im * im;
+      else if (spec.quantity === "amp") values[i] = Math.hypot(re, im);
+      else values[i] = Math.atan2(im, re); // phase ∈ (−π, π]
     }
     const labels = Array.from({ length: dim }, (_, i) => i.toString(2).padStart(n, "0"));
     return {
@@ -392,24 +500,37 @@ export function computePlot(
         xLabels: labels,
         values,
         xAxis: "basis state",
-        yAxis: spec.quantity === "prob" ? "probability" : "|amplitude|",
-        signed: false,
+        yAxis: spec.quantity === "prob" ? "probability" : spec.quantity === "amp" ? "|amplitude|" : "arg(a)",
+        signed: spec.quantity === "phase",
       },
     };
   }
 
-  if (spec.quantity === "entropy") {
+  if (PROFILE.has(spec.quantity)) {
+    if (spec.quantity === "pauliWeight") {
+      if (n > MAX_QUBITS_MAGIC) return { error: `${n} qubits — Pauli-weight capped at ${MAX_QUBITS_MAGIC}` };
+      const wd = magic(allPauliExpectations(state, n), n).weightDist;
+      return {
+        data: {
+          kind: "series1d",
+          xLabels: wd.map((_, w) => String(w)),
+          values: wd,
+          xAxis: "Pauli weight",
+          yAxis: "Σ Ξ_P",
+          signed: false,
+        },
+      };
+    }
     if (n < 2) return { error: "entropy profile needs ≥ 2 qubits" };
-    const prof = entropyProfile(state, n);
-    if (!prof) return { error: `${n} qubits — entropy profile out of range` };
-    const labels = prof.entropy.map((_, k) => `${k}|${k + 1}`);
+    const vals = spec.quantity === "renyi2" ? renyi2Profile(state, n) : entropyProfile(state, n)?.entropy ?? null;
+    if (!vals) return { error: `${n} qubits — entropy profile out of range` };
     return {
       data: {
         kind: "series1d",
-        xLabels: labels,
-        values: prof.entropy.map((v) => (Number.isNaN(v) ? 0 : v)),
+        xLabels: vals.map((_, k) => `${k}|${k + 1}`),
+        values: vals.map((v) => (Number.isFinite(v) ? v : 0)),
         xAxis: "cut",
-        yAxis: "S(ρ) [bits]",
+        yAxis: spec.quantity === "renyi2" ? "S₂ [bits]" : "S(ρ) [bits]",
         signed: false,
       },
     };
@@ -440,6 +561,12 @@ export function computePlot(
       data: { kind: "matrix", rowLabels: labels, colLabels: labels, z: cc.c, xAxis: "qubit j", yAxis: "qubit i", signed: false },
     };
   }
+  if (spec.quantity === "xxCorr" || spec.quantity === "yyCorr") {
+    const conn = connectedPauliCorr(state, n, spec.quantity === "xxCorr" ? "X" : "Y");
+    return {
+      data: { kind: "matrix", rowLabels: labels, colLabels: labels, z: conn, xAxis: "qubit j", yAxis: "qubit i", signed: true },
+    };
+  }
   const zz = zzCorrelations(state, n);
   if (!zz) return { error: "ZZ correlations out of range" };
   return {
@@ -456,7 +583,7 @@ function finishSweep(
   qubitName: (q: number) => string,
 ): PlotResult {
   const sym = symbolFor(spec.quantity);
-  const signed = !NONNEGATIVE.has(spec.quantity);
+  const signed = SIGNED.has(spec.quantity);
   if (spec.chart === "heatmap") {
     // rows = qubits, cols = steps
     const z: number[][] = Array.from({ length: n }, (_, q) => byStep.map((row) => row[q]));
@@ -474,7 +601,12 @@ function symbolFor(q: PlotQuantity): string {
   if (q === "expX") return "⟨X⟩";
   if (q === "expY") return "⟨Y⟩";
   if (q === "qubitEntropy") return "S(ρ_q) [bits]";
+  if (q === "purityQubit") return "Tr(ρ_q²)";
+  if (q === "coherenceQubit") return "C₁(ρ_q)";
   if (q === "midEntropy") return "S(ρ) [bits]";
   if (q === "magic") return "M₂ [bits]";
+  if (q === "meyerWallach") return "Q";
+  if (q === "participationEntropy") return "S_part [bits]";
+  if (q === "l1Coherence") return "C₁";
   return QUANTITY_LABELS[q];
 }
