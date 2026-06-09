@@ -236,8 +236,10 @@ host plus `/api/health`.
     async and route each noisy evaluation through this GPU path (with
     CPU fallback), so the K× Pauli-sum speedup is live there.
   - `plotSpec.ts`: on-demand custom plots from a validated `PlotSpec`
-    (23 `quantity` values across per-qubit / per-basis / 1-D-profile /
-    pairwise-matrix / scalar domains; optional `sweep`; `chart`).
+    (27 `quantity` values across per-qubit / per-basis / 1-D-profile /
+    pairwise-matrix / scalar domains, plus **parameterized** ones that read
+    `spec.args`: `pauli` ⟨P⟩, `energy` ⟨H⟩ Pauli-sum, `schmidt` spectrum at
+    a cut, `otoc` C(t); optional `sweep`; `chart`).
     `computePlot` re-simulates as needed → generic `PlotData`
     (series1d / multiline / matrix). No code execution. Powers
     `CustomPlotPanel`; AI-emittable via a ```plotspec block.
@@ -528,14 +530,17 @@ host plus `/api/health`.
   `quantiom:spotlight-w` (enlarged-panel dock width),
   `quantiom:custom-plots:v1` (saved custom-plot specs).
 - **Custom plots (on-demand visualisation)**: `sim/plotSpec.ts` defines a
-  small validated `PlotSpec` — 23 `quantity` values across five domains:
+  small validated `PlotSpec` — 27 `quantity` values across domains:
   **per qubit** (⟨Z⟩/⟨X⟩/⟨Y⟩, S(ρ_q), purity Tr(ρ_q²), l₁ coherence),
   **per basis** (prob, |amp|, phase), **1-D profile** (entropy / 2-Rényi
   per cut, Pauli-weight distribution), **pairwise matrix** (mutual info,
   ZZ/XX/YY corr, log-negativity, concurrence), **scalar** (mid-cut entropy,
-  magic M₂, Meyer–Wallach Q, participation entropy, l₁ coherence). Optional
+  magic M₂, Meyer–Wallach Q, participation entropy, l₁ coherence), and
+  **parameterized** (read `spec.args`): `pauli` (⟨P⟩ for a Pauli string),
+  `energy` (⟨H⟩ for a Pauli-sum), `schmidt` (entanglement spectrum at a
+  chosen cut), `otoc` (C(t) scrambling — its own t-series). Optional
   `sweep` ∈ none/column/t — sweep only with the per-qubit or scalar
-  quantities; `chart` ∈ bars/line/heatmap. `computePlot(spec, circuit, params, customGates)`
+  quantities (incl. pauli/energy); `chart` ∈ bars/line/heatmap. `computePlot(spec, circuit, params, customGates)`
   re-simulates as needed and returns a generic `PlotData`
   (series1d/multiline/matrix); `validatePlotSpec`/`coercePlotSpec` reject or
   repair impossible combos — **no code execution**, only a constrained spec.
@@ -579,7 +584,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (955 tests): the simulator core is deeply covered —
+- **What's covered** (962 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),

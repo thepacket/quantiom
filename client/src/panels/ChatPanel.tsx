@@ -79,12 +79,18 @@ const SYSTEM_PROMPT =
   "\"prob\"|\"amp\"|\"phase\"; 1-D profile: \"entropy\"|\"renyi2\"|" +
   "\"pauliWeight\"; pairwise matrix: \"mutualInfo\"|\"zzCorr\"|\"xxCorr\"|" +
   "\"yyCorr\"|\"negativity\"|\"concurrence\"; single scalar: \"midEntropy\"|" +
-  "\"magic\"|\"meyerWallach\"|\"participationEntropy\"|\"l1Coherence\". " +
+  "\"magic\"|\"meyerWallach\"|\"participationEntropy\"|\"l1Coherence\"; " +
+  "parameterized (need \"args\"): \"pauli\" (⟨P⟩), \"energy\" (⟨H⟩ Pauli-sum), " +
+  "\"schmidt\" (entanglement spectrum at a cut), \"otoc\" (C(t) scrambling — " +
+  "its own t-series, chart must be line). \"args\": { \"pauli\": e.g. \"ZIZ\" " +
+  "(length n); \"hamiltonian\": e.g. \"ZZ + 0.5 XI\"; \"cut\": integer 1…n−1; " +
+  "\"wPauli\"/\"vPauli\" ∈ X/Y/Z with \"wQubit\"/\"vQubit\" indices (otoc) }. " +
   "\"sweep\": \"none\"|\"column\"|\"t\" (\"column\" = vs circuit depth, \"t\" = " +
   "vs the t clock over 0…2π; a sweep is only valid with the per-qubit or the " +
-  "scalar quantities). \"chart\": \"bars\"|\"line\"|\"heatmap\" (matrix " +
-  "quantities must use heatmap; a swept quantity must use line or heatmap). " +
-  "\"title\": optional string}. Add a one-line explanation before the block. " +
+  "scalar quantities — incl. pauli/energy). \"chart\": \"bars\"|\"line\"|" +
+  "\"heatmap\" (matrix quantities must use heatmap; a swept quantity must use " +
+  "line or heatmap). \"title\": optional string}. Add a one-line explanation " +
+  "before the block. " +
   "For a plot the spec catalog can't express, you may instead emit a fenced " +
   "```plotjs block: the BODY of a function (data) => scene that returns a " +
   "declarative scene {width, height, title?, elements:[…]}. It runs in a " +

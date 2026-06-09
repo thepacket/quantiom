@@ -18,7 +18,7 @@ This page is a tour of every panel.
 ## Custom plots
 
 Build a plot on demand instead of hunting for the right dedicated panel.
-Pick a **quantity** from a catalog of 23, grouped by domain:
+Pick a **quantity** from a catalog of 27, grouped by domain:
 
 - **Per qubit** — ⟨Z⟩/⟨X⟩/⟨Y⟩, single-qubit entanglement entropy S(ρ_q),
   purity Tr(ρ_q²), or l₁ coherence.
@@ -30,6 +30,10 @@ Pick a **quantity** from a catalog of 23, grouped by domain:
 - **Single scalar** — mid-cut entanglement entropy, stabilizer-Rényi magic
   M₂, Meyer–Wallach global entanglement Q, participation entropy, or global
   l₁ coherence.
+- **Parameterized** (take an argument) — a **custom Pauli observable** ⟨P⟩
+  (any Pauli string), the **energy** ⟨H⟩ of a Pauli-sum Hamiltonian you
+  type, the **entanglement spectrum** at a cut you choose, or the **OTOC**
+  C(t) for operators W, V you pick (a scrambling time-series).
 
 Then an optional **sweep** (none, vs circuit *depth*, or vs the *t* clock
 over one period — sweeps apply to the per-qubit and scalar quantities), and

@@ -787,6 +787,11 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .cplot__field span { text-transform: uppercase; letter-spacing: 0.05em; }
 .cplot__field select { font-size: 11px; padding: 2px 4px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; }
 .cplot__field select:disabled { opacity: 0.45; }
+.cplot__arg { font-size: 11px; padding: 2px 4px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; width: 100px; }
+.cplot__arg--num { width: 48px; }
+.cplot__field--wide .cplot__arg { width: 160px; }
+.cplot__arg-row { display: inline-flex; gap: 3px; }
+.cplot__arg-row select { font-size: 11px; padding: 2px 3px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; }
 .cplot__add { font-size: 11px; padding: 3px 8px; background: var(--bg-2); color: var(--accent); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
 .cplot__add:hover { border-color: var(--accent-2); }
 .cplot__list { display: flex; flex-direction: column; gap: 10px; }

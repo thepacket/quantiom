@@ -19,14 +19,16 @@
  */
 
 import { simulate, type ParameterValues } from "./simulate";
-import { paulis, type Pauli } from "./expectation";
-import { mutualInformationMatrix, entropyProfile, vonNeumannEntropy } from "./entanglement";
+import { paulis, pauliSumExpectation, type Pauli } from "./expectation";
+import { mutualInformationMatrix, entropyProfile, vonNeumannEntropy, entanglementSpectrum } from "./entanglement";
 import { reducedDensityMatrix, purity } from "./density";
 import { negativityMatrix } from "./negativity";
 import { concurrenceMatrix } from "./concurrence";
 import { magic } from "./magic";
 import { allPauliExpectations } from "./pauliSpectrum";
 import { zzCorrelations } from "./correlations";
+import { otoc } from "./otoc";
+import { parsePauliSum } from "./trotter";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 
@@ -62,7 +64,27 @@ export type PlotQuantity =
   | "magic" // stabilizer-Rényi magic M₂
   | "meyerWallach" // Meyer–Wallach global entanglement Q
   | "participationEntropy" // Shannon participation entropy of |a|² (localization)
-  | "l1Coherence"; // global l₁-norm coherence
+  | "l1Coherence" // global l₁-norm coherence
+  // parameterized (need `args`)
+  | "pauli" // ⟨P⟩ for a custom Pauli string args.pauli (scalar; sweepable)
+  | "energy" // ⟨H⟩ for a Pauli-sum args.hamiltonian (scalar; sweepable)
+  | "schmidt" // entanglement spectrum at cut args.cut (1-D profile)
+  | "otoc"; // OTOC C(t) for args.{wPauli@wQubit, vPauli@vQubit} (its own t-series)
+
+/** Extra parameters for the parameterized quantities. */
+export type PlotArgs = {
+  /** Pauli string for `pauli`, e.g. "ZIZ" (one char ∈ I/X/Y/Z per qubit). */
+  pauli?: string;
+  /** Pauli-sum Hamiltonian text for `energy`, e.g. "ZZ + 0.5 XI". */
+  hamiltonian?: string;
+  /** Cut position k for `schmidt`: side A = qubits 0…k−1 (1 ≤ k ≤ n−1). */
+  cut?: number;
+  /** OTOC operators: Pauli + qubit for W and V. */
+  wPauli?: Pauli;
+  wQubit?: number;
+  vPauli?: Pauli;
+  vQubit?: number;
+};
 
 /** Optional second dimension. `column` re-runs the circuit truncated after
  *  each column; `t` sweeps the `t` clock over one period [0, 2π). Both only
@@ -75,6 +97,8 @@ export type PlotSpec = {
   quantity: PlotQuantity;
   sweep: PlotSweep;
   chart: PlotChart;
+  /** Parameters for the parameterized quantities (pauli/energy/schmidt/otoc). */
+  args?: PlotArgs;
   /** Optional human title; the renderer falls back to a generated one. */
   title?: string;
 };
@@ -103,6 +127,10 @@ export const PLOT_QUANTITIES: PlotQuantity[] = [
   "meyerWallach",
   "participationEntropy",
   "l1Coherence",
+  "pauli",
+  "energy",
+  "schmidt",
+  "otoc",
 ];
 
 export const QUANTITY_LABELS: Record<PlotQuantity, string> = {
@@ -129,18 +157,26 @@ export const QUANTITY_LABELS: Record<PlotQuantity, string> = {
   meyerWallach: "Meyer–Wallach global entanglement Q",
   participationEntropy: "participation entropy (basis)",
   l1Coherence: "l₁ coherence (global)",
+  pauli: "custom Pauli observable ⟨P⟩",
+  energy: "energy ⟨H⟩ (Pauli sum)",
+  schmidt: "entanglement spectrum at a cut",
+  otoc: "OTOC C(t) (scrambling)",
 };
 
 // Per-qubit quantities form a vector over qubits and accept a sweep.
 const PER_QUBIT = new Set<PlotQuantity>(["expZ", "expX", "expY", "qubitEntropy", "purityQubit", "coherenceQubit"]);
 const PER_BASIS = new Set<PlotQuantity>(["prob", "amp", "phase"]);
-// 1-D profiles over a custom domain (cut / Pauli weight); not sweepable.
-const PROFILE = new Set<PlotQuantity>(["entropy", "renyi2", "pauliWeight"]);
+// 1-D profiles over a custom domain (cut / Pauli weight / Schmidt index); not sweepable.
+const PROFILE = new Set<PlotQuantity>(["entropy", "renyi2", "pauliWeight", "schmidt"]);
 const MATRIX = new Set<PlotQuantity>(["mutualInfo", "zzCorr", "xxCorr", "yyCorr", "negativity", "concurrence"]);
 // Scalar quantities are a single number; with a sweep they trace one line.
-const SCALAR = new Set<PlotQuantity>(["midEntropy", "magic", "meyerWallach", "participationEntropy", "l1Coherence"]);
+const SCALAR = new Set<PlotQuantity>(["midEntropy", "magic", "meyerWallach", "participationEntropy", "l1Coherence", "pauli", "energy"]);
+// `otoc` computes its own t-series (a self-contained line); not a normal sweep.
+const SELF_SERIES = new Set<PlotQuantity>(["otoc"]);
+// Parameterized quantities that read `spec.args`.
+const PARAMETERIZED = new Set<PlotQuantity>(["pauli", "energy", "schmidt", "otoc"]);
 // Signed quantities (diverging colour scale about 0); everything else is ≥ 0.
-const SIGNED = new Set<PlotQuantity>(["expZ", "expX", "expY", "phase", "zzCorr", "xxCorr", "yyCorr"]);
+const SIGNED = new Set<PlotQuantity>(["expZ", "expX", "expY", "phase", "zzCorr", "xxCorr", "yyCorr", "pauli", "energy"]);
 /** Quantities that accept a `column`/`t` sweep. */
 const SWEEPABLE = new Set<PlotQuantity>([...PER_QUBIT, ...SCALAR]);
 
@@ -193,17 +229,34 @@ export function validatePlotSpec(spec: PlotSpec): string | null {
   if (!["none", "column", "t"].includes(spec.sweep)) return `unknown sweep "${spec.sweep}"`;
   if (!["bars", "line", "heatmap"].includes(spec.chart)) return `unknown chart "${spec.chart}"`;
 
-  if (spec.sweep !== "none" && !SWEEPABLE.has(spec.quantity)) {
-    return `a "${spec.sweep}" sweep only works with a per-qubit or scalar quantity`;
+  // `otoc` always draws its own t-series — no normal sweep, line chart only.
+  if (SELF_SERIES.has(spec.quantity)) {
+    if (spec.chart !== "line") return `${QUANTITY_LABELS[spec.quantity]} is a time series — use a line chart`;
+  } else {
+    if (spec.sweep !== "none" && !SWEEPABLE.has(spec.quantity)) {
+      return `a "${spec.sweep}" sweep only works with a per-qubit or scalar quantity`;
+    }
+    if (MATRIX.has(spec.quantity) && spec.chart !== "heatmap") {
+      return `${QUANTITY_LABELS[spec.quantity]} is a matrix — use a heatmap`;
+    }
+    if (spec.sweep !== "none" && spec.chart === "bars") {
+      return `a swept quantity is 2-D — use a line chart or heatmap`;
+    }
+    if (SCALAR.has(spec.quantity) && spec.sweep !== "none" && spec.chart === "heatmap") {
+      return `${QUANTITY_LABELS[spec.quantity]} is a single value — use a line chart`;
+    }
   }
-  if (MATRIX.has(spec.quantity) && spec.chart !== "heatmap") {
-    return `${QUANTITY_LABELS[spec.quantity]} is a matrix — use a heatmap`;
+
+  // Parameterized quantities need plausible `args` (deep checks at compute time).
+  const a = spec.args;
+  if (spec.quantity === "pauli" && !(a?.pauli && /^[IXYZ]+$/i.test(a.pauli.trim()))) {
+    return `set a Pauli string (e.g. "ZIZ")`;
   }
-  if (spec.sweep !== "none" && spec.chart === "bars") {
-    return `a swept quantity is 2-D — use a line chart or heatmap`;
+  if (spec.quantity === "energy" && !(a?.hamiltonian && a.hamiltonian.trim())) {
+    return `set a Pauli-sum Hamiltonian (e.g. "ZZ + 0.5 XI")`;
   }
-  if (SCALAR.has(spec.quantity) && spec.sweep !== "none" && spec.chart === "heatmap") {
-    return `${QUANTITY_LABELS[spec.quantity]} is a single value — use a line chart`;
+  if (spec.quantity === "schmidt" && !(a && Number.isInteger(a.cut) && (a.cut as number) >= 1)) {
+    return `set a cut position k ≥ 1`;
   }
   return null;
 }
@@ -230,12 +283,29 @@ export function coercePlotSpec(raw: unknown): PlotSpec | null {
   if (sweep !== "none" && chart === "bars") chart = "line";
   if (SCALAR.has(q) && sweep !== "none" && chart === "heatmap") chart = "line";
   if (SCALAR.has(q) && sweep === "none") chart = "bars";
+  if (SELF_SERIES.has(q)) chart = "line";
 
+  const args = PARAMETERIZED.has(q) ? coerceArgs(o.args) : undefined;
   const title = typeof o.title === "string" && o.title.trim() ? o.title.trim() : undefined;
-  return { quantity: q, sweep, chart, title };
+  return { quantity: q, sweep, chart, args, title };
+}
+
+function coerceArgs(raw: unknown): PlotArgs {
+  const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const args: PlotArgs = {};
+  if (typeof o.pauli === "string") args.pauli = o.pauli.trim().toUpperCase();
+  if (typeof o.hamiltonian === "string") args.hamiltonian = o.hamiltonian;
+  if (Number.isInteger(o.cut)) args.cut = o.cut as number;
+  const P = (v: unknown): Pauli | undefined => (v === "X" || v === "Y" || v === "Z" || v === "I" ? v : undefined);
+  if (P(o.wPauli)) args.wPauli = P(o.wPauli);
+  if (P(o.vPauli)) args.vPauli = P(o.vPauli);
+  if (Number.isInteger(o.wQubit)) args.wQubit = o.wQubit as number;
+  if (Number.isInteger(o.vQubit)) args.vQubit = o.vQubit as number;
+  return args;
 }
 
 export function defaultChart(q: PlotQuantity, sweep: PlotSweep): PlotChart {
+  if (SELF_SERIES.has(q)) return "line";
   if (MATRIX.has(q)) return "heatmap";
   if (sweep !== "none") return "line";
   return "bars";
@@ -243,6 +313,7 @@ export function defaultChart(q: PlotQuantity, sweep: PlotSweep): PlotChart {
 
 /** Chart types the builder UI should offer for a quantity + sweep. */
 export function chartChoicesFor(q: PlotQuantity, sweep: PlotSweep): PlotChart[] {
+  if (SELF_SERIES.has(q)) return ["line"];
   if (MATRIX.has(q)) return ["heatmap"];
   if (SCALAR.has(q)) return sweep === "none" ? ["bars"] : ["line"];
   if (sweep !== "none") return ["line", "heatmap"];
@@ -254,10 +325,24 @@ export function isSweepable(q: PlotQuantity): boolean {
   return SWEEPABLE.has(q);
 }
 
+/** Whether the quantity reads `spec.args` (drives the builder's arg inputs). */
+export function isParameterized(q: PlotQuantity): boolean {
+  return PARAMETERIZED.has(q);
+}
+
 /** A short generated title for a spec with no explicit one. */
 export function plotTitle(spec: PlotSpec): string {
   if (spec.title) return spec.title;
-  const base = QUANTITY_LABELS[spec.quantity];
+  let base = QUANTITY_LABELS[spec.quantity];
+  const a = spec.args;
+  if (spec.quantity === "pauli" && a?.pauli) base = `⟨${a.pauli}⟩`;
+  else if (spec.quantity === "energy" && a?.hamiltonian) base = `⟨H⟩ = ⟨${a.hamiltonian.trim()}⟩`;
+  else if (spec.quantity === "schmidt" && a?.cut != null) base = `entanglement spectrum at cut ${a.cut}`;
+  else if (spec.quantity === "otoc") {
+    const w = `${a?.wPauli ?? "Z"}${a?.wQubit ?? 0}`;
+    const v = `${a?.vPauli ?? "Z"}${a?.vQubit ?? ""}`;
+    base = `OTOC C(t): W=${w}, V=${v}`;
+  }
   if (spec.sweep === "column") return `${base} vs depth`;
   if (spec.sweep === "t") return `${base} vs t`;
   return base;
@@ -345,8 +430,34 @@ function renyi2Profile(state: Float64Array, n: number, maxSide = 8): number[] | 
   return out;
 }
 
+/** Parse a Pauli string of length n into a Pauli[], or null on mismatch. */
+function parsePauliString(s: string | undefined, n: number): Pauli[] | null {
+  if (!s) return null;
+  const up = s.trim().toUpperCase();
+  if (up.length !== n) return null;
+  const arr: Pauli[] = [];
+  for (const ch of up) {
+    if (ch === "I" || ch === "X" || ch === "Y" || ch === "Z") arr.push(ch);
+    else return null;
+  }
+  return arr;
+}
+
 /** A scalar quantity of the whole state, or null if out of range / undefined. */
-function scalarValue(state: Float64Array, n: number, q: PlotQuantity): number | null {
+function scalarValue(state: Float64Array, n: number, q: PlotQuantity, args?: PlotArgs): number | null {
+  if (q === "pauli") {
+    const arr = parsePauliString(args?.pauli, n);
+    return arr ? paulis(state, n, arr) : null;
+  }
+  if (q === "energy") {
+    try {
+      const terms = parsePauliSum(args?.hamiltonian ?? "");
+      if (terms.length === 0 || terms.some((t) => t.paulis.length !== n)) return null;
+      return pauliSumExpectation(state, n, terms);
+    } catch {
+      return null;
+    }
+  }
   if (q === "magic") {
     if (n > MAX_QUBITS_MAGIC) return null;
     return magic(allPauliExpectations(state, n), n).m2;
@@ -398,6 +509,25 @@ export function computePlot(
   const n = circuit.numQubits;
   if (n < 1) return { error: "the circuit has no qubits" };
 
+  // ── OTOC: computes its own C(t) series over one t period ─────────
+  if (spec.quantity === "otoc") {
+    const a = spec.args ?? {};
+    const wQ = a.wQubit ?? 0;
+    const vQ = a.vQubit ?? n - 1;
+    const res = otoc(circuit, paramValues, customGates, wQ, vQ, a.wPauli ?? "Z", a.vPauli ?? "Z");
+    if (!res) return { error: `OTOC needs 1–6 qubits and valid operator qubits (0…${n - 1})` };
+    return {
+      data: {
+        kind: "multiline",
+        xValues: res.ts,
+        series: [{ label: "C(t)", values: res.C }],
+        xAxis: "t",
+        yAxis: "C(t)",
+        signed: false,
+      },
+    };
+  }
+
   // ── swept (2-D) per-qubit or scalar-over-time quantities ─────────
   if (spec.sweep !== "none") {
     const isScalar = SCALAR.has(spec.quantity);
@@ -426,8 +556,8 @@ export function computePlot(
     }
 
     if (isScalar) {
-      const values = samples.map((s) => scalarValue(s.state, n, spec.quantity));
-      if (values.some((v) => v === null)) return { error: `${QUANTITY_LABELS[spec.quantity]} — out of range for ${n} qubits` };
+      const values = samples.map((s) => scalarValue(s.state, n, spec.quantity, spec.args));
+      if (values.some((v) => v === null)) return { error: `${QUANTITY_LABELS[spec.quantity]} — out of range or bad args for ${n} qubits` };
       return {
         data: {
           kind: "multiline",
@@ -435,7 +565,7 @@ export function computePlot(
           series: [{ label: symbolFor(spec.quantity), values: values as number[] }],
           xAxis,
           yAxis: symbolFor(spec.quantity),
-          signed: false,
+          signed: SIGNED.has(spec.quantity),
         },
       };
     }
@@ -468,8 +598,8 @@ export function computePlot(
   }
 
   if (SCALAR.has(spec.quantity)) {
-    const v = scalarValue(state, n, spec.quantity);
-    if (v === null) return { error: `${QUANTITY_LABELS[spec.quantity]} — out of range for ${n} qubits` };
+    const v = scalarValue(state, n, spec.quantity, spec.args);
+    if (v === null) return { error: `${QUANTITY_LABELS[spec.quantity]} — out of range or bad args for ${n} qubits` };
     return {
       data: {
         kind: "series1d",
@@ -477,7 +607,7 @@ export function computePlot(
         values: [v],
         xAxis: "",
         yAxis: symbolFor(spec.quantity),
-        signed: false,
+        signed: SIGNED.has(spec.quantity),
       },
     };
   }
@@ -517,6 +647,24 @@ export function computePlot(
           values: wd,
           xAxis: "Pauli weight",
           yAxis: "Σ Ξ_P",
+          signed: false,
+        },
+      };
+    }
+    if (spec.quantity === "schmidt") {
+      if (n < 2) return { error: "entanglement spectrum needs ≥ 2 qubits" };
+      const cut = spec.args?.cut ?? Math.floor(n / 2);
+      if (cut < 1 || cut > n - 1) return { error: `cut k must be 1…${n - 1}` };
+      const sub = Array.from({ length: cut }, (_, q) => q); // A = {0…cut−1}
+      const sch = entanglementSpectrum(state, n, sub);
+      if (!sch) return { error: `cut side too large (capped at 6 qubits)` };
+      return {
+        data: {
+          kind: "series1d",
+          xLabels: sch.spectrum.map((_, i) => String(i)),
+          values: sch.spectrum,
+          xAxis: `Schmidt index (cut ${cut}|${cut + 1})`,
+          yAxis: "λ² (eigenvalue)",
           signed: false,
         },
       };
@@ -608,5 +756,7 @@ function symbolFor(q: PlotQuantity): string {
   if (q === "meyerWallach") return "Q";
   if (q === "participationEntropy") return "S_part [bits]";
   if (q === "l1Coherence") return "C₁";
+  if (q === "pauli") return "⟨P⟩";
+  if (q === "energy") return "⟨H⟩";
   return QUANTITY_LABELS[q];
 }

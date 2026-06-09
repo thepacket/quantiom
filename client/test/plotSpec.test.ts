@@ -309,6 +309,66 @@ describe("plotSpec — long list: per-qubit purity/coherence, phase, profiles, c
   });
 });
 
+describe("plotSpec — parameterized quantities (args)", () => {
+  const bell = () => circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+
+  it("custom Pauli ⟨ZZ⟩ = 1 and ⟨ZI⟩ = 0 on a Bell pair", () => {
+    const zz = data(computePlot({ quantity: "pauli", sweep: "none", chart: "bars", args: { pauli: "ZZ" } }, bell(), {}, []));
+    if (zz.kind !== "series1d") throw new Error("shape");
+    expect(zz.values[0]).toBeCloseTo(1, 8);
+    const zi = data(computePlot({ quantity: "pauli", sweep: "none", chart: "bars", args: { pauli: "ZI" } }, bell(), {}, []));
+    if (zi.kind !== "series1d") throw new Error("shape");
+    expect(zi.values[0]).toBeCloseTo(0, 8);
+  });
+
+  it("energy ⟨H⟩ for a Pauli sum: ⟨ZZ + XX⟩ = 2 on a Bell pair", () => {
+    const d = data(computePlot({ quantity: "energy", sweep: "none", chart: "bars", args: { hamiltonian: "ZZ + XX" } }, bell(), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values[0]).toBeCloseTo(2, 8);
+  });
+
+  it("entanglement spectrum at the Bell cut is {0.5, 0.5}", () => {
+    const d = data(computePlot({ quantity: "schmidt", sweep: "none", chart: "bars", args: { cut: 1 } }, bell(), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values.length).toBe(2);
+    expect(d.values[0]).toBeCloseTo(0.5, 8);
+    expect(d.values[1]).toBeCloseTo(0.5, 8);
+  });
+
+  it("OTOC yields a C(t) series over one t period", () => {
+    const c = circ(2, [gate("h", [0]), gate("rx", [1], [], ["t"])]);
+    const d = data(computePlot({ quantity: "otoc", sweep: "none", chart: "line", args: { wPauli: "Z", wQubit: 0, vPauli: "Z", vQubit: 1 } }, c, { t: 0 }, []));
+    if (d.kind !== "multiline") throw new Error("shape");
+    expect(d.series.length).toBe(1);
+    expect(d.series[0].label).toBe("C(t)");
+    expect(d.xValues.length).toBeGreaterThan(8);
+    expect(d.series[0].values.every((v) => Number.isFinite(v))).toBe(true);
+  });
+
+  it("a custom Pauli observable is sweepable over depth", () => {
+    const c = circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+    const d = data(computePlot({ quantity: "pauli", sweep: "column", chart: "line", args: { pauli: "ZZ" } }, c, {}, []));
+    if (d.kind !== "multiline") throw new Error("shape");
+    expect(d.series.length).toBe(1);
+    expect(d.series[0].values[d.series[0].values.length - 1]).toBeCloseTo(1, 8);
+  });
+
+  it("validates missing args and the otoc line-chart rule", () => {
+    expect(validatePlotSpec({ quantity: "pauli", sweep: "none", chart: "bars" })).toMatch(/Pauli string/);
+    expect(validatePlotSpec({ quantity: "energy", sweep: "none", chart: "bars" })).toMatch(/Hamiltonian/);
+    expect(validatePlotSpec({ quantity: "schmidt", sweep: "none", chart: "bars" })).toMatch(/cut/);
+    expect(validatePlotSpec({ quantity: "otoc", sweep: "none", chart: "heatmap", args: {} })).toMatch(/line/);
+  });
+
+  it("coerces and preserves args; otoc forces a line chart", () => {
+    const p = coercePlotSpec({ quantity: "pauli", args: { pauli: "xz" } });
+    expect(p?.args?.pauli).toBe("XZ");
+    const o = coercePlotSpec({ quantity: "otoc", chart: "bars", args: { wQubit: 0, vQubit: 1 } });
+    expect(o?.chart).toBe("line");
+    expect(o?.args?.vQubit).toBe(1);
+  });
+});
+
 describe("plotSpec — error paths", () => {
   it("reports the cap for too many qubits on a basis plot", () => {
     const c = circ(11, []);

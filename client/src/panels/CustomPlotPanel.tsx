@@ -6,9 +6,11 @@ import {
   defaultChart,
   chartChoicesFor,
   isSweepable,
+  isParameterized,
   plotTitle,
   PLOT_QUANTITIES,
   QUANTITY_LABELS,
+  type PlotArgs,
   type PlotChart,
   type PlotData,
   type PlotQuantity,
@@ -119,6 +121,8 @@ function Body({ circuit, customGates, paramValues }: Props) {
   const [quantity, setQuantity] = useState<PlotQuantity>("expZ");
   const [sweep, setSweep] = useState<PlotSweep>("none");
   const [chart, setChart] = useState<PlotChart>("bars");
+  const [args, setArgs] = useState<PlotArgs>({ pauli: "Z", hamiltonian: "ZZ + 0.5 X", cut: 1, wPauli: "Z", wQubit: 0, vPauli: "Z", vQubit: 1 });
+  const setArg = (k: keyof PlotArgs, v: string | number) => setArgs((a) => ({ ...a, [k]: v }));
 
   // Persist.
   useEffect(() => {
@@ -158,7 +162,8 @@ function Body({ circuit, customGates, paramValues }: Props) {
     setChart(defaultChart(quantity, sweep));
   }, [quantity, sweep]);
 
-  const addCurrent = () => setPlots((prev) => [{ kind: "spec", spec: { quantity, sweep, chart } }, ...prev]);
+  const addCurrent = () =>
+    setPlots((prev) => [{ kind: "spec", spec: { quantity, sweep, chart, args: isParameterized(quantity) ? args : undefined } }, ...prev]);
   const addCode = () => setPlots((prev) => [{ kind: "program", code: STARTER_CODE, title: "code plot" }, ...prev]);
   const removeAt = (i: number) => setPlots((prev) => prev.filter((_, k) => k !== i));
   const updateCode = (i: number, code: string) =>
@@ -197,6 +202,46 @@ function Body({ circuit, customGates, paramValues }: Props) {
             ))}
           </select>
         </label>
+        {quantity === "pauli" && (
+          <label className="cplot__field">
+            <span>Pauli string</span>
+            <input className="cplot__arg" value={args.pauli ?? ""} placeholder="ZIZ" onChange={(e) => setArg("pauli", e.target.value)} />
+          </label>
+        )}
+        {quantity === "energy" && (
+          <label className="cplot__field cplot__field--wide">
+            <span>Hamiltonian (Pauli sum)</span>
+            <input className="cplot__arg" value={args.hamiltonian ?? ""} placeholder="ZZ + 0.5 X" onChange={(e) => setArg("hamiltonian", e.target.value)} />
+          </label>
+        )}
+        {quantity === "schmidt" && (
+          <label className="cplot__field">
+            <span>cut k</span>
+            <input className="cplot__arg cplot__arg--num" type="number" min={1} value={args.cut ?? 1} onChange={(e) => setArg("cut", parseInt(e.target.value, 10) || 1)} />
+          </label>
+        )}
+        {quantity === "otoc" && (
+          <>
+            <label className="cplot__field">
+              <span>W</span>
+              <span className="cplot__arg-row">
+                <select value={args.wPauli ?? "Z"} onChange={(e) => setArg("wPauli", e.target.value)}>
+                  {["X", "Y", "Z"].map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <input className="cplot__arg cplot__arg--num" type="number" min={0} value={args.wQubit ?? 0} onChange={(e) => setArg("wQubit", parseInt(e.target.value, 10) || 0)} />
+              </span>
+            </label>
+            <label className="cplot__field">
+              <span>V</span>
+              <span className="cplot__arg-row">
+                <select value={args.vPauli ?? "Z"} onChange={(e) => setArg("vPauli", e.target.value)}>
+                  {["X", "Y", "Z"].map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <input className="cplot__arg cplot__arg--num" type="number" min={0} value={args.vQubit ?? 1} onChange={(e) => setArg("vQubit", parseInt(e.target.value, 10) || 0)} />
+              </span>
+            </label>
+          </>
+        )}
         <button className="cplot__add" onClick={addCurrent} title="Add this plot">
           + plot
         </button>
