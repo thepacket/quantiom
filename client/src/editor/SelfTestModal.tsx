@@ -104,15 +104,17 @@ export function SelfTestModal({ onClose }: { onClose: () => void }) {
               }}>
                 <span style={{ fontSize: 22, color: allPass ? PASS : FAIL }}>{allPass ? "✓" : "✗"}</span>
                 <span style={{ fontSize: 16, fontWeight: 600 }}>
-                  {allPass ? `All ${report.total} checks passed` : `${report.failed} of ${report.total} checks failed`}
+                  {allPass
+                    ? `All ${report.total} checks passed across ${report.groups.length} groups`
+                    : `${report.failed} of ${report.total} checks failed`}
                 </span>
                 <span style={{ marginLeft: "auto", color: "var(--muted)", fontFamily: "ui-monospace, monospace", fontSize: 11 }}>
                   {report.durationMs.toFixed(0)} ms
                 </span>
               </div>
               <p style={{ margin: "-6px 0 14px", color: "var(--muted)", fontSize: 11 }}>
-                {report.total} in-browser checks — a subset of the full {FULL_SUITE_TESTS}-test
-                suite (the remainder run in Node/CI).
+                {report.total} in-browser checks across {report.groups.length} groups — a subset of
+                the full {FULL_SUITE_TESTS}-test suite (the remainder run in Node/CI).
               </p>
 
               {report.groups.map((g) => {
