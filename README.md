@@ -11,7 +11,7 @@
 **A browser-native research-grade quantum circuit editor, simulator,
 workstation, and visualizer.**
 
-![Quantiom — the circuit editor with an analysis panel enlarged in a dock beside the circuit, the gate palette, the right-hand panel column, and the AI assistant](screenshots/quantiom2.png)
+![Quantiom — the circuit editor with an analysis panel enlarged in a dock beside the circuit, the gate palette, the right-hand panel column, and the AI assistant](screenshots/quantiom3.png)
 
 Quantiom is a quantum circuit workstation that runs entirely in your
 browser — no install, no account. It serves a broad audience: researchers
