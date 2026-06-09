@@ -55,10 +55,10 @@ client/src/
                 share links, recorder, docs modal, the main editor shell
   sim/          the simulator core (this is the brain)
   qasm/         OpenQASM 3 parse + emit + eight SDK / LaTeX emitters
-  panels/       ~65 collapsible peer panels (40 visualisers)
+  panels/       ~66 collapsible peer panels (40 visualisers)
   styles.css    all styles in one file
 server/         FastAPI shell — static host + health endpoint
-examples/       88 .qasm files in 10 categories, imported via Vite ?raw
+examples/       93 .qasm files in 10 categories, imported via Vite ?raw
 docs/           markdown bundled into the in-app Help → Tutorial /
                 Help → Panel reference modal
 ```
