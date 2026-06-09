@@ -28,7 +28,12 @@ import { magic } from "./magic";
 import { allPauliExpectations } from "./pauliSpectrum";
 import { zzCorrelations } from "./correlations";
 import { otoc } from "./otoc";
-import { parsePauliSum } from "./trotter";
+import { parsePauliSum, pauliSumQubitCount } from "./trotter";
+import { discreteWigner } from "./wigner";
+import { husimiQ } from "./husimi";
+import { buildUnitary } from "./unitary";
+import { pauliTransferMatrix } from "./ptm";
+import { hamiltonianSpectrum } from "./hamSpectrum";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 
@@ -69,7 +74,14 @@ export type PlotQuantity =
   | "pauli" // ⟨P⟩ for a custom Pauli string args.pauli (scalar; sweepable)
   | "energy" // ⟨H⟩ for a Pauli-sum args.hamiltonian (scalar; sweepable)
   | "schmidt" // entanglement spectrum at cut args.cut (1-D profile)
-  | "otoc"; // OTOC C(t) for args.{wPauli@wQubit, vPauli@vQubit} (its own t-series)
+  | "otoc" // OTOC C(t) for args.{wPauli@wQubit, vPauli@vQubit} (its own t-series)
+  | "energySpectrum" // eigenvalues of a Pauli-sum args.hamiltonian (1-D spectrum)
+  // grids (2-D heatmaps) and scatter
+  | "wigner" // discrete Wigner phase-space grid (signed)
+  | "husimi" // spin Husimi-Q grid (non-negative)
+  | "unitaryMag" // |U_ij| of the circuit unitary (grid)
+  | "ptm" // Pauli transfer matrix R_ij (signed grid)
+  | "ampScatter"; // complex-plane scatter of amplitudes (Re vs Im)
 
 /** Extra parameters for the parameterized quantities. */
 export type PlotArgs = {
@@ -91,7 +103,7 @@ export type PlotArgs = {
  *  combine with per-qubit quantities (expZ/expX/expY). */
 export type PlotSweep = "none" | "column" | "t";
 
-export type PlotChart = "bars" | "line" | "heatmap";
+export type PlotChart = "bars" | "line" | "heatmap" | "scatter";
 
 export type PlotSpec = {
   quantity: PlotQuantity;
@@ -131,6 +143,12 @@ export const PLOT_QUANTITIES: PlotQuantity[] = [
   "energy",
   "schmidt",
   "otoc",
+  "energySpectrum",
+  "wigner",
+  "husimi",
+  "unitaryMag",
+  "ptm",
+  "ampScatter",
 ];
 
 export const QUANTITY_LABELS: Record<PlotQuantity, string> = {
@@ -161,6 +179,12 @@ export const QUANTITY_LABELS: Record<PlotQuantity, string> = {
   energy: "energy ⟨H⟩ (Pauli sum)",
   schmidt: "entanglement spectrum at a cut",
   otoc: "OTOC C(t) (scrambling)",
+  energySpectrum: "energy spectrum of a Pauli sum",
+  wigner: "discrete Wigner function (grid)",
+  husimi: "Husimi Q phase space (grid)",
+  unitaryMag: "circuit unitary |U_ij| (grid)",
+  ptm: "Pauli transfer matrix (grid)",
+  ampScatter: "amplitudes on the complex plane",
 };
 
 // Per-qubit quantities form a vector over qubits and accept a sweep.
@@ -173,10 +197,14 @@ const MATRIX = new Set<PlotQuantity>(["mutualInfo", "zzCorr", "xxCorr", "yyCorr"
 const SCALAR = new Set<PlotQuantity>(["midEntropy", "magic", "meyerWallach", "participationEntropy", "l1Coherence", "pauli", "energy"]);
 // `otoc` computes its own t-series (a self-contained line); not a normal sweep.
 const SELF_SERIES = new Set<PlotQuantity>(["otoc"]);
+// 2-D grids that render as a heatmap (like MATRIX, but not pairwise-qubit).
+const GRID = new Set<PlotQuantity>(["wigner", "husimi", "unitaryMag", "ptm"]);
+// Quantities that render as an (x, y) scatter.
+const SCATTER = new Set<PlotQuantity>(["ampScatter"]);
 // Parameterized quantities that read `spec.args`.
-const PARAMETERIZED = new Set<PlotQuantity>(["pauli", "energy", "schmidt", "otoc"]);
+const PARAMETERIZED = new Set<PlotQuantity>(["pauli", "energy", "schmidt", "otoc", "energySpectrum"]);
 // Signed quantities (diverging colour scale about 0); everything else is ≥ 0.
-const SIGNED = new Set<PlotQuantity>(["expZ", "expX", "expY", "phase", "zzCorr", "xxCorr", "yyCorr", "pauli", "energy"]);
+const SIGNED = new Set<PlotQuantity>(["expZ", "expX", "expY", "phase", "zzCorr", "xxCorr", "yyCorr", "pauli", "energy", "wigner", "ptm", "energySpectrum"]);
 /** Quantities that accept a `column`/`t` sweep. */
 const SWEEPABLE = new Set<PlotQuantity>([...PER_QUBIT, ...SCALAR]);
 
@@ -216,6 +244,12 @@ export type PlotData =
       xAxis: string;
       yAxis: string;
       signed: boolean;
+    }
+  | {
+      kind: "scatter";
+      points: { x: number; y: number; label?: string }[];
+      xAxis: string;
+      yAxis: string;
     };
 
 export type PlotResult = { data: PlotData } | { error: string };
@@ -227,11 +261,15 @@ export type PlotResult = { data: PlotData } | { error: string };
 export function validatePlotSpec(spec: PlotSpec): string | null {
   if (!PLOT_QUANTITIES.includes(spec.quantity)) return `unknown quantity "${spec.quantity}"`;
   if (!["none", "column", "t"].includes(spec.sweep)) return `unknown sweep "${spec.sweep}"`;
-  if (!["bars", "line", "heatmap"].includes(spec.chart)) return `unknown chart "${spec.chart}"`;
+  if (!["bars", "line", "heatmap", "scatter"].includes(spec.chart)) return `unknown chart "${spec.chart}"`;
 
   // `otoc` always draws its own t-series — no normal sweep, line chart only.
   if (SELF_SERIES.has(spec.quantity)) {
     if (spec.chart !== "line") return `${QUANTITY_LABELS[spec.quantity]} is a time series — use a line chart`;
+  } else if (GRID.has(spec.quantity)) {
+    if (spec.chart !== "heatmap") return `${QUANTITY_LABELS[spec.quantity]} is a grid — use a heatmap`;
+  } else if (SCATTER.has(spec.quantity)) {
+    if (spec.chart !== "scatter") return `${QUANTITY_LABELS[spec.quantity]} is a scatter plot`;
   } else {
     if (spec.sweep !== "none" && !SWEEPABLE.has(spec.quantity)) {
       return `a "${spec.sweep}" sweep only works with a per-qubit or scalar quantity`;
@@ -258,6 +296,9 @@ export function validatePlotSpec(spec: PlotSpec): string | null {
   if (spec.quantity === "schmidt" && !(a && Number.isInteger(a.cut) && (a.cut as number) >= 1)) {
     return `set a cut position k ≥ 1`;
   }
+  if (spec.quantity === "energySpectrum" && !(a?.hamiltonian && a.hamiltonian.trim())) {
+    return `set a Pauli-sum Hamiltonian (e.g. "ZZ + 0.5 XI")`;
+  }
   return null;
 }
 
@@ -276,7 +317,7 @@ export function coercePlotSpec(raw: unknown): PlotSpec | null {
   if (sweep !== "none" && !SWEEPABLE.has(q)) sweep = "none";
 
   let chart: PlotChart;
-  if (o.chart === "bars" || o.chart === "line" || o.chart === "heatmap") chart = o.chart;
+  if (o.chart === "bars" || o.chart === "line" || o.chart === "heatmap" || o.chart === "scatter") chart = o.chart;
   else chart = defaultChart(q, sweep);
   // Repair impossible combinations rather than rejecting.
   if (MATRIX.has(q)) chart = "heatmap";
@@ -284,6 +325,8 @@ export function coercePlotSpec(raw: unknown): PlotSpec | null {
   if (SCALAR.has(q) && sweep !== "none" && chart === "heatmap") chart = "line";
   if (SCALAR.has(q) && sweep === "none") chart = "bars";
   if (SELF_SERIES.has(q)) chart = "line";
+  if (GRID.has(q)) chart = "heatmap";
+  if (SCATTER.has(q)) chart = "scatter";
 
   const args = PARAMETERIZED.has(q) ? coerceArgs(o.args) : undefined;
   const title = typeof o.title === "string" && o.title.trim() ? o.title.trim() : undefined;
@@ -306,7 +349,8 @@ function coerceArgs(raw: unknown): PlotArgs {
 
 export function defaultChart(q: PlotQuantity, sweep: PlotSweep): PlotChart {
   if (SELF_SERIES.has(q)) return "line";
-  if (MATRIX.has(q)) return "heatmap";
+  if (GRID.has(q) || MATRIX.has(q)) return "heatmap";
+  if (SCATTER.has(q)) return "scatter";
   if (sweep !== "none") return "line";
   return "bars";
 }
@@ -314,7 +358,8 @@ export function defaultChart(q: PlotQuantity, sweep: PlotSweep): PlotChart {
 /** Chart types the builder UI should offer for a quantity + sweep. */
 export function chartChoicesFor(q: PlotQuantity, sweep: PlotSweep): PlotChart[] {
   if (SELF_SERIES.has(q)) return ["line"];
-  if (MATRIX.has(q)) return ["heatmap"];
+  if (GRID.has(q) || MATRIX.has(q)) return ["heatmap"];
+  if (SCATTER.has(q)) return ["scatter"];
   if (SCALAR.has(q)) return sweep === "none" ? ["bars"] : ["line"];
   if (sweep !== "none") return ["line", "heatmap"];
   return ["bars", "line"];
@@ -342,6 +387,8 @@ export function plotTitle(spec: PlotSpec): string {
     const w = `${a?.wPauli ?? "Z"}${a?.wQubit ?? 0}`;
     const v = `${a?.vPauli ?? "Z"}${a?.vQubit ?? ""}`;
     base = `OTOC C(t): W=${w}, V=${v}`;
+  } else if (spec.quantity === "energySpectrum" && a?.hamiltonian) {
+    base = `spectrum of ⟨${a.hamiltonian.trim()}⟩`;
   }
   if (spec.sweep === "column") return `${base} vs depth`;
   if (spec.sweep === "t") return `${base} vs t`;
@@ -528,6 +575,29 @@ export function computePlot(
     };
   }
 
+  // ── energy spectrum: eigenvalues of a Pauli-sum Hamiltonian ──────
+  if (spec.quantity === "energySpectrum") {
+    let terms;
+    try {
+      terms = parsePauliSum(spec.args?.hamiltonian ?? "");
+    } catch {
+      return { error: "could not parse the Hamiltonian" };
+    }
+    const hn = pauliSumQubitCount(terms);
+    const res = hamiltonianSpectrum(terms, hn);
+    if (!res) return { error: `energy spectrum needs a 1–6 qubit Hamiltonian (got ${hn})` };
+    return {
+      data: {
+        kind: "series1d",
+        xLabels: res.energies.map((_, i) => String(i)),
+        values: res.energies,
+        xAxis: "level",
+        yAxis: "E",
+        signed: true,
+      },
+    };
+  }
+
   // ── swept (2-D) per-qubit or scalar-over-time quantities ─────────
   if (spec.sweep !== "none") {
     const isScalar = SCALAR.has(spec.quantity);
@@ -682,6 +752,54 @@ export function computePlot(
         signed: false,
       },
     };
+  }
+
+  // grids (render as a heatmap)
+  if (GRID.has(spec.quantity)) {
+    if (spec.quantity === "wigner") {
+      const w = discreteWigner(state, n);
+      if (!w) return { error: `Wigner function needs 1–4 qubits` };
+      const lab = w.W.map((_, i) => String(i));
+      return { data: { kind: "matrix", rowLabels: lab, colLabels: lab, z: w.W, xAxis: "q", yAxis: "p", signed: true } };
+    }
+    if (spec.quantity === "husimi") {
+      const h = husimiQ(state, n);
+      if (!h) return { error: `Husimi-Q needs 1–7 qubits` };
+      return {
+        data: {
+          kind: "matrix",
+          rowLabels: h.Q.map((_, i) => String(i)),
+          colLabels: h.Q[0].map((_, i) => String(i)),
+          z: h.Q,
+          xAxis: "φ",
+          yAxis: "θ",
+          signed: false,
+        },
+      };
+    }
+    if (spec.quantity === "unitaryMag") {
+      const u = buildUnitary(circuit, paramValues, customGates);
+      if (!u) return { error: `unitary grid needs 1–6 qubits` };
+      const d = u.dim;
+      const z: number[][] = Array.from({ length: d }, (_, i) => Array.from({ length: d }, (_, j) => u.mag[i * d + j]));
+      const lab = Array.from({ length: d }, (_, i) => i.toString(2).padStart(n, "0"));
+      return { data: { kind: "matrix", rowLabels: lab, colLabels: lab, z, xAxis: "input |j⟩", yAxis: "output ⟨i|", signed: false } };
+    }
+    // ptm
+    const p = pauliTransferMatrix(circuit, paramValues, customGates);
+    if (!p) return { error: `Pauli transfer matrix needs 1–3 qubits` };
+    return { data: { kind: "matrix", rowLabels: p.labels, colLabels: p.labels, z: p.R, xAxis: "P_in", yAxis: "P_out", signed: true } };
+  }
+
+  // scatter
+  if (spec.quantity === "ampScatter") {
+    if (n > MAX_QUBITS_BASIS) return { error: `${n} qubits — scatter capped at ${MAX_QUBITS_BASIS}` };
+    const dim = 1 << n;
+    const points = [];
+    for (let i = 0; i < dim; i++) {
+      points.push({ x: state[2 * i], y: state[2 * i + 1], label: i.toString(2).padStart(n, "0") });
+    }
+    return { data: { kind: "scatter", points, xAxis: "Re(a)", yAxis: "Im(a)" } };
   }
 
   // matrix quantities

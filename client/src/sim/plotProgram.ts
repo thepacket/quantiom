@@ -24,6 +24,7 @@
 
 import { simulate, type ParameterValues } from "./simulate";
 import { sampleMeasurementShots } from "./measurementShots";
+import { reducedDensityMatrix } from "./density";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 
@@ -53,6 +54,11 @@ export type PlotProgramInput = {
   counts: Record<string, number> | null;
   /** Number of shots sampled for `counts` (0 when there are no measurements). */
   shots: number;
+  /** Per-qubit reduced density matrices ρ_q (2×2), one per qubit. Each is
+   *  row-major: `re`/`im` are length-4 [ρ00, ρ01, ρ10, ρ11]. The diagonal
+   *  gives P(0)/P(1); from these you can read ⟨Z⟩=ρ00−ρ11, ⟨X⟩=2·Re ρ01,
+   *  ⟨Y⟩=2·Im ρ10, and the purity Tr(ρ_q²). */
+  rho1: { re: number[]; im: number[] }[];
   /** Suggested drawing-canvas size, in the scene's own coordinate units. */
   width: number;
   height: number;
@@ -125,6 +131,15 @@ export function buildPlotProgramInput(
     shots = PROGRAM_SHOTS;
   }
 
+  // Per-qubit reduced density matrices ρ_q (2×2, row-major).
+  const rho1 = Array.from({ length: n }, (_, q) => {
+    const rho = reducedDensityMatrix(res.state, n, [q]);
+    return {
+      re: [rho[0][0].re, rho[0][1].re, rho[1][0].re, rho[1][1].re],
+      im: [rho[0][0].im, rho[0][1].im, rho[1][0].im, rho[1][1].im],
+    };
+  });
+
   return {
     n,
     dim,
@@ -136,6 +151,7 @@ export function buildPlotProgramInput(
     clbits,
     counts,
     shots,
+    rho1,
     width: DEFAULT_W,
     height: DEFAULT_H,
     palette: { accent: "#7aa2ff", accent2: "#4f9eff", warm: "#ff9a5a", muted: "#8b95a6", border: "#262c36" },

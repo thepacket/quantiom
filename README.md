@@ -150,7 +150,7 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**962 tests (~96% statement coverage)** that run in continuous integration
+**970 tests (~96% statement coverage)** that run in continuous integration
 on **every push** (`.github/workflows/ci.yml`). They verify the statevector
 simulator (incl. the `initialize()` gate and X/Y-basis measurement), every
 gate's matrix unitarity and algebra, the Clifford tableau (with the
@@ -167,7 +167,7 @@ tree — each checked against analytic ground truth.
 You don't have to take that on faith: the toolbar **Self-test** button
 re-runs a **380-check** cross-section of the same engine **live in your
 browser** in ~10 ms and shows the pass/fail report — itself a subset of
-the full **962-test** suite that runs in CI on every commit. See
+the full **970-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 
@@ -696,10 +696,11 @@ is still 100% client-side.
   token (and on partial `$$…$$`) would lock the main thread.
 - **Model picker.** Live-fetches the full OpenRouter catalog with
   search; click any model to switch. Choice persists per browser.
-- **Prompt library.** A searchable **prompts** picker with ~130
-  ready-made prompts across 11 categories (Analyze, Plot on demand, Create,
-  Optimize, Transform, Explain & derive, Debug & verify, Export & hardware,
-  Noise & error, Benchmark & characterize, Visualize & interpret). The
+- **Prompt library.** A searchable **prompts** picker with ~145
+  ready-made prompts across 12 categories (Analyze, Plot on demand, Custom
+  visuals (code), Create, Optimize, Transform, Explain & derive, Debug &
+  verify, Export & hardware, Noise & error, Benchmark & characterize,
+  Visualize & interpret). The
   **Plot on demand** prompts ask the AI for a chart and it replies with a
   one-click `plotspec` block for the Custom plots panel. Selecting
   one drops it into the box for editing (it doesn't auto-send);

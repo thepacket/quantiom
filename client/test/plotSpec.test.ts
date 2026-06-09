@@ -369,6 +369,64 @@ describe("plotSpec — parameterized quantities (args)", () => {
   });
 });
 
+describe("plotSpec — grids, scatter, and energy spectrum", () => {
+  const bell = () => circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+
+  it("energy spectrum of H = Z is {−1, +1}", () => {
+    const d = data(computePlot({ quantity: "energySpectrum", sweep: "none", chart: "bars", args: { hamiltonian: "Z" } }, circ(1, []), {}, []));
+    if (d.kind !== "series1d") throw new Error("shape");
+    expect(d.values.length).toBe(2);
+    expect(Math.min(...d.values)).toBeCloseTo(-1, 8);
+    expect(Math.max(...d.values)).toBeCloseTo(1, 8);
+  });
+
+  it("unitary magnitude grid of H is all 1/√2", () => {
+    const d = data(computePlot({ quantity: "unitaryMag", sweep: "none", chart: "heatmap" }, circ(1, [gate("h", [0])]), {}, []));
+    if (d.kind !== "matrix") throw new Error("shape");
+    expect(d.z[0][0]).toBeCloseTo(Math.SQRT1_2, 8);
+    expect(d.z[1][0]).toBeCloseTo(Math.SQRT1_2, 8);
+  });
+
+  it("Wigner is a signed 2ⁿ×2ⁿ grid; Husimi is a non-negative grid", () => {
+    const w = data(computePlot({ quantity: "wigner", sweep: "none", chart: "heatmap" }, circ(2, [gate("h", [0])]), {}, []));
+    if (w.kind !== "matrix") throw new Error("shape");
+    expect(w.z.length).toBe(4);
+    expect(w.signed).toBe(true);
+    const h = data(computePlot({ quantity: "husimi", sweep: "none", chart: "heatmap" }, circ(1, [gate("h", [0])]), {}, []));
+    if (h.kind !== "matrix") throw new Error("shape");
+    expect(h.signed).toBe(false);
+    expect(h.z.flat().every((v) => v >= -1e-9)).toBe(true);
+  });
+
+  it("PTM of the identity is the 4ⁿ identity", () => {
+    const d = data(computePlot({ quantity: "ptm", sweep: "none", chart: "heatmap" }, circ(1, []), {}, []));
+    if (d.kind !== "matrix") throw new Error("shape");
+    expect(d.z[0][0]).toBeCloseTo(1, 8);
+    expect(d.z[1][1]).toBeCloseTo(1, 8);
+    expect(d.z[0][1]).toBeCloseTo(0, 8);
+  });
+
+  it("amplitude scatter places Bell amplitudes on the real axis", () => {
+    const d = data(computePlot({ quantity: "ampScatter", sweep: "none", chart: "scatter" }, bell(), {}, []));
+    if (d.kind !== "scatter") throw new Error("shape");
+    expect(d.points.length).toBe(4);
+    expect(d.points[0].x).toBeCloseTo(Math.SQRT1_2, 8);
+    expect(d.points[0].y).toBeCloseTo(0, 8);
+    expect(d.points[3].x).toBeCloseTo(Math.SQRT1_2, 8);
+  });
+
+  it("validates grid/scatter chart rules and energySpectrum args", () => {
+    expect(validatePlotSpec({ quantity: "wigner", sweep: "none", chart: "bars" })).toMatch(/grid/);
+    expect(validatePlotSpec({ quantity: "ampScatter", sweep: "none", chart: "heatmap" })).toMatch(/scatter/);
+    expect(validatePlotSpec({ quantity: "energySpectrum", sweep: "none", chart: "bars" })).toMatch(/Hamiltonian/);
+  });
+
+  it("coerces grid→heatmap and scatter→scatter charts", () => {
+    expect(coercePlotSpec({ quantity: "wigner", chart: "bars" })?.chart).toBe("heatmap");
+    expect(coercePlotSpec({ quantity: "ampScatter", chart: "line" })?.chart).toBe("scatter");
+  });
+});
+
 describe("plotSpec — error paths", () => {
   it("reports the cap for too many qubits on a basis plot", () => {
     const c = circ(11, []);

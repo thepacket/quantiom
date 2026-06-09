@@ -104,7 +104,7 @@ export function CustomPlotPanel(props: Props) {
 }
 
 const STARTER_CODE = `// data = { n, dim, ampRe[], ampIm[], prob[], numColumns,
-//   numClbits, clbits, counts, shots, width, height, palette }
+//   numClbits, clbits, counts, shots, rho1, width, height, palette }
 // return { width, height, title?, elements:[...] }
 const W = data.width, H = data.height, bw = W / data.dim;
 const els = data.prob.map((p, i) => ({
@@ -208,7 +208,7 @@ function Body({ circuit, customGates, paramValues }: Props) {
             <input className="cplot__arg" value={args.pauli ?? ""} placeholder="ZIZ" onChange={(e) => setArg("pauli", e.target.value)} />
           </label>
         )}
-        {quantity === "energy" && (
+        {(quantity === "energy" || quantity === "energySpectrum") && (
           <label className="cplot__field cplot__field--wide">
             <span>Hamiltonian (Pauli sum)</span>
             <input className="cplot__arg" value={args.hamiltonian ?? ""} placeholder="ZZ + 0.5 X" onChange={(e) => setArg("hamiltonian", e.target.value)} />
@@ -433,6 +433,7 @@ function PlotCard({
 function PlotRender({ data, chart }: { data: PlotData; chart: PlotChart }) {
   if (data.kind === "matrix") return <HeatmapPlot data={data} />;
   if (data.kind === "multiline") return <MultilinePlot data={data} />;
+  if (data.kind === "scatter") return <ScatterPlot data={data} />;
   return chart === "line" ? <Line1DPlot data={data} /> : <Bars1DPlot data={data} />;
 }
 
@@ -577,6 +578,35 @@ function Axes({ lo, hi, xAxis, yAxis }: { lo: number; hi: number; xAxis: string;
       <text x={(PLOT_W + PAD_L) / 2} y={PLOT_H - 0.5} textAnchor="middle" className="cplot__axis">{xAxis}</text>
       <text x={9} y={PAD_T + plotH / 2} textAnchor="middle" className="cplot__axis" transform={`rotate(-90 9 ${PAD_T + plotH / 2})`}>{yAxis}</text>
     </g>
+  );
+}
+
+function ScatterPlot({ data }: { data: Extract<PlotData, { kind: "scatter" }> }) {
+  const xs = data.points.map((p) => p.x);
+  const ys = data.points.map((p) => p.y);
+  // Symmetric square range about 0 so the complex plane isn't distorted.
+  let m = 1e-9;
+  for (const v of [...xs, ...ys]) if (Number.isFinite(v) && Math.abs(v) > m) m = Math.abs(v);
+  const plotW = PLOT_W - PAD_L - PAD_R;
+  const plotH = PLOT_H - PAD_T - PAD_B;
+  const xOf = (x: number) => PAD_L + plotW * (0.5 + 0.5 * (x / m));
+  const yOf = (y: number) => PAD_T + plotH * (0.5 - 0.5 * (y / m));
+  return (
+    <svg viewBox={`0 0 ${PLOT_W} ${PLOT_H}`} className="cplot__svg plot-fill" role="img">
+      {/* axes through the origin */}
+      <line x1={PAD_L} y1={yOf(0)} x2={PLOT_W - PAD_R} y2={yOf(0)} stroke="var(--border)" strokeWidth={0.6} />
+      <line x1={xOf(0)} y1={PAD_T} x2={xOf(0)} y2={PAD_T + plotH} stroke="var(--border)" strokeWidth={0.6} />
+      {data.points.map((p, i) =>
+        Math.hypot(p.x, p.y) < 1e-9 ? null : (
+          <circle key={i} cx={xOf(p.x)} cy={yOf(p.y)} r={2.2} fill="var(--accent)" fillOpacity={0.8}>
+            <title>|{p.label}⟩: {p.x.toFixed(3)} {p.y >= 0 ? "+" : "−"} {Math.abs(p.y).toFixed(3)}i</title>
+          </circle>
+        ),
+      )}
+      <text x={PLOT_W - PAD_R} y={yOf(0) - 2} textAnchor="end" className="cplot__axis">{data.xAxis}</text>
+      <text x={xOf(0) + 3} y={PAD_T + 6} className="cplot__axis">{data.yAxis}</text>
+      <text x={PAD_L - 3} y={PAD_T + 6} textAnchor="end" className="cplot__tick">{m.toFixed(2)}</text>
+    </svg>
   );
 }
 

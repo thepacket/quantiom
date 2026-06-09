@@ -20,6 +20,18 @@ describe("plotProgram — buildPlotProgramInput", () => {
     expect(inp.shots).toBe(0);
   });
 
+  it("exposes per-qubit reduced density matrices (rho1)", () => {
+    // |0⟩ ⊗ |0⟩ → each ρ_q = diag(1, 0).
+    const z = input(circ(2, []));
+    expect(z.rho1.length).toBe(2);
+    expect(z.rho1[0].re).toEqual([1, 0, 0, 0]);
+    // Bell pair → each qubit maximally mixed: ρ_q = diag(½, ½).
+    const b = input(circ(2, [gate("h", [0]), gate("cx", [1], [0])]));
+    expect(b.rho1[0].re[0]).toBeCloseTo(0.5, 8);
+    expect(b.rho1[0].re[3]).toBeCloseTo(0.5, 8);
+    expect(b.rho1[0].re[1]).toBeCloseTo(0, 8); // no coherence
+  });
+
   it("exposes clbits + a shot histogram when the circuit measures", () => {
     // H on q0, then measure q0 -> c0. (circ assigns one column per gate.)
     const c = circ(1, [gate("h", [0]), { ...gate("measure", [0]), clbits: [0] }], 1);

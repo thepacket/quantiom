@@ -236,6 +236,39 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
     ],
   },
   {
+    name: "Custom visuals (code)",
+    prompts: [
+      {
+        title: "Amplitudes on the complex plane",
+        text: "Draw a scatter plot of the output amplitudes on the complex plane (Re on x, Im on y), one point per basis state, sized by probability.",
+      },
+      {
+        title: "Polar probability wheel",
+        text: "Draw a radial/polar plot of the computational-basis probabilities arranged around a circle, each wedge length proportional to its probability.",
+      },
+      {
+        title: "Amplitude grid coloured by phase",
+        text: "Lay the 2ⁿ amplitudes out on a 2-D grid, each cell coloured by phase (hue) and sized/opacity by |amplitude|.",
+      },
+      {
+        title: "Per-qubit Bloch discs",
+        text: "Using data.rho1, draw a row of small Bloch discs — one per qubit — showing each qubit's (⟨X⟩, ⟨Z⟩) point inside a unit circle, with radius shrinking as the qubit gets mixed.",
+      },
+      {
+        title: "Mutual-information chord diagram",
+        text: "Draw a chord/arc diagram: place the qubits on a circle and connect each pair with a line whose thickness encodes their mutual information (compute it from the amplitudes).",
+      },
+      {
+        title: "Phase histogram (12 sectors)",
+        text: "Draw a histogram of the amplitude phases binned into 12 sectors (−π…π), each bar weighted by the total probability in that phase bin.",
+      },
+      {
+        title: "Describe your own visual",
+        text: "Create a custom plot that [describe the visual you want] from this circuit's state. Use a sandboxed plotjs program returning a declarative scene.",
+      },
+    ],
+  },
+  {
     name: "Create",
     prompts: [
       {

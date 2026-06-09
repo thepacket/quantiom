@@ -236,20 +236,22 @@ host plus `/api/health`.
     async and route each noisy evaluation through this GPU path (with
     CPU fallback), so the K× Pauli-sum speedup is live there.
   - `plotSpec.ts`: on-demand custom plots from a validated `PlotSpec`
-    (27 `quantity` values across per-qubit / per-basis / 1-D-profile /
-    pairwise-matrix / scalar domains, plus **parameterized** ones that read
+    (33 `quantity` values across per-qubit / per-basis / 1-D-profile /
+    pairwise-matrix / scalar domains; **parameterized** ones that read
     `spec.args`: `pauli` ⟨P⟩, `energy` ⟨H⟩ Pauli-sum, `schmidt` spectrum at
-    a cut, `otoc` C(t); optional `sweep`; `chart`).
-    `computePlot` re-simulates as needed → generic `PlotData`
-    (series1d / multiline / matrix). No code execution. Powers
-    `CustomPlotPanel`; AI-emittable via a ```plotspec block.
+    a cut, `otoc` C(t), `energySpectrum`; and **grids/scatter**: `wigner`,
+    `husimi`, `unitaryMag`, `ptm` (heatmaps) + `ampScatter` (complex plane).
+    Optional `sweep`; `chart`). `computePlot` re-simulates as needed →
+    generic `PlotData` (series1d / multiline / matrix / **scatter**). No code
+    execution. Powers `CustomPlotPanel`; AI-emittable via a ```plotspec block.
   - `plotProgram.ts`: the sandboxed escape hatch. `runPlotProgram` runs
     AI/user code `(data) => scene` in a **Web Worker** (network/storage
     globals neutered, 2.5 s timeout → terminate); `sanitizePlotScene`
     validates the returned declarative scene before it's drawn.
     `buildPlotProgramInput` hands the program { n, dim, ampRe, ampIm,
-    prob, numColumns, numClbits, clbits, counts, shots, width, height,
-    palette }. AI-emittable via a ```plotjs block.
+    prob, numColumns, numClbits, clbits, counts, shots, rho1 (per-qubit
+    2×2 reduced density matrices), width, height, palette }. AI-emittable
+    via a ```plotjs block.
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
     anti-controls and `if (c[k] == v) …` wrappers for conditional
@@ -435,12 +437,13 @@ host plus `/api/health`.
   & derive / Debug & verify / Export & hardware) whose entries insert a
   ready-made prompt into the input for editing (append, not auto-send;
   bracketed `[values]` are placeholders; shown in BOTH chat and dialogue
-  modes — in dialogue it seeds the topic). 11 categories / ~130 prompts
-  (Analyze / Plot on demand / Create / Optimize / Transform / Explain &
-  derive / Debug & verify / Export & hardware / Noise & error / Benchmark &
-  characterize / Visualize & interpret — the **Plot on demand** category
-  emits ```plotspec blocks for the Custom plots panel). The circuit QASM is
-  auto-attached to every
+  modes — in dialogue it seeds the topic). 12 categories / ~145 prompts
+  (Analyze / Plot on demand / Custom visuals (code) / Create / Optimize /
+  Transform / Explain & derive / Debug & verify / Export & hardware / Noise &
+  error / Benchmark & characterize / Visualize & interpret — the **Plot on
+  demand** category emits ```plotspec blocks and **Custom visuals (code)**
+  emits ```plotjs sandboxed programs for the Custom plots panel). The circuit
+  QASM is auto-attached to every
   message, so prompts can say "this circuit"; the benchmark/visualize
   prompts are written to *interpret* Quantiom-computed results.
   **Streaming is freeze-safe**: the in-progress bubble renders plain text
@@ -530,19 +533,21 @@ host plus `/api/health`.
   `quantiom:spotlight-w` (enlarged-panel dock width),
   `quantiom:custom-plots:v1` (saved custom-plot specs).
 - **Custom plots (on-demand visualisation)**: `sim/plotSpec.ts` defines a
-  small validated `PlotSpec` — 27 `quantity` values across domains:
+  small validated `PlotSpec` — 33 `quantity` values across domains:
   **per qubit** (⟨Z⟩/⟨X⟩/⟨Y⟩, S(ρ_q), purity Tr(ρ_q²), l₁ coherence),
   **per basis** (prob, |amp|, phase), **1-D profile** (entropy / 2-Rényi
   per cut, Pauli-weight distribution), **pairwise matrix** (mutual info,
   ZZ/XX/YY corr, log-negativity, concurrence), **scalar** (mid-cut entropy,
-  magic M₂, Meyer–Wallach Q, participation entropy, l₁ coherence), and
+  magic M₂, Meyer–Wallach Q, participation entropy, l₁ coherence),
   **parameterized** (read `spec.args`): `pauli` (⟨P⟩ for a Pauli string),
   `energy` (⟨H⟩ for a Pauli-sum), `schmidt` (entanglement spectrum at a
-  chosen cut), `otoc` (C(t) scrambling — its own t-series). Optional
-  `sweep` ∈ none/column/t — sweep only with the per-qubit or scalar
-  quantities (incl. pauli/energy); `chart` ∈ bars/line/heatmap. `computePlot(spec, circuit, params, customGates)`
+  chosen cut), `otoc` (C(t) scrambling — its own t-series), `energySpectrum`
+  (eigenvalues of a Pauli-sum), and **grids/scatter**: `wigner`, `husimi`,
+  `unitaryMag`, `ptm` (heatmaps) + `ampScatter` (complex-plane scatter).
+  Optional `sweep` ∈ none/column/t — sweep only with the per-qubit or scalar
+  quantities (incl. pauli/energy); `chart` ∈ bars/line/heatmap/scatter. `computePlot(spec, circuit, params, customGates)`
   re-simulates as needed and returns a generic `PlotData`
-  (series1d/multiline/matrix); `validatePlotSpec`/`coercePlotSpec` reject or
+  (series1d/multiline/matrix/scatter); `validatePlotSpec`/`coercePlotSpec` reject or
   repair impossible combos — **no code execution**, only a constrained spec.
   `CustomPlotPanel` (under Controls) is the builder + a generic SVG renderer;
   the **AI chat emits a fenced ```plotspec JSON block** which renders a
@@ -564,7 +569,8 @@ host plus `/api/health`.
   small `var(--…)` theme set, `path` d limited to SVG path tokens — then
   rendered to SVG. `data` = { n, dim, ampRe[], ampIm[], prob[], numColumns,
   numClbits, clbits (0/1[]|null), counts ({bitstring:count}|null), shots,
-  width, height, palette }. The sanitisers are pure + unit-tested; the
+  rho1 (per-qubit 2×2 reduced density matrices), width, height, palette }.
+  The sanitisers are pure + unit-tested; the
   worker itself is browser-verified (neutered fetch + loop-timeout).
 - **Panel spotlight**: drag any analysis panel's header ⤢ grip onto the
   circuit (or click it) to enlarge that panel in a resizable dock on the
@@ -584,7 +590,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (962 tests): the simulator core is deeply covered —
+- **What's covered** (970 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),

@@ -18,7 +18,7 @@ This page is a tour of every panel.
 ## Custom plots
 
 Build a plot on demand instead of hunting for the right dedicated panel.
-Pick a **quantity** from a catalog of 27, grouped by domain:
+Pick a **quantity** from a catalog of 33, grouped by domain:
 
 - **Per qubit** — ⟨Z⟩/⟨X⟩/⟨Y⟩, single-qubit entanglement entropy S(ρ_q),
   purity Tr(ρ_q²), or l₁ coherence.
@@ -32,15 +32,20 @@ Pick a **quantity** from a catalog of 27, grouped by domain:
   l₁ coherence.
 - **Parameterized** (take an argument) — a **custom Pauli observable** ⟨P⟩
   (any Pauli string), the **energy** ⟨H⟩ of a Pauli-sum Hamiltonian you
-  type, the **entanglement spectrum** at a cut you choose, or the **OTOC**
-  C(t) for operators W, V you pick (a scrambling time-series).
+  type, the **entanglement spectrum** at a cut you choose, the **OTOC**
+  C(t) for operators W, V you pick, or the **energy spectrum** (eigenvalues)
+  of a Pauli-sum Hamiltonian.
+- **Grids & scatter** — the **discrete Wigner** function, the spin
+  **Husimi-Q** phase space, the circuit **unitary** magnitude |U_ij|, and
+  the **Pauli transfer matrix** (all heatmaps), plus an **amplitude
+  scatter** that places each amplitude on the complex plane.
 
 Then an optional **sweep** (none, vs circuit *depth*, or vs the *t* clock
 over one period — sweeps apply to the per-qubit and scalar quantities), and
-a **chart** (bars, line, or heatmap). The panel re-simulates as needed and
-draws the result: matrix quantities render as a heatmap, swept per-qubit
-quantities as a multi-line plot (one line per qubit) or a qubit × step
-heatmap, and a swept scalar as a single curve over depth/time.
+a **chart** (bars, line, heatmap, or scatter). The panel re-simulates as
+needed and draws the result: matrix/grid quantities render as a heatmap,
+swept per-qubit quantities as a multi-line plot (one line per qubit) or a
+qubit × step heatmap, and a swept scalar as a single curve over depth/time.
 
 The plot is described by a small validated *spec*, never executable code,
 so the **AI assistant can create one from a plain-English request** — ask
@@ -52,7 +57,9 @@ sessions. Like every analysis panel it runs only while open.
 **Plot programs (advanced).** For a plot the catalog can't express, the
 **+ code** button (or the AI's `plotjs` block) adds a code plot: a short
 snippet `(data) => scene` that computes a declarative scene
-(lines / rects / circles / paths / text) from the amplitudes. The code is
+(lines / rects / circles / paths / text) from the amplitudes, the
+measurement counts, or the per-qubit reduced density matrices (`data.rho1`).
+The code is
 **sandboxed** — it runs in a Web Worker with no DOM and with network /
 storage access removed, a hard timeout guards against infinite loops, and
 the returned scene is sanitised (whitelisted shapes, clamped numbers,

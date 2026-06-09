@@ -812,10 +812,10 @@ chatbot:
   cross-examined by a Critic — with the equivalence/resource panels as
   the referee — is often more instructive than a monologue.
 - **Prompt library.** The **prompts** button opens a searchable,
-  categorized library (Analyze / Plot on demand / Create / Optimize /
-  Transform / Explain & derive / Debug & verify / Export & hardware /
-  Noise & error / Benchmark & characterize / Visualize & interpret).
-  Picking one drops a ready-made prompt into the message box for you to
+  categorized library (Analyze / Plot on demand / Custom visuals (code) /
+  Create / Optimize / Transform / Explain & derive / Debug & verify /
+  Export & hardware / Noise & error / Benchmark & characterize / Visualize &
+  interpret). Picking one drops a ready-made prompt into the message box for you to
   edit before sending; bracketed `[values]` are placeholders to fill in.
   The benchmark and visualize prompts are built to *interpret* what
   Quantiom computes — paste an RB/QV/XEB result or attach a panel snapshot
