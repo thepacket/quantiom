@@ -118,6 +118,7 @@ import { DecoherencePanel } from "../panels/DecoherencePanel";
 import { FidelityPanel } from "../panels/FidelityPanel";
 import { ReadoutMitigationPanel } from "../panels/ReadoutMitigationPanel";
 import { ClassicalShadowsPanel } from "../panels/ClassicalShadowsPanel";
+import { StatePrepPanel } from "../panels/StatePrepPanel";
 import { CoherencePanel } from "../panels/CoherencePanel";
 import { sampleAveragedAmplitudeProbabilities } from "../sim/measurementShots";
 import { TomographyPanel } from "../panels/TomographyPanel";
@@ -1495,6 +1496,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="zx"><ZXPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="hamiltonian">
           <HamiltonianPanel onLoadInNewTab={(c, n) => t.newTab(c, n)} />
+        </ErrorBoundary>
+        <ErrorBoundary label="state-prep">
+          <StatePrepPanel onLoadInNewTab={(c, n) => t.newTab(c, n)} />
         </ErrorBoundary>
         <ErrorBoundary label="ham-spectrum"><HamSpectrumPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="diagonal-ensemble"><DiagonalEnsemblePanel state={simState} /></ErrorBoundary>
