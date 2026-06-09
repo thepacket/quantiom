@@ -812,13 +812,20 @@ chatbot:
   cross-examined by a Critic — with the equivalence/resource panels as
   the referee — is often more instructive than a monologue.
 - **Prompt library.** The **prompts** button opens a searchable,
-  categorized library (Analyze / Create / Optimize / Transform / Explain
-  & derive / Debug & verify / Export & hardware / Noise & error /
-  Benchmark & characterize / Visualize & interpret). Picking one drops a
-  ready-made prompt into the message box for you to edit before sending;
-  bracketed `[values]` are placeholders to fill in. The benchmark and
-  visualize prompts are built to *interpret* what Quantiom computes —
-  paste an RB/QV/XEB result or attach a panel snapshot and ask.
+  categorized library (Analyze / Plot on demand / Create / Optimize /
+  Transform / Explain & derive / Debug & verify / Export & hardware /
+  Noise & error / Benchmark & characterize / Visualize & interpret).
+  Picking one drops a ready-made prompt into the message box for you to
+  edit before sending; bracketed `[values]` are placeholders to fill in.
+  The benchmark and visualize prompts are built to *interpret* what
+  Quantiom computes — paste an RB/QV/XEB result or attach a panel snapshot
+  and ask.
+- **Plots from a description.** Ask the AI to "plot ⟨X⟩ for each qubit vs
+  circuit depth" (or use a **Plot on demand** prompt) and it replies with a
+  `plotspec` block — a one-click **+ add plot** button that draws the chart
+  in the **Custom plots** panel (under Controls). No code runs; the model
+  only fills a small validated spec (quantity × sweep × chart). You can
+  also build the same plot by hand from the panel's dropdowns.
 
 Replies render as **markdown + LaTeX** (KaTeX, including Dirac braket
 notation), so derivations come back formatted. Treat answers as

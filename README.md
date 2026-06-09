@@ -136,7 +136,7 @@ bug reports and feature requests in
 **[Issues](https://github.com/thepacket/quantiom/issues)**.
 
 Quantiom is moving fast and the surface to verify is wide — 64 gates,
-three simulator backends, an AI chat assistant, ~65 panels (40 of them
+three simulator backends, an AI chat assistant, ~66 panels (40 of them
 entanglement / dynamics / state visualisers), OpenQASM 3 round-trip,
 and nine code/format emitters. Expect rough edges; bug
 reports against any of it are welcome.
@@ -144,7 +144,7 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**859 tests (~96% statement coverage)** that run in continuous integration
+**930 tests (~96% statement coverage)** that run in continuous integration
 on **every push** (`.github/workflows/ci.yml`). They verify the statevector
 simulator (incl. the `initialize()` gate and X/Y-basis measurement), every
 gate's matrix unitarity and algebra, the Clifford tableau (with the
@@ -161,7 +161,7 @@ tree — each checked against analytic ground truth.
 You don't have to take that on faith: the toolbar **Self-test** button
 re-runs a **380-check** cross-section of the same engine **live in your
 browser** in ~10 ms and shows the pass/fail report — itself a subset of
-the full **859-test** suite that runs in CI on every commit. See
+the full **930-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 
@@ -486,6 +486,15 @@ short-circuit their `useMemo`s when hidden.
   and an Hz slider (0.05–3 Hz). Playback runs an internal clock that
   pushes new t values directly into the React state at ~15 fps — the
   Bloch vectors orbit and the probability bars pulse.
+- **Custom plots** — build a chart on demand from a small validated
+  *spec*: pick a quantity (per-qubit ⟨X⟩/⟨Y⟩/⟨Z⟩ or entanglement entropy,
+  per-basis probability / |amplitude|, the entropy profile, a pairwise
+  matrix — mutual information, ⟨ZᵢZⱼ⟩, log-negativity, concurrence — or a
+  scalar like mid-cut entropy / magic M₂), an optional sweep (none, vs
+  circuit depth, or vs the `t` clock), and a chart (bars / line / heatmap).
+  No code runs, so the **AI assistant can create a plot from a plain
+  description** — it replies with a `plotspec` block carrying a one-click
+  **+ add plot** button. Saved plots persist across sessions.
 - **Statevector** — basis-state table with numeric `Re + Im·i` per
   amplitude, formatted to 4 decimals. Final classical-register values
   shown when the circuit has measurements. Notice cards in noise mode
@@ -674,10 +683,12 @@ is still 100% client-side.
   token (and on partial `$$…$$`) would lock the main thread.
 - **Model picker.** Live-fetches the full OpenRouter catalog with
   search; click any model to switch. Choice persists per browser.
-- **Prompt library.** A searchable **prompts** picker with ~95
-  ready-made prompts across 10 categories (Analyze, Create, Optimize,
-  Transform, Explain & derive, Debug & verify, Export & hardware, Noise
-  & error, Benchmark & characterize, Visualize & interpret). Selecting
+- **Prompt library.** A searchable **prompts** picker with ~130
+  ready-made prompts across 11 categories (Analyze, Plot on demand, Create,
+  Optimize, Transform, Explain & derive, Debug & verify, Export & hardware,
+  Noise & error, Benchmark & characterize, Visualize & interpret). The
+  **Plot on demand** prompts ask the AI for a chart and it replies with a
+  one-click `plotspec` block for the Custom plots panel. Selecting
   one drops it into the box for editing (it doesn't auto-send);
   bracketed `[values]` are fill-in placeholders, and the
   benchmark/visualize prompts are written to *interpret* what Quantiom

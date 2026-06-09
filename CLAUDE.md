@@ -378,7 +378,7 @@ host plus `/api/health`.
     `sim/t1t2.ts`), `PauliBudgetPanel` (**Pauli error budget** — per-qubit X/Y/Z
     error stacked bars via the Pauli-twirl approx of depol+amp+phase damping,
     exact/instant; `sim/pauliBudget.ts`).
-  - The right column groups all ~65 panels under 12 sticky **category headers**
+  - The right column groups all ~66 panels under 12 sticky **category headers**
     (Controls / State / Measurement / Phase space & magic / Expectation &
     metrology / Entanglement & correlations / Dynamics / Operator & spectrum /
     Circuit structure / Noise & error / Characterization & benchmarking /
@@ -415,10 +415,12 @@ host plus `/api/health`.
   & derive / Debug & verify / Export & hardware) whose entries insert a
   ready-made prompt into the input for editing (append, not auto-send;
   bracketed `[values]` are placeholders; shown in BOTH chat and dialogue
-  modes — in dialogue it seeds the topic). 10 categories / ~95 prompts
-  (Analyze / Create / Optimize / Transform / Explain & derive / Debug &
-  verify / Export & hardware / Noise & error / Benchmark & characterize /
-  Visualize & interpret). The circuit QASM is auto-attached to every
+  modes — in dialogue it seeds the topic). 11 categories / ~130 prompts
+  (Analyze / Plot on demand / Create / Optimize / Transform / Explain &
+  derive / Debug & verify / Export & hardware / Noise & error / Benchmark &
+  characterize / Visualize & interpret — the **Plot on demand** category
+  emits ```plotspec blocks for the Custom plots panel). The circuit QASM is
+  auto-attached to every
   message, so prompts can say "this circuit"; the benchmark/visualize
   prompts are written to *interpret* Quantiom-computed results.
   **Streaming is freeze-safe**: the in-progress bubble renders plain text
@@ -540,7 +542,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (899 tests): the simulator core is deeply covered —
+- **What's covered** (930 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
