@@ -3,21 +3,26 @@
 ## What this is
 
 Quantum-computing circuit editor, simulator, workstation, and
-visualizer aimed at users **already comfortable with QC concepts**.
-A serious tool, not a vulgarizer. IBM Quantum Composer is the floor.
+visualizer. A serious, full-featured tool that's also **approachable**:
+it serves researchers and engineers without dumbing anything down, and
+it welcomes students, educators, and self-learners. IBM Quantum Composer
+is the floor. Nothing is dumbed down; it's just made approachable.
 
 ## Product principles
 
-- **Editor-first.** No tutorial system. The "educator" facet is rich
-  inline math and formal derivations alongside what the user builds —
-  not guided lesson paths.
-- **Don't simplify the editor to accommodate beginners.** Advanced
-  features are expected: arbitrary-angle rotations, arbitrary unitary
+- **Editor-first, with an on-ramp.** The core is the editor plus rich
+  inline math and formal derivations alongside what the user builds. The
+  "educator" facet lives there — *and* in a docs tutorial (with a gentle
+  newcomer's introduction) and a short intro video that help people get
+  started. We don't bolt guided lesson paths *into* the editor itself.
+- **Depth by default — approachable, not stripped.** The advanced
+  features stay available rather than hidden behind modes or removed to
+  "simplify": arbitrary-angle rotations, arbitrary unitary
   matrices, custom gates, classical registers, mid-circuit
   measurement, conditional gates, anti-controls, barriers,
   subroutines, multi-circuit tabs, OpenQASM 3 round-trip, six SDK
   exports, transpilation, routing, Trotter circuit synthesis, ZNE,
-  process tomography.
+  process tomography. Make them legible; don't take them away.
 - **Visualizers are peer panels**, not the headline. Same update
   cadence and screen-space rights as statevector / probabilities /
   Bloch.
@@ -651,8 +656,10 @@ host plus `/api/health`.
 - ~~**Q-sphere.**~~ Was once rejected as "too large"; **reopened and
   SHIPPED 2026-06-03** (`QSpherePanel`, default-collapsed, n ≤ 8). Kept
   compact. Don't re-reject it.
-- **In-tool tutorials, guided lessons.** Editor-first; the example
-  library is the education.
+- **In-editor step-by-step lesson paths / wizards.** Keep the editor
+  itself uncluttered. Teaching happens through the docs tutorial (incl.
+  its newcomer intro), the intro video, the example library, and the rich
+  inline math — not a guided-lesson overlay inside the canvas.
 - **Density-matrix mode beyond what trajectories give.** 4ⁿ memory
   caps n at ~10 for no extra scientific value over trajectories.
 - **WebGPU for general statevector compute.** Engineering effort vs
