@@ -23,6 +23,7 @@
  */
 
 import { simulate, type ParameterValues } from "./simulate";
+import { sampleMeasurementShots } from "./measurementShots";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
 
@@ -42,6 +43,16 @@ export type PlotProgramInput = {
   prob: number[];
   /** Number of circuit columns (time steps). */
   numColumns: number;
+  /** Number of classical bits in the circuit. */
+  numClbits: number;
+  /** Final classical-register bits (0/1) from one collapsed run, big-endian
+   *  (clbit 0 leftmost), or `null` if the circuit has no measurements. */
+  clbits: number[] | null;
+  /** Measurement-outcome histogram over `shots` independent runs:
+   *  `{ bitstring: count }`, or `null` if the circuit has no measurements. */
+  counts: Record<string, number> | null;
+  /** Number of shots sampled for `counts` (0 when there are no measurements). */
+  shots: number;
   /** Suggested drawing-canvas size, in the scene's own coordinate units. */
   width: number;
   height: number;
@@ -69,6 +80,7 @@ export type PlotProgramResult = { scene: PlotScene } | { error: string };
 // ─── caps ─────────────────────────────────────────────────────────────
 
 const MAX_QUBITS_PROGRAM = 14; // 2¹⁴ amplitudes cloned to the worker
+const PROGRAM_SHOTS = 1024; // measurement-histogram sample size
 const DEFAULT_W = 320;
 const DEFAULT_H = 180;
 const MAX_ELEMENTS = 4000;
@@ -99,6 +111,20 @@ export function buildPlotProgramInput(
     prob[i] = re * re + im * im;
   }
   const numColumns = circuit.gates.reduce((m, g) => Math.max(m, g.column), -1) + 1;
+
+  // Measurement outcomes: the final classical register from this run, plus a
+  // shot histogram (only when the circuit actually measures).
+  const hasMeasurement = Array.isArray(res.measurementRecord) && res.measurementRecord.length > 0;
+  const clbits = hasMeasurement ? res.measurementRecord!.map((v) => (v ? 1 : 0)) : null;
+  let counts: Record<string, number> | null = null;
+  let shots = 0;
+  if (hasMeasurement) {
+    const map = sampleMeasurementShots(circuit, paramValues, customGates, PROGRAM_SHOTS);
+    counts = {};
+    for (const [k, v] of map) counts[k] = v;
+    shots = PROGRAM_SHOTS;
+  }
+
   return {
     n,
     dim,
@@ -106,6 +132,10 @@ export function buildPlotProgramInput(
     ampIm,
     prob,
     numColumns,
+    numClbits: circuit.numClbits,
+    clbits,
+    counts,
+    shots,
     width: DEFAULT_W,
     height: DEFAULT_H,
     palette: { accent: "#7aa2ff", accent2: "#4f9eff", warm: "#ff9a5a", muted: "#8b95a6", border: "#262c36" },

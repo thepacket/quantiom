@@ -1,5 +1,40 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeColor, sanitizePathD, sanitizePlotScene } from "../src/sim/plotProgram";
+import { circ, gate } from "./helpers";
+import { sanitizeColor, sanitizePathD, sanitizePlotScene, buildPlotProgramInput } from "../src/sim/plotProgram";
+
+function input(c: Parameters<typeof buildPlotProgramInput>[0]) {
+  const r = buildPlotProgramInput(c, {}, []);
+  if ("error" in r) throw new Error("unexpected error: " + r.error);
+  return r;
+}
+
+describe("plotProgram — buildPlotProgramInput", () => {
+  it("exposes amplitudes/probabilities for a Bell pair", () => {
+    const inp = input(circ(2, [gate("h", [0]), gate("cx", [1], [0])]));
+    expect(inp.n).toBe(2);
+    expect(inp.dim).toBe(4);
+    expect(inp.prob[0]).toBeCloseTo(0.5, 8);
+    expect(inp.prob[3]).toBeCloseTo(0.5, 8);
+    expect(inp.clbits).toBeNull(); // no measurements
+    expect(inp.counts).toBeNull();
+    expect(inp.shots).toBe(0);
+  });
+
+  it("exposes clbits + a shot histogram when the circuit measures", () => {
+    // H on q0, then measure q0 -> c0. (circ assigns one column per gate.)
+    const c = circ(1, [gate("h", [0]), { ...gate("measure", [0]), clbits: [0] }], 1);
+    const inp = input(c);
+    expect(inp.numClbits).toBe(1);
+    expect(inp.clbits).not.toBeNull();
+    expect(inp.clbits!.length).toBe(1);
+    expect(inp.counts).not.toBeNull();
+    const total = Object.values(inp.counts!).reduce((a, b) => a + b, 0);
+    expect(total).toBe(inp.shots);
+    expect(inp.shots).toBeGreaterThan(0);
+    // Both outcomes should appear for an H-measured qubit over many shots.
+    expect(Object.keys(inp.counts!).sort()).toEqual(["0", "1"]);
+  });
+});
 
 describe("plotProgram — sanitizeColor", () => {
   it("accepts safe literal colours", () => {

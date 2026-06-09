@@ -540,6 +540,7 @@ host plus `/api/health`.
   types whitelisted, numbers clamped, colours restricted to hex/rgb/hsl/a
   small `var(--…)` theme set, `path` d limited to SVG path tokens — then
   rendered to SVG. `data` = { n, dim, ampRe[], ampIm[], prob[], numColumns,
+  numClbits, clbits (0/1[]|null), counts ({bitstring:count}|null), shots,
   width, height, palette }. The sanitisers are pure + unit-tested; the
   worker itself is browser-verified (neutered fetch + loop-timeout).
 - **Panel spotlight**: drag any analysis panel's header ⤢ grip onto the
@@ -560,7 +561,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (953 tests): the simulator core is deeply covered —
+- **What's covered** (955 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),

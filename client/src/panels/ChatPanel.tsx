@@ -89,7 +89,8 @@ const SYSTEM_PROMPT =
   "```plotjs block: the BODY of a function (data) => scene that returns a " +
   "declarative scene {width, height, title?, elements:[…]}. It runs in a " +
   "sandboxed Web Worker (no DOM, network, or imports). `data` = {n, dim, " +
-  "ampRe[], ampIm[], prob[], numColumns, width, height, palette:{accent," +
+  "ampRe[], ampIm[], prob[], numColumns, numClbits, clbits (0/1[] or null), " +
+  "counts ({bitstring:count} or null), shots, width, height, palette:{accent," +
   "accent2,warm,muted,border}}. Element types: {type:'line',x1,y1,x2,y2," +
   "stroke?,strokeWidth?}, {type:'rect',x,y,width,height,fill?,opacity?}, " +
   "{type:'circle',cx,cy,r,fill?}, {type:'path',d,stroke?,fill?}, " +

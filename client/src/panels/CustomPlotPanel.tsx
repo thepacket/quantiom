@@ -101,7 +101,8 @@ export function CustomPlotPanel(props: Props) {
   );
 }
 
-const STARTER_CODE = `// data = { n, dim, ampRe[], ampIm[], prob[], numColumns, width, height, palette }
+const STARTER_CODE = `// data = { n, dim, ampRe[], ampIm[], prob[], numColumns,
+//   numClbits, clbits, counts, shots, width, height, palette }
 // return { width, height, title?, elements:[...] }
 const W = data.width, H = data.height, bw = W / data.dim;
 const els = data.prob.map((p, i) => ({
