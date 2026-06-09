@@ -15,6 +15,27 @@ This page is a tour of every panel.
 
 ---
 
+## Custom plots
+
+Build a plot on demand instead of hunting for the right dedicated panel.
+Pick a **quantity** (⟨Z⟩/⟨X⟩/⟨Y⟩ per qubit, probability or |amplitude|
+per basis state, entanglement-entropy profile across every cut, pairwise
+mutual information, or the connected ⟨ZᵢZⱼ⟩ correlation), an optional
+**sweep** (none, vs circuit *depth*, or vs the *t* clock over one period —
+sweeps apply to the per-qubit quantities), and a **chart** (bars, line, or
+heatmap). The panel re-simulates as needed and draws the result; matrix
+quantities render as a heatmap, swept quantities as a multi-line plot
+(one line per qubit) or a qubit × step heatmap.
+
+The plot is described by a small validated *spec*, never executable code,
+so the **AI assistant can create one from a plain-English request** — ask
+it to "plot ⟨X⟩ for each qubit vs circuit depth" and it replies with a
+`plotspec` block carrying a one-click **+ add plot** button that drops the
+chart into this panel (and reveals it). Saved plots persist across
+sessions. Like every analysis panel it runs only while open.
+
+---
+
 ## Statevector
 
 The dense amplitude table. One row per non-zero basis state showing

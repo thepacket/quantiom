@@ -55,12 +55,19 @@ type Props = {
 
 const STORAGE_KEY = "quantiom:panel-collapsed:v1";
 const SET_ALL_EVENT = "quantiom:set-all-panels";
+const SET_ONE_EVENT = "quantiom:set-one-panel";
 
 /** Expand (collapsed=false) or collapse (collapsed=true) every mounted panel.
  *  Broadcast to all PanelShell instances via a window event, so callers don't
  *  need a shared store. */
 export function setAllPanelsCollapsed(collapsed: boolean): void {
   window.dispatchEvent(new CustomEvent(SET_ALL_EVENT, { detail: { collapsed } }));
+}
+
+/** Expand or collapse a single panel by id (e.g. to reveal a panel a feature
+ *  just pushed content into). No-op if no panel with that id is mounted. */
+export function setPanelCollapsed(id: string, collapsed: boolean): void {
+  window.dispatchEvent(new CustomEvent(SET_ONE_EVENT, { detail: { id, collapsed } }));
 }
 
 function loadCollapsedMap(): Record<string, boolean> {
@@ -103,6 +110,16 @@ export function PanelShell({ id, title, children, toolbar, getCopyText, defaultC
     window.addEventListener(SET_ALL_EVENT, onSetAll);
     return () => window.removeEventListener(SET_ALL_EVENT, onSetAll);
   }, []);
+
+  // Respond to a targeted single-panel expand/collapse.
+  useEffect(() => {
+    const onSetOne = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && detail.id === id && typeof detail.collapsed === "boolean") setCollapsed(detail.collapsed);
+    };
+    window.addEventListener(SET_ONE_EVENT, onSetOne);
+    return () => window.removeEventListener(SET_ONE_EVENT, onSetOne);
+  }, [id]);
 
   const onCopy = async () => {
     if (!getCopyText) return;

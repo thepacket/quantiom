@@ -18,6 +18,8 @@ import {
   type AttachKey,
 } from "./chatContext";
 import { PROMPT_LIBRARY } from "./promptLibrary";
+import { requestCustomPlot } from "./CustomPlotPanel";
+import { coercePlotSpec, plotTitle } from "../sim/plotSpec";
 import {
   DIALOGUE_PRESETS,
   buildTurnMessages,
@@ -69,6 +71,15 @@ const SYSTEM_PROMPT =
   "When proposing a new circuit or modification, always emit it inside a " +
   "fenced code block starting with ```qasm or ```openqasm — Quantiom " +
   "auto-detects those blocks and offers to open them as a new tab. " +
+  "When the user asks for a plot, chart, or visualisation of a quantity " +
+  "over the current circuit, emit a fenced ```plotspec block containing a " +
+  "single JSON object so Quantiom can render it natively (no code runs). " +
+  "Schema: {\"quantity\": one of \"expZ\"|\"expX\"|\"expY\"|\"prob\"|\"amp\"|" +
+  "\"entropy\"|\"mutualInfo\"|\"zzCorr\", \"sweep\": \"none\"|\"column\"|\"t\" " +
+  "(\"column\" = vs circuit depth, \"t\" = vs the t clock over 0…2π; a sweep " +
+  "is only valid with expZ/expX/expY), \"chart\": \"bars\"|\"line\"|\"heatmap\" " +
+  "(matrix quantities mutualInfo/zzCorr must use heatmap), \"title\": optional " +
+  "string}. Add a one-line explanation before the block. " +
   "Write mathematics in LaTeX: inline as $…$ and display as $$…$$ " +
   "(KaTeX renders it, including \\ket{}, \\bra{}, \\braket{}{}). Be " +
   "concise; do not over-explain quantum-computing basics.";
@@ -566,6 +577,8 @@ function Message({
             ) : (
               <div key={i} className="chat__text">{part.text}</div>
             )
+          ) : part.isPlotSpec ? (
+            <PlotSpecBlock key={i} text={part.text} />
           ) : (
             <div key={i} className="chat__code-block">
               <div className="chat__code-bar">
@@ -614,6 +627,8 @@ function DialogueTurnView({
             ) : (
               <div key={i} className="chat__md"><Markdown source={part.text} /></div>
             )
+          ) : part.isPlotSpec ? (
+            <PlotSpecBlock key={i} text={part.text} />
           ) : (
             <div key={i} className="chat__code-block">
               <div className="chat__code-bar">
@@ -661,9 +676,51 @@ function autoOpenQasmBlocks(
   }
 }
 
+/**
+ * Render an AI-emitted ```plotspec block as a one-click "add plot" action.
+ * The JSON is coerced through `requestCustomPlot` (which validates + repairs);
+ * an invalid spec falls back to showing the raw block so the user can read it.
+ */
+function PlotSpecBlock({ text }: { text: string }) {
+  const [added, setAdded] = useState(false);
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    /* not JSON */
+  }
+  const add = () => {
+    const spec = requestCustomPlot(parsed);
+    if (spec) setAdded(true);
+  };
+  // Preview title without mutating anything.
+  const coerced = coercePlotSpec(parsed);
+  const title = coerced ? plotTitle(coerced) : null;
+  return (
+    <div className="chat__code-block chat__plotspec">
+      <div className="chat__code-bar">
+        <span className="chat__code-lang">plot{title ? `: ${title}` : ""}</span>
+        {title ? (
+          <button
+            className="chat__open-tab chat__open-tab--btn"
+            onClick={add}
+            disabled={added}
+            title="Add this plot to the Custom plots panel"
+          >
+            {added ? "✓ added to Custom plots" : "+ add plot"}
+          </button>
+        ) : (
+          <span className="chat__open-tab">invalid plot spec</span>
+        )}
+      </div>
+      <pre className="chat__code"><code>{text}</code></pre>
+    </div>
+  );
+}
+
 type Part =
   | { kind: "text"; text: string }
-  | { kind: "code"; text: string; lang: string; isQasm: boolean };
+  | { kind: "code"; text: string; lang: string; isQasm: boolean; isPlotSpec: boolean };
 
 /**
  * Split a message into alternating text and fenced-code parts. Fenced
@@ -700,7 +757,8 @@ function splitFencedBlocks(src: string): Part[] {
       if (i < lines.length) i++;
       const text = codeLines.join("\n");
       const isQasm = isLikelyQasm(lang, text);
-      out.push({ kind: "code", text, lang, isQasm });
+      const isPlotSpec = /^(plotspec|plot)$/i.test(lang.trim());
+      out.push({ kind: "code", text, lang, isQasm, isPlotSpec });
       continue;
     }
     textBuf.push(line);

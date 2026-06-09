@@ -67,6 +67,103 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
     ],
   },
   {
+    name: "Plot on demand",
+    prompts: [
+      {
+        title: "⟨Z⟩ per qubit (bars)",
+        text: "Make a plot of ⟨Z⟩ for each qubit of this circuit as a bar chart.",
+      },
+      {
+        title: "⟨X⟩ per qubit (bars)",
+        text: "Plot ⟨X⟩ for every qubit of this circuit as bars.",
+      },
+      {
+        title: "⟨Z⟩ vs circuit depth",
+        text: "Plot how ⟨Z⟩ of each qubit evolves versus circuit depth (one line per qubit).",
+      },
+      {
+        title: "⟨X⟩ vs the t clock",
+        text: "Plot ⟨X⟩ of each qubit as a function of the t clock over one full period (0…2π).",
+      },
+      {
+        title: "Space–time ⟨Z⟩ heatmap",
+        text: "Plot a space–time heatmap of ⟨Z⟩ (qubit on one axis, circuit depth on the other).",
+      },
+      {
+        title: "Probability distribution",
+        text: "Plot the computational-basis probability distribution of this circuit's output as a bar chart.",
+      },
+      {
+        title: "|amplitude| per basis state",
+        text: "Plot the magnitude of the amplitude for each basis state of this circuit's output.",
+      },
+      {
+        title: "Entanglement-entropy profile",
+        text: "Plot the entanglement-entropy profile S(ρ) across every contiguous bipartition cut of this state.",
+      },
+      {
+        title: "Mutual-information heatmap",
+        text: "Plot the pairwise mutual-information I(i:j) heatmap for this circuit's output state.",
+      },
+      {
+        title: "Connected ⟨ZᵢZⱼ⟩ heatmap",
+        text: "Plot the connected ⟨ZᵢZⱼ⟩−⟨Zᵢ⟩⟨Zⱼ⟩ correlation matrix of this state as a heatmap.",
+      },
+      {
+        title: "⟨Y⟩ vs depth heatmap",
+        text: "Plot a heatmap of ⟨Y⟩ for each qubit versus circuit depth.",
+      },
+      {
+        title: "Best plot for this circuit",
+        text: "Pick the single most informative quantity to visualise for this circuit and generate a plot for it, then explain in one sentence why you chose it.",
+      },
+      {
+        title: "⟨Y⟩ per qubit (bars)",
+        text: "Plot ⟨Y⟩ for each qubit of this circuit as a bar chart.",
+      },
+      {
+        title: "⟨Z⟩ vs the t clock",
+        text: "Plot ⟨Z⟩ of each qubit as a function of the t clock over one full period (0…2π) — show the Rabi/Larmor oscillation.",
+      },
+      {
+        title: "⟨X⟩ vs depth heatmap",
+        text: "Plot a space–time heatmap of ⟨X⟩ with qubit on one axis and circuit depth on the other.",
+      },
+      {
+        title: "Entanglement front (⟨Z⟩ depth)",
+        text: "Plot ⟨Z⟩ per qubit versus circuit depth and use it to point out where the light-cone / entanglement front first reaches each qubit.",
+      },
+      {
+        title: "Probability — line view",
+        text: "Plot the computational-basis output probabilities of this circuit as a line chart so I can see the profile across basis states.",
+      },
+      {
+        title: "Magnetisation map",
+        text: "Plot the space–time ⟨Z⟩ heatmap (the magnetisation map) and tell me whether you see Floquet period-doubling stripes, a spreading light cone, or flat static rows.",
+      },
+      {
+        title: "Correlation length",
+        text: "Plot the connected ⟨ZᵢZⱼ⟩ correlation heatmap and estimate the correlation length from how fast the off-diagonal correlations decay.",
+      },
+      {
+        title: "Compare ⟨X⟩, ⟨Y⟩, ⟨Z⟩",
+        text: "Generate three plots — ⟨X⟩, ⟨Y⟩, and ⟨Z⟩ per qubit — and summarise where each qubit's Bloch vector points.",
+      },
+      {
+        title: "Page curve check",
+        text: "Plot the entanglement-entropy profile across every cut and tell me whether it traces the symmetric Page arch (volume law) or stays flat (area law).",
+      },
+      {
+        title: "Total vs classical correlation",
+        text: "Plot both the mutual-information heatmap and the connected ⟨ZᵢZⱼ⟩ heatmap, then explain where total (quantum + classical) correlation exceeds the purely classical Z-basis correlation.",
+      },
+      {
+        title: "Time-average magnetisation",
+        text: "Plot ⟨Z⟩ of each qubit versus the t clock, then describe the time-averaged magnetisation and any qubit that stays frozen.",
+      },
+    ],
+  },
+  {
     name: "Create",
     prompts: [
       {

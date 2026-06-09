@@ -121,6 +121,7 @@ import { sampleAveragedAmplitudeProbabilities } from "../sim/measurementShots";
 import { TomographyPanel } from "../panels/TomographyPanel";
 import { HamiltonianPanel } from "../panels/HamiltonianPanel";
 import { ParameterPanel } from "../panels/ParameterPanel";
+import { CustomPlotPanel } from "../panels/CustomPlotPanel";
 import { ErrorBoundary } from "../panels/ErrorBoundary";
 import { useStatevector, dataOf } from "../panels/useSimulation";
 import { SNIPPETS, type Snippet } from "./snippets";
@@ -1383,6 +1384,9 @@ export function CircuitEditor() {
         <div className="panels-cat">Controls</div>
         <ErrorBoundary label="parameters">
           <ParameterPanel state={simState} values={paramValues} onChange={setParamValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="custom-plots">
+          <CustomPlotPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
 
         <div className="panels-cat">State</div>

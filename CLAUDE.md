@@ -505,7 +505,22 @@ host plus `/api/health`.
   `quantiom:panels-collapsed` (whole right-panel-column collapse),
   `quantiom:inspector-w` (Inspector side-panel width),
   `quantiom:inspector-collapsed` (Inspector collapse),
-  `quantiom:spotlight-w` (enlarged-panel dock width).
+  `quantiom:spotlight-w` (enlarged-panel dock width),
+  `quantiom:custom-plots:v1` (saved custom-plot specs).
+- **Custom plots (on-demand visualisation)**: `sim/plotSpec.ts` defines a
+  small validated `PlotSpec` (`quantity` ∈ ⟨Z⟩/⟨X⟩/⟨Y⟩ per qubit · prob ·
+  |amp| · entropy profile · mutual info · ZZ corr; optional `sweep` ∈
+  none/column/t — column & t only with per-qubit quantities; `chart` ∈
+  bars/line/heatmap). `computePlot(spec, circuit, params, customGates)`
+  re-simulates as needed and returns a generic `PlotData`
+  (series1d/multiline/matrix); `validatePlotSpec`/`coercePlotSpec` reject or
+  repair impossible combos — **no code execution**, only a constrained spec.
+  `CustomPlotPanel` (under Controls) is the builder + a generic SVG renderer;
+  the **AI chat emits a fenced ```plotspec JSON block** which renders a
+  one-click "+ add plot" button (`requestCustomPlot` → `quantiom:add-plot`
+  window event; `PanelShell.setPanelCollapsed` then reveals the panel) — so
+  "create a new plot from a textual description" works with zero arbitrary
+  code.
 - **Panel spotlight**: drag any analysis panel's header ⤢ grip onto the
   circuit (or click it) to enlarge that panel in a resizable dock on the
   left of the canvas (vertical splitter; `quantiom:spotlight-w`). Built in

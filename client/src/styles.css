@@ -156,6 +156,8 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__turn--user .chat__turn-name { color: var(--muted); }
 .chat__open-tab--btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 3px; padding: 1px 6px; cursor: pointer; font-size: 12px; }
 .chat__open-tab--btn:hover { background: var(--accent); color: var(--bg); }
+.chat__open-tab--btn:disabled { opacity: 0.6; cursor: default; background: transparent; color: var(--accent); }
+.chat__plotspec { border-color: var(--accent); }
 .chat__model { position: relative; }
 .chat__model-btn { font-size: 15px; padding: 3px 8px; min-width: 120px; text-align: left; }
 .chat__model-pop { position: absolute; top: 100%; left: 0; margin-top: 4px; width: 380px; max-height: 360px; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); z-index: 200; overflow: hidden; }
@@ -777,6 +779,29 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .spacetime__legend span { display: inline-flex; align-items: center; gap: 4px; }
 .spacetime__swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .spacetime__swatch--zero { background: var(--bg-2); border: 1px solid var(--border); }
+
+/* ─── Custom plots ─────────────────────────────────────────────────── */
+.cplot { display: flex; flex-direction: column; gap: 8px; }
+.cplot__builder { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; }
+.cplot__field { display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--muted); }
+.cplot__field span { text-transform: uppercase; letter-spacing: 0.05em; }
+.cplot__field select { font-size: 11px; padding: 2px 4px; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; }
+.cplot__field select:disabled { opacity: 0.45; }
+.cplot__add { font-size: 11px; padding: 3px 8px; background: var(--bg-2); color: var(--accent); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
+.cplot__add:hover { border-color: var(--accent-2); }
+.cplot__list { display: flex; flex-direction: column; gap: 10px; }
+.cplot__card { border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px 6px; }
+.cplot__card-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 2px; }
+.cplot__card-title { font-size: 11px; color: var(--fg); }
+.cplot__remove { font-size: 13px; line-height: 1; padding: 0 5px; background: none; color: var(--muted); border: none; cursor: pointer; }
+.cplot__remove:hover { color: #ff9a5a; }
+.cplot__svg { width: 100%; height: auto; }
+.cplot__tick { font-size: 7px; fill: var(--muted); }
+.cplot__axis { font-size: 8px; fill: var(--muted); }
+.cplot__withlegend { display: flex; flex-direction: column; gap: 3px; }
+.cplot__legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 9px; color: var(--muted); }
+.cplot__legend span { display: inline-flex; align-items: center; gap: 3px; }
+.cplot__swatch { width: 9px; height: 3px; border-radius: 1px; display: inline-block; }
 
 /* ─── Entanglement spectrum (Schmidt) ──────────────────────────────── */
 .schmidt { display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
