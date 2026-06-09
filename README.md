@@ -11,7 +11,7 @@
 **A browser-native research-grade quantum circuit editor, simulator,
 workstation, and visualizer.**
 
-![Quantiom — a 4-qubit LiH Jordan–Wigner Trotter step, with the AI chat panel explaining the circuit in rendered LaTeX alongside the statevector, probabilities, and Bloch panels](screenshots/quantiom.png)
+![Quantiom — the circuit editor with an analysis panel enlarged in a dock beside the circuit, the gate palette, the right-hand panel column, and the AI assistant](screenshots/quantiom2.png)
 
 Quantiom is a quantum circuit workstation that runs entirely in your
 browser — no install, no account. It's built for people already
@@ -473,10 +473,12 @@ The right column stacks collapsible panels under 12 sticky category
 headers, and the **whole column collapses** to a thin "PANELS" reopen
 strip (▸ in the panel bar) to give the canvas more room. Each panel
 persists its collapsed state per panel id in `localStorage`. Every panel
-has a **copy-to-clipboard** button in its header. Collapsed panels cost
-nothing per frame — `SimResult` exposes `amplitudes`, `probabilities`,
-`blochVectors` as lazy getters and panel bodies short-circuit their
-`useMemo`s when hidden.
+has a **copy-to-clipboard** button in its header, and a **⤢ spotlight
+grip** — drag it onto the circuit (or click it) to enlarge that panel in a
+resizable dock on the left of the canvas, beside the circuit. Collapsed
+panels cost nothing per frame — `SimResult` exposes `amplitudes`,
+`probabilities`, `blochVectors` as lazy getters and panel bodies
+short-circuit their `useMemo`s when hidden.
 
 - **Parameters** — sliders for every free symbol detected in the
   circuit (e.g. `θ`, `φ`, `λ`). The literal symbol **`t`** is special:
@@ -698,7 +700,8 @@ is still 100% client-side.
   content-stall (keep-alives but no tokens) timeout — so a hung request
   fails with a clear error instead of spinning.
 - **Resizable height** by dragging the top edge; collapsible to a 24px
-  reopen strip. Height + open/closed state both persist.
+  reopen strip. Height + open/closed state both persist. A **−/100%/+**
+  control in the header scales the reply-pane font (60–200%, persisted).
 - **Bounded history persistence** (last 100 messages) so the next
   session picks up where you left off without slowly filling
   localStorage.

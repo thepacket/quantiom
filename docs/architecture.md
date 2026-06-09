@@ -306,6 +306,14 @@ bodies inside a panel short-circuit when collapsed. The shared
 on first access and memoise — so a panel that doesn't read a field
 costs nothing.
 
+`PanelShell` also drives the **spotlight** dock: drag a panel's ⤢
+grip onto the circuit (or click it) and the shell `createPortal`s its
+own body into a resizable pane on the left of the canvas, beside the
+circuit. A `SpotlightProvider`/`useSpotlight` context carries the
+spotlit id + the dock's mount node, so there's no per-panel registry
+and the panel keeps its exact props/state (its `CollapsedContext` is
+forced to `false` while spotlit so it computes).
+
 This is the heart of the **default-fast invariant**: a circuit
 with no measurements, no parameters, no Clifford-only fast path,
 and every panel collapsed except (say) Statevector, is byte-
@@ -390,6 +398,7 @@ quantiom:circuit:v1          legacy single-circuit IR (migrated to tabs:v1)
 quantiom:clipboard:v1        cross-tab gate-rectangle clipboard
 quantiom:custom-gates:v1     user-defined custom gate library
 quantiom:inspector-w         Inspector side-panel width (px)
+quantiom:spotlight-w         enlarged-panel (spotlight) dock width (px)
 quantiom:inspector-collapsed Inspector side-panel collapse
 quantiom:noise:v2            noise model (T1/T2, gates, coupling, Kraus)
 quantiom:palette-collapsed   gate-palette whole-column collapse

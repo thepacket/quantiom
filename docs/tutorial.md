@@ -767,6 +767,12 @@ search box → a thin "GATES" strip) and the **whole right-hand panel
 column** (the ▸ in the panel bar → a "PANELS" strip) to give the canvas
 the full width; both states persist.
 
+**Enlarge a panel.** Drag any panel's **⤢ grip** (in its header) onto the
+circuit — or just click it — to render that panel large in a resizable
+dock on the **left of the canvas**, beside the circuit, so you can read it
+in detail while you keep editing. Drop another panel to swap it; the **×**
+(or the "shown enlarged — click to restore" note in the column) closes it.
+
 See [`qasm.md`](qasm.md) for the full round-trip contract and per-emitter
 conventions.
 
