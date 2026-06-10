@@ -163,7 +163,7 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**1011 tests (~96% statement coverage)** that run in continuous integration
+**1012 tests (~96% statement coverage)** that run in continuous integration
 on **every push** (`.github/workflows/ci.yml`). They verify the statevector
 simulator (incl. the `initialize()` gate and X/Y-basis measurement), every
 gate's matrix unitarity and algebra, the Clifford tableau (with the
@@ -180,7 +180,7 @@ tree — each checked against analytic ground truth.
 You don't have to take that on faith: the toolbar **Self-test** button
 re-runs a **413-check** cross-section of the same engine **live in your
 browser** in ~10 ms and shows the pass/fail report — itself a subset of
-the full **1011-test** suite that runs in CI on every commit. See
+the full **1012-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 

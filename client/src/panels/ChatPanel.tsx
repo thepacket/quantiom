@@ -319,13 +319,15 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
     const abort = new AbortController();
     agentAbortRef.current = abort;
 
-    // The agent's working circuit — kept in sync within the loop (the `circuit`
-    // prop is stale inside this async closure until React re-renders).
+    // The agent's working circuit + params — kept in sync within the loop (the
+    // `circuit`/`paramValues` props are stale inside this async closure until
+    // React re-renders, so reads after a mutation must see the local copies).
     let working = circuit;
+    let workingParams: ParameterValues = { ...paramValues };
     const ctx: AgentContext = {
       getCircuit: () => working,
       customGates,
-      paramValues,
+      paramValues: workingParams,
       coupling: noise.coupling,
       applyCircuit: (next) => { working = next; onApplyCircuit(next); },
       addPlot: (spec) => { requestCustomPlot(spec); },
@@ -336,7 +338,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
       switchTab: onSwitchTab,
       closeTab: onCloseTab,
       saveCustomGate: onSaveCustomGate,
-      setParams: onSetParams,
+      setParams: (vals) => { workingParams = { ...workingParams, ...vals }; ctx.paramValues = workingParams; onSetParams(workingParams); },
       addPlotProgram: (code) => { requestCustomPlotProgram(code); },
       setPanel: (id, open) => { setPanelCollapsed(id, !open); },
     };

@@ -245,6 +245,26 @@ describe("agent tools", () => {
     expect(() => executeTool("set_qubit_names", { names: [] }, c.ctx)).toThrow(/required/);
   });
 
+  it("reads reflect params updated by set_params within the same run", () => {
+    // Regression: the agent's context used to snapshot paramValues, so reads
+    // after set_params re-simulated with the stale value. A correctly-wired
+    // context exposes paramValues live; verify executeTool picks up the change.
+    let cur: Circuit = circ(1, [gate("ry", [0], [], ["theta"])]); // ⟨Z⟩ = cos(theta)
+    let params: Record<string, number> = { theta: 0 };
+    const ctx: AgentContext = {
+      getCircuit: () => cur,
+      customGates: [],
+      get paramValues() { return params; },
+      applyCircuit: (n) => { cur = n; },
+      addPlot: () => {},
+      setParams: (v) => { params = { ...params, ...v }; },
+    };
+    expect(executeTool("expectation", { observable: "Z" }, ctx)).toMatch(/⟨Z⟩ = 1\.0000/); // theta=0
+    executeTool("set_params", { values: { theta: Math.PI } }, ctx);
+    expect(executeTool("expectation", { observable: "Z" }, ctx)).toMatch(/⟨Z⟩ = -1\.0000/); // theta=π
+    expect(executeTool("get_free_symbols", {}, ctx)).toMatch(/theta = 3\.14/);
+  });
+
   it("add_plot forwards a spec", () => {
     const p = makeCtx(circ(1, [gate("h", [0])]));
     executeTool("add_plot", { quantity: "expZ", chart: "bars" }, p.ctx);
