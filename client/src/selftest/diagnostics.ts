@@ -29,7 +29,7 @@ import { paulis, type Pauli } from "../sim/expectation";
 import { estimateResources } from "../sim/resources";
 import { equivalenceCheck } from "../sim/equivalence";
 import { invertGate } from "../editor/inverse";
-import { evalExpr } from "../sim/expr";
+import { evalExpr, detectFreeVars } from "../sim/expr";
 import { emitQasm3 } from "../qasm/emit";
 import { parseQasm3 } from "../qasm/parse";
 import { emitQiskit } from "../qasm/emitQiskit";
@@ -57,6 +57,9 @@ import { applyReadoutError, mitigateReadout } from "../sim/readoutMitigation";
 import { buildClassicalShadows, estimatePauli } from "../sim/classicalShadows";
 import { routeCircuit, countConnectivityViolations } from "../sim/router";
 import { executeTool, type AgentContext } from "../panels/agentTools";
+import { hamiltonianSpectrum } from "../sim/hamSpectrum";
+import { compileForDevice } from "../sim/compile";
+import { reducedDensityMatrix, purity } from "../sim/density";
 import { DEFAULT_NOISE, type NoiseModel } from "../sim/noise";
 import type { Complex } from "../sim/complex";
 import type { Circuit, PlacedGate, GateId } from "../editor/types";
@@ -800,6 +803,75 @@ export function runSelfTest(): SelfTestReport {
     });
     s.check("an unknown tool name throws", () => {
       try { executeTool("nope", {}, makeCtx(bellC).ctx); return false; } catch { return true; }
+    });
+  }
+
+  // ── Parameter-expression evaluator (expr.ts) ───────────────────────
+  s.group("Parameter expressions");
+  {
+    s.check("pi/2 evaluates to π/2", () => close(evalExpr("pi/2", {}), Math.PI / 2));
+    s.check("sin(pi/2) = 1", () => close(evalExpr("sin(pi/2)", {}), 1));
+    s.check("sqrt(2) = √2", () => close(evalExpr("sqrt(2)", {}), Math.SQRT2));
+    s.check("2*theta with theta=1.5 is 3", () => close(evalExpr("2*theta", { theta: 1.5 }), 3));
+    s.check("Greek θ maps to the ASCII free variable", () => close(evalExpr("θ/2", { theta: Math.PI }), Math.PI / 2));
+    s.check("free variables exclude reserved names (sin, pi)", () => {
+      const fv = detectFreeVars("a*sin(b) + pi").sort();
+      return fv.length === 2 && fv[0] === "a" && fv[1] === "b";
+    });
+    s.check("a malformed expression evaluates to NaN, not a throw", () => Number.isNaN(evalExpr("1 +* 2", {})));
+  }
+
+  // ── Hamiltonian spectrum (exact Pauli-sum eigenvalues) ─────────────
+  s.group("Hamiltonian spectrum");
+  {
+    const eigs = (h: string, n: number) => hamiltonianSpectrum(parsePauliSum(h), n)?.energies ?? [];
+    s.check("H = Z has eigenvalues {−1, +1}", () => {
+      const e = eigs("Z", 1);
+      return close(e[0], -1) && close(e[1], 1);
+    });
+    s.check("H = X has eigenvalues {−1, +1}", () => {
+      const e = eigs("X", 1);
+      return close(e[0], -1, 1e-7) && close(e[1], 1, 1e-7);
+    });
+    s.check("H = ZZ is doubly degenerate {−1, −1, +1, +1}", () => {
+      const e = eigs("ZZ", 2);
+      return close(e[0], -1) && close(e[1], -1) && close(e[2], 1) && close(e[3], 1);
+    });
+    s.check("ground energy ≤ every eigenvalue", () => {
+      const r = hamiltonianSpectrum(parsePauliSum("0.5 ZZ + 0.3 XI + 0.3 IX"), 2)!;
+      return r.energies.every((e) => e >= r.ground - 1e-9);
+    });
+  }
+
+  // ── Compile pipeline (Transpile→Optimise→Route→Optimise) ───────────
+  s.group("Compile pipeline preserves the unitary");
+  {
+    const bell = circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+    s.check("compile for IBM heavy-hex stays equivalent", () =>
+      equivalenceCheck(bell, compileForDevice(bell, "ibm-heavy-hex", undefined).circuit, [], [], {}).equivalent);
+    s.check("compile for Rigetti stays equivalent", () =>
+      equivalenceCheck(bell, compileForDevice(bell, "rigetti", undefined).circuit, [], [], {}).equivalent);
+    s.check("routing stage runs when a coupling map is supplied", () => {
+      const r = compileForDevice(bell, "ibm-heavy-hex", [[1], [0]]);
+      return r.stages.some((st) => st.name === "route") && equivalenceCheck(bell, r.circuit, [], [], {}).equivalent;
+    });
+  }
+
+  // ── Reduced density matrices & purity (partial trace) ──────────────
+  s.group("Reduced density matrices");
+  {
+    const bell = simulate(circ(2, [gate("h", [0]), gate("cx", [1], [0])]), {}).state;
+    const zero = simulate(circ(1, []), {}).state;
+    const plus = simulate(circ(1, [gate("h", [0])]), {}).state;
+    s.check("|0⟩ marginal is pure (Tr ρ² = 1)", () => close(purity(reducedDensityMatrix(zero, 1, [0])), 1));
+    s.check("Bell marginal is maximally mixed (Tr ρ² = ½)", () => close(purity(reducedDensityMatrix(bell, 2, [0])), 0.5, 1e-9));
+    s.check("|0⟩ reduced ρ = |0⟩⟨0|", () => {
+      const r = reducedDensityMatrix(zero, 1, [0]);
+      return close(r[0][0].re, 1) && close(r[1][1].re, 0);
+    });
+    s.check("|+⟩ reduced ρ has ½ on every entry", () => {
+      const r = reducedDensityMatrix(plus, 1, [0]);
+      return close(r[0][0].re, 0.5) && close(r[0][1].re, 0.5) && close(r[1][0].re, 0.5) && close(r[1][1].re, 0.5);
     });
   }
 
