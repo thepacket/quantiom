@@ -191,6 +191,16 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
   const [usageIn, setUsageIn] = useState<number>(0);
   const [usageOut, setUsageOut] = useState<number>(0);
   const [stepsTaken, setStepsTaken] = useState<number>(0);
+  // Live size (chars) of the auto-attached context that rides with each
+  // message: the circuit QASM plus any "+ context" panel attachments.
+  const contextChars = useMemo(() => {
+    const qasm = emitQasm3(circuit);
+    const extra = buildAttachedContext(attached, circuit, simResult, noise);
+    return (
+      `Current circuit (OpenQASM 3, ${circuit.numQubits} qubits, ${circuit.gates.length} gates):\n\n\`\`\`qasm\n${qasm}\n\`\`\`` +
+      (extra ? `\n\nAdditional Quantiom-computed context:\n\n${extra}` : "")
+    ).length;
+  }, [circuit, attached, simResult, noise]);
   // AI ↔ AI dialogue mode + Agent (tool-use) mode.
   const [mode, setMode] = useState<"chat" | "dialogue" | "agent">("chat");
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([]);
@@ -657,6 +667,9 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
         </button>
       </div>
       <div className="chat__header chat__header2">
+        <span className="chat__usage" title="Size of the context auto-attached to each message: the current circuit's OpenQASM plus any “+ context” panel attachments.">
+          context chars <b>{fmtChars(contextChars)}</b>
+        </span>
         <span className="chat__usage" title="Characters sent to the model this conversation (the running input cost). Resets on Clear.">
           in chars <b>{fmtChars(usageIn)}</b>
         </span>
