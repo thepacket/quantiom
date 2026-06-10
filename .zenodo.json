@@ -1,6 +1,6 @@
 {
   "title": "Quantiom: A browser-native, research-grade quantum circuit editor, simulator, and visualizer",
-  "description": "Quantiom is a browser-native quantum circuit editor, simulator, and visualizer for users already comfortable with quantum-computing concepts. It runs entirely in the browser with no installation: a multi-tab 64-gate editor feeds a dense statevector simulator, an Aaronson-Gottesman stabilizer tableau, and a quantum-trajectory noise simulator, alongside ~40 research-grade panels including 24 entanglement and dynamics visualizers, OpenQASM 3 round-trip, eight code/format exporters, optimizers, error mitigation, and a transpile/route/compile pipeline.",
+  "description": "Quantiom is a browser-native quantum circuit editor, simulator, and visualizer for users already comfortable with quantum-computing concepts. It runs entirely in the browser with no installation: a multi-tab 64-gate editor feeds a dense statevector simulator, an Aaronson-Gottesman stabilizer tableau, and a quantum-trajectory noise simulator, alongside ~70 research-grade panels including ~40 entanglement and dynamics visualizers, OpenQASM 3 round-trip, nine code/format exporters, optimizers, error mitigation, a transpile/route/compile pipeline, and an AI assistant with chat, dialogue, and tool-using agent modes.",
   "upload_type": "software",
   "license": "MIT",
   "creators": [

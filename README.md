@@ -5,7 +5,7 @@
 <h1 align="center">Quantiom</h1>
 
 [![CI](https://github.com/thepacket/quantiom/actions/workflows/ci.yml/badge.svg)](https://github.com/thepacket/quantiom/actions/workflows/ci.yml)
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20540701-blue?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.20540701)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20540700-blue?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.20540700)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **A browser-native research-grade quantum circuit editor, simulator,
@@ -207,7 +207,7 @@ in [`CITATION.cff`](CITATION.cff) (GitHub renders a **"Cite this
 repository"** button from it). An archival, versioned DOI is minted via
 [Zenodo](https://zenodo.org) on each tagged release.
 
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20540701-blue?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.20540701)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20540700-blue?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.20540700)
 
 The DOI above is the *concept* DOI — it always resolves to the latest
 archived version. Each release also gets its own version-specific DOI.

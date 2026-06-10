@@ -8,16 +8,17 @@ authors:
     orcid: "https://orcid.org/0009-0001-3961-9500"
 repository-code: "https://github.com/thepacket/quantiom"
 url: "https://quantiom.fly.dev"
-doi: 10.5281/zenodo.20540701
+doi: 10.5281/zenodo.20540700
 abstract: >-
   Quantiom is a browser-native quantum circuit editor, simulator, and
   visualizer for users already comfortable with quantum-computing concepts.
   It runs entirely in the browser with no installation: a multi-tab 64-gate
   editor feeds a dense statevector simulator, an Aaronson-Gottesman stabilizer
-  tableau, and a quantum-trajectory noise simulator, alongside ~40 research-
-  grade panels including 24 entanglement and dynamics visualizers, OpenQASM 3
-  round-trip, eight code/format exporters, optimizers, error mitigation, and a
-  transpile/route/compile pipeline.
+  tableau, and a quantum-trajectory noise simulator, alongside ~70 research-
+  grade panels including ~40 entanglement and dynamics visualizers, OpenQASM 3
+  round-trip, nine code/format exporters, optimizers, error mitigation, a
+  transpile/route/compile pipeline, and an AI assistant with chat, dialogue,
+  and tool-using agent modes.
 keywords:
   - quantum computing
   - quantum circuits
@@ -26,5 +27,5 @@ keywords:
   - OpenQASM
   - TypeScript
 license: MIT
-version: 0.9.0
-date-released: "2026-06-04"
+version: 1.0.0
+date-released: "2026-06-10"
