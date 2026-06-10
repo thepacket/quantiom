@@ -657,4 +657,41 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
       },
     ],
   },
+  {
+    name: "Visual demos",
+    prompts: [
+      {
+        title: "Entanglement light-cone (Ising quench)",
+        text: "Build a 6-qubit Trotterized transverse-field Ising quench (H = Σ ZZ + g Σ X) starting from |0…0⟩, with the Trotter step using a free time parameter t. Then open the Space-time entropy panel and the t-sweep panel. Tell me to press play on the t slider to watch the entanglement light-cone spread across the qubit × time grid.",
+      },
+      {
+        title: "Wigner negativity of a magic state",
+        text: "Prepare a magic state by applying T to |+⟩ on a single qubit, then open the Wigner and Husimi-Q panels. Explain the negative regions of the Wigner function and what they say about non-classicality / magic.",
+      },
+      {
+        title: "Kicked-top chaos in phase space",
+        text: "Build a kicked-top Floquet circuit (alternating global rotations and a nonlinear twist) on 4 qubits with a free parameter t, then open the Wigner and Husimi panels. Describe how the phase-space portrait breaks up into chaotic structure as the kick strength grows.",
+      },
+      {
+        title: "OTOC scrambling over time",
+        text: "Build a random brickwork circuit on 5 qubits whose layers depend on a free time parameter t, then open the OTOC panel. Explain what the out-of-time-order correlator C(t) shows about information scrambling and the butterfly velocity.",
+      },
+      {
+        title: "Bloch trajectory of a driven qubit",
+        text: "Drive a single qubit with RX(t) (a free time parameter t), then open the Bloch trajectory panel. Tell me to press play on t to watch the state trace a path on the Bloch sphere, and describe the precession.",
+      },
+      {
+        title: "Loschmidt echo & DQPT",
+        text: "Quench a 4-qubit transverse-field Ising chain with a free time parameter t (Trotterized evolution from a polarized initial state), then open the Loschmidt-echo panel. Explain the dynamical quantum phase transition: the non-analytic cusps in the rate function at the critical times.",
+      },
+      {
+        title: "GHZ on the Q-sphere",
+        text: "Build a 4-qubit GHZ state and open the Q-sphere panel. Explain what I'm seeing: the two basis states at the poles (Hamming weight 0 and 4) and how phase maps to hue — a far prettier view than a flat heatmap.",
+      },
+      {
+        title: "Scrambling in the unitary heatmap",
+        text: "Build a depth-8 random circuit on 4 qubits and open the unitary-heatmap panel. Explain how a localized/structured operator differs from a dense scrambling one in the magnitude + phase heatmap.",
+      },
+    ],
+  },
 ];
