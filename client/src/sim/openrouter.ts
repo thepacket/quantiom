@@ -22,6 +22,11 @@ const BASE_URL = "https://openrouter.ai/api/v1";
 // help with rate-limit prioritisation.
 const APP_REFERER = "https://quantiom.fly.dev";
 const APP_TITLE = "Quantiom";
+/** Default cap on completion length. Without an explicit max_tokens, OpenRouter
+ *  reserves the model's *full* output budget (often 64k) for its up-front
+ *  credit check, which 402s low-limit keys even for a one-line reply. A modest
+ *  default keeps that pre-authorisation small; the user can raise it. */
+export const DEFAULT_MAX_TOKENS = 4096;
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -61,8 +66,9 @@ export async function chatCompletion(
   messages: AgentMessage[],
   tools?: ToolDef[],
   signal?: AbortSignal,
+  maxTokens: number = DEFAULT_MAX_TOKENS,
 ): Promise<{ content: string; toolCalls: ParsedToolCall[] }> {
-  const body: Record<string, unknown> = { model, messages, stream: false };
+  const body: Record<string, unknown> = { model, messages, stream: false, max_tokens: maxTokens };
   if (tools && tools.length) {
     body.tools = tools;
     body.tool_choice = "auto";
@@ -157,6 +163,7 @@ export function streamChat(
   model: string,
   messages: ChatMessage[],
   callbacks: StreamCallbacks,
+  maxTokens: number = DEFAULT_MAX_TOKENS,
 ): AbortController {
   const controller = new AbortController();
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -187,7 +194,7 @@ export function streamChat(
           "HTTP-Referer": APP_REFERER,
           "X-Title": APP_TITLE,
         },
-        body: JSON.stringify({ model, messages, stream: true }),
+        body: JSON.stringify({ model, messages, stream: true, max_tokens: maxTokens }),
         signal: controller.signal,
       });
       if (!res.ok) {

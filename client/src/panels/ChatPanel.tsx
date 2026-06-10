@@ -6,6 +6,7 @@ import { Markdown } from "../editor/Markdown";
 import {
   listModels,
   streamChat,
+  DEFAULT_MAX_TOKENS,
   type ChatMessage,
   type OpenRouterModel,
 } from "../sim/openrouter";
@@ -164,6 +165,14 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
   const [replyScale, setReplyScale] = useState<number>(() => {
     try { const v = parseFloat(localStorage.getItem("quantiom:chat:font-scale") ?? ""); return Number.isFinite(v) && v >= 0.6 && v <= 2 ? v : 1; } catch { return 1; }
   });
+  // Max completion tokens per request. Bounds OpenRouter's up-front credit
+  // reservation (a missing/huge value 402s low-limit keys). Persisted; settable
+  // in the ⚙ drawer. Clamped to [256, 32768].
+  const [maxTokens, setMaxTokensState] = useState<number>(() => {
+    try { const v = parseInt(localStorage.getItem("quantiom:chat:max-tokens") ?? "", 10); return Number.isFinite(v) && v >= 256 && v <= 32768 ? v : DEFAULT_MAX_TOKENS; } catch { return DEFAULT_MAX_TOKENS; }
+  });
+  useEffect(() => { try { localStorage.setItem("quantiom:chat:max-tokens", String(maxTokens)); } catch { /* ignore */ } }, [maxTokens]);
+  const setMaxTokens = useCallback((n: number) => setMaxTokensState(Math.max(256, Math.min(32768, Math.round(n || 0) || DEFAULT_MAX_TOKENS))), []);
   // AI ↔ AI dialogue mode + Agent (tool-use) mode.
   const [mode, setMode] = useState<"chat" | "dialogue" | "agent">("chat");
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([]);
@@ -288,8 +297,8 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
         setStreamBuf("");
         streamAccumRef.current = "";
       },
-    });
-  }, [input, streaming, apiKey, model, circuit, history, onLoadInNewTab, attached, simResult, noise, scheduleFlush, cancelFlush]);
+    }, maxTokens);
+  }, [input, streaming, apiKey, model, circuit, history, onLoadInNewTab, attached, simResult, noise, maxTokens, scheduleFlush, cancelFlush]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -353,7 +362,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
 
     try {
       for (let step = 0; step < maxAgentSteps; step++) {
-        const { content, toolCalls } = await chatCompletion(apiKey, model, msgs, AGENT_TOOLS, abort.signal);
+        const { content, toolCalls } = await chatCompletion(apiKey, model, msgs, AGENT_TOOLS, abort.signal, maxTokens);
         if (toolCalls.length === 0) {
           msgs = [...msgs, { role: "assistant", content: content || "(done)" }];
           setAgentMessages(msgs);
@@ -384,7 +393,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
       setAgentRunning(false);
       agentAbortRef.current = null;
     }
-  }, [input, agentRunning, apiKey, model, circuit, customGates, paramValues, noise, maxAgentSteps, onApplyCircuit, onLoadInNewTab, onSetNoise, onListTabs, onSwitchTab, onSaveCustomGate, onSetParams]);
+  }, [input, agentRunning, apiKey, model, circuit, customGates, paramValues, noise, maxAgentSteps, maxTokens, onApplyCircuit, onLoadInNewTab, onSetNoise, onListTabs, onSwitchTab, onSaveCustomGate, onSetParams]);
 
   // Snapshot the current circuit + attached panels as the grounding context
   // shared by every dialogue turn (the circuit is fixed during a run).
@@ -406,9 +415,9 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
           onDelta,
           onDone: (full) => { abortRef.current = null; resolve(full); },
           onError: (m) => { abortRef.current = null; setError(m); resolve(null); },
-        });
+        }, maxTokens);
       }),
-    [apiKey],
+    [apiKey, maxTokens],
   );
 
   // Launch (or, when a transcript already exists, continue) the AI ↔ AI
@@ -647,6 +656,22 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
             Stored in this browser only (localStorage). Sent only to
             openrouter.ai as a Bearer token. Get a key at{" "}
             <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys</a>.
+          </div>
+          <label className="chat__settings-row">
+            <span>Max reply tokens</span>
+            <input
+              type="number"
+              min={256}
+              max={32768}
+              step={256}
+              value={maxTokens}
+              onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}
+            />
+          </label>
+          <div className="chat__settings-note">
+            Caps each reply's length. Lower this if OpenRouter returns a 402
+            (“requires more credits”) — without a cap it reserves the model's
+            full output budget up front, which low-limit keys can't afford.
           </div>
         </div>
       )}
