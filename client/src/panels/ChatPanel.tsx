@@ -588,8 +588,13 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
         <button
           className="chat__btn"
           onClick={clearChat}
-          disabled={streaming || dialogueRunning || (mode === "chat" ? history.length === 0 : dialogue.length === 0)}
-          title={mode === "chat" ? "Clear chat history" : "Clear the dialogue"}
+          disabled={
+            streaming || dialogueRunning || agentRunning ||
+            (mode === "chat" ? history.length === 0
+              : mode === "agent" ? agentMessages.length === 0
+              : dialogue.length === 0)
+          }
+          title={mode === "chat" ? "Clear chat history" : mode === "agent" ? "Clear the agent conversation" : "Clear the dialogue"}
         >
           clear
         </button>
