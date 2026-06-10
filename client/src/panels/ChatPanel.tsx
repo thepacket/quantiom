@@ -314,7 +314,14 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
         setStreaming(false);
         abortRef.current = null;
         setUsageOut((n) => n + full.length);
-        if (full.length > 0) setHistory((h) => [...h, { role: "assistant", content: full }]);
+        if (full.length > 0) {
+          setHistory((h) => [...h, { role: "assistant", content: full }]);
+        } else {
+          // Empty reply ⇒ no exchange to keep; roll back the orphaned user turn.
+          setHistory((h) => h.filter((m) => m !== visibleUser));
+          setInput((cur) => (cur.trim() ? cur : text));
+          setError("The model returned an empty reply — try again or pick another model.");
+        }
         setStreamBuf("");
         streamAccumRef.current = "";
         // Auto-open every detected QASM block as a new tab. Done here
@@ -329,6 +336,10 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
         setError(msg);
         setStreamBuf("");
         streamAccumRef.current = "";
+        // Roll back the optimistic user message so a failed send doesn't leave
+        // an orphaned, persisted bubble; restore the text so it can be retried.
+        setHistory((h) => h.filter((m) => m !== visibleUser));
+        setInput((cur) => (cur.trim() ? cur : text));
       },
     }, maxTokens);
   }, [input, streaming, apiKey, model, circuit, history, onLoadInNewTab, attached, simResult, noise, maxTokens, scheduleFlush, cancelFlush]);
