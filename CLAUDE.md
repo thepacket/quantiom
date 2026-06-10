@@ -479,7 +479,10 @@ host plus `/api/health`.
   `panels/agentTools.ts` defines the OpenRouter function-tool schemas
   (`AGENT_TOOLS`) + a pure `executeTool(name, args, ctx)` dispatcher wired to
   existing code — read tools (get_circuit_qasm / get_resources / get_state /
-  expectation / export_circuit / check_equivalent) and mutate tools
+  expectation / get_free_symbols / get_analysis [entropy / mutual_info / magic /
+  purity / coherence / meyer_wallach state metrics] / get_noise / run_benchmark
+  [rb / qv / xeb device characterization] / export_circuit / check_equivalent)
+  and mutate tools
   (set_circuit_qasm, place_gate, remove_gate, add_qubits, optimise, transpile,
   compile, append_inverse, add_plot, prepare_state, synthesize_unitary,
   trotterise, open_in_new_tab, set_noise, list_tabs, switch_tab,
@@ -626,7 +629,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (1002 tests): the simulator core is deeply covered —
+- **What's covered** (1005 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
@@ -671,9 +674,10 @@ host plus `/api/health`.
   `statePrep` (synthesized circuit reproduces random targets at fidelity 1),
   and `unitarySynth` (synthesized unitary matches at process fidelity 1).
   The **Agent-mode** tool dispatcher (`agentTools.ts` `executeTool`) is
-  covered with a mock context — read tools return the right text, mutate
-  tools update the circuit via `applyCircuit`, transforms/QASM-load work,
-  bad input throws. The
+  covered with a mock context — read tools return the right text (incl.
+  get_free_symbols, get_analysis state metrics vs Bell-state ground truth,
+  get_noise, run_benchmark rb/qv/xeb), mutate tools update the circuit via
+  `applyCircuit`, transforms/QASM-load work, bad input throws. The
   AI-dialogue pure core is covered too
   (`dialogue.ts`: `buildTurnMessages` alternation, `mergeConsecutive`,
   `nextSpeakerOf`, `turnsAreConverging`, `dialogueToMarkdown`).

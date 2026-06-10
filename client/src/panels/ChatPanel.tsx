@@ -133,7 +133,10 @@ const AGENT_SYSTEM_PROMPT =
   "transpile, compile, append the inverse, add plots). Prefer `set_circuit_qasm` " +
   "for building or substantially rewriting circuits, and the incremental tools " +
   "for small edits. Always inspect with read tools (get_resources / get_state / " +
-  "expectation) to verify your work. Every edit is undo-able by the user. When " +
+  "expectation / get_analysis / get_free_symbols) to verify your work — these " +
+  "return computed numbers you must not fabricate. Call get_free_symbols before " +
+  "set_params, and run_benchmark / get_noise for device characterization. Every " +
+  "edit is undo-able by the user. When " +
   "done, give a short plain-language summary of what you did and what you found. " +
   "Write math in $…$ / $$…$$ (KaTeX). Be concise.";
 

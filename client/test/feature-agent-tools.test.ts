@@ -140,6 +140,40 @@ describe("agent tools", () => {
     expect(() => executeTool("save_as_custom_gate", { name: "" }, c.ctx)).toThrow(/name is required/);
   });
 
+  it("get_free_symbols lists symbolic parameters with current values", () => {
+    const c = makeCtx(circ(1, [gate("rz", [0], [], ["theta"]), gate("rx", [0], [], ["2*t"])]));
+    c.ctx.paramValues = { theta: 1.5 };
+    const out = executeTool("get_free_symbols", {}, c.ctx);
+    expect(out).toMatch(/theta = 1\.5/);
+    expect(out).toMatch(/t = 0/);
+    expect(out).toMatch(/time clock/);
+    const none = makeCtx(circ(1, [gate("h", [0])]));
+    expect(executeTool("get_free_symbols", {}, none.ctx)).toMatch(/No free symbols/);
+  });
+
+  it("get_analysis computes state metrics (Bell state)", () => {
+    const { ctx } = makeCtx(circ(2, [gate("h", [0]), gate("cx", [1], [0])]));
+    // Bell state: mid-cut entropy = 1 bit, I(0:1) = 2 bits, magic 0, Q = 1.
+    expect(executeTool("get_analysis", { metric: "entropy" }, ctx)).toMatch(/S=1\.0000/);
+    expect(executeTool("get_analysis", { metric: "mutual_info" }, ctx)).toMatch(/I\(0:1\)=2\.0000/);
+    expect(executeTool("get_analysis", { metric: "magic" }, ctx)).toMatch(/M₂ = 0\.0000/);
+    expect(executeTool("get_analysis", { metric: "purity" }, ctx)).toMatch(/Tr\(ρ_0²\)=0\.5000/);
+    expect(executeTool("get_analysis", { metric: "meyer_wallach" }, ctx)).toMatch(/Q = 1\.0000/);
+    expect(executeTool("get_analysis", { metric: "coherence" }, ctx)).toMatch(/l₁ =/);
+    expect(() => executeTool("get_analysis", { metric: "bogus" }, ctx)).toThrow(/unknown metric/);
+  });
+
+  it("get_noise reads the model; run_benchmark characterizes it", () => {
+    const c = makeCtx(circ(1, [gate("h", [0])]));
+    expect(executeTool("get_noise", {}, c.ctx)).toMatch(/Noise disabled/);
+    // Noiseless RB → near-perfect survival, EPC ≈ 0.
+    const rb = executeTool("run_benchmark", { kind: "rb" }, c.ctx);
+    expect(rb).toMatch(/error-per-Clifford/);
+    expect(executeTool("run_benchmark", { kind: "qv" }, c.ctx)).toMatch(/Quantum Volume/);
+    expect(executeTool("run_benchmark", { kind: "xeb" }, c.ctx)).toMatch(/per-cycle fidelity/);
+    expect(() => executeTool("run_benchmark", { kind: "nope" }, c.ctx)).toThrow(/rb, qv, xeb/);
+  });
+
   it("add_plot forwards a spec", () => {
     const p = makeCtx(circ(1, [gate("h", [0])]));
     executeTool("add_plot", { quantity: "expZ", chart: "bars" }, p.ctx);

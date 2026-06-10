@@ -39,6 +39,15 @@ import { buildTrotterCircuit, type TrotterOrder } from "../sim/trotter";
 import { equivalenceCheck } from "../sim/equivalence";
 import type { NoiseModel } from "../sim/noise";
 import { GATES } from "../editor/gates";
+import { detectFreeVars } from "../sim/expr";
+import { entropyProfile, mutualInformationMatrix } from "../sim/entanglement";
+import { reducedDensityMatrix, purity } from "../sim/density";
+import { magic } from "../sim/magic";
+import { allPauliExpectations } from "../sim/pauliSpectrum";
+import { coherenceFromAmplitudes } from "../sim/coherence";
+import { randomizedBenchmarking } from "../sim/randomizedBenchmarking";
+import { quantumVolume } from "../sim/quantumVolume";
+import { xeb } from "../sim/xeb";
 
 export type AgentContext = {
   getCircuit: () => Circuit;
@@ -88,6 +97,28 @@ export const AGENT_TOOLS = [
     "Compute ⟨P⟩ for a Pauli string (e.g. \"ZZI\") or ⟨H⟩ for a Pauli sum (e.g. \"0.5 ZZ + X\") on the current circuit's output.",
     { observable: { type: "string", description: "A Pauli string of length n, or a weighted Pauli sum." } },
     ["observable"],
+  ),
+  t(
+    "get_free_symbols",
+    "List the circuit's free parameters (symbols used in gate angle expressions, e.g. theta, phi, t) and their current slider values. Call this BEFORE set_params so you set the right symbols. Read-only.",
+    {},
+  ),
+  t(
+    "get_analysis",
+    "Compute a quantum-information metric on the current circuit's output state — numbers the model cannot fabricate. `metric` ∈ entropy (entanglement-entropy profile across every cut + mid-cut value), mutual_info (per-qubit S + pairwise I(i:j)), magic (stabilizer-Rényi M₂; 0 = stabilizer/Clifford state), purity (per-qubit Tr(ρ²); 1 = unentangled), coherence (l₁ + relative-entropy coherence in the Z basis), meyer_wallach (global entanglement Q ∈ [0,1]). Read-only.",
+    { metric: { type: "string", enum: ["entropy", "mutual_info", "magic", "purity", "coherence", "meyer_wallach"] } },
+    ["metric"],
+  ),
+  t(
+    "get_noise",
+    "Read the current noise model (enabled flag + per-channel rates + trajectory count). Complements set_noise. Read-only.",
+    {},
+  ),
+  t(
+    "run_benchmark",
+    "Run a device-characterization benchmark against the CURRENT noise model (independent of the open circuit) — compute the model cannot fabricate. `kind` ∈ rb (single-qubit randomized benchmarking → error-per-Clifford), qv (quantum volume → achieved QV + heavy-output probabilities), xeb (cross-entropy benchmarking → per-cycle fidelity λ). Bounded/sampled; runs on click. Read-only.",
+    { kind: { type: "string", enum: ["rb", "qv", "xeb"] } },
+    ["kind"],
   ),
   t(
     "set_circuit_qasm",
@@ -255,6 +286,88 @@ export function executeTool(name: string, args: Record<string, unknown>, ctx: Ag
       }
       const v = pauliSumExpectation(res.state, n, terms);
       return `⟨H⟩ = ${v.toFixed(6)} for H = ${obs}`;
+    }
+
+    case "get_free_symbols": {
+      const syms = new Set<string>();
+      for (const g of circuit.gates) for (const p of g.params ?? []) for (const v of detectFreeVars(p)) syms.add(v);
+      if (syms.size === 0) return "No free symbols — the circuit has no symbolic parameters.";
+      return ["Free symbols (current value):", ...[...syms].sort().map((s) => {
+        const cur = ctx.paramValues[s];
+        const note = s === "t" ? "  — time clock (animatable)" : "";
+        return `  ${s} = ${typeof cur === "number" ? cur : 0}${note}`;
+      })].join("\n");
+    }
+
+    case "get_analysis": {
+      const metric = String(args.metric ?? "");
+      const res = simulate(circuit, ctx.paramValues, ctx.customGates);
+      if (res.isStabilizer) return "Clifford fast path — these state metrics need the statevector (the state is a stabilizer state; magic M₂ = 0 by definition).";
+      const n = circuit.numQubits;
+      switch (metric) {
+        case "entropy": {
+          const prof = entropyProfile(res.state, n);
+          if (!prof) return "Entropy profile needs n ≥ 2 qubits.";
+          const mid = prof.entropy[Math.floor((n - 2) / 2)];
+          const cuts = prof.entropy.map((e, k) => `cut ${k}|${k + 1}: S=${Number.isFinite(e) ? e.toFixed(4) : "—"} (max ${prof.maxEntropy[k].toFixed(2)})`);
+          return `Entanglement-entropy profile (bits):\n  ${cuts.join("\n  ")}\n  mid-cut S ≈ ${Number.isFinite(mid) ? mid.toFixed(4) : "—"}`;
+        }
+        case "mutual_info": {
+          const mi = mutualInformationMatrix(res.state, n);
+          if (!mi) return `Mutual information capped at 12 qubits (circuit has ${n}).`;
+          const single = mi.single.map((s, q) => `S(ρ_${q})=${s.toFixed(4)}`).join(", ");
+          const pairs: string[] = [];
+          for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (mi.mi[i][j] > 1e-4) pairs.push(`I(${i}:${j})=${mi.mi[i][j].toFixed(4)}`);
+          return `Per-qubit entropy: ${single}\nPairwise mutual information (bits): ${pairs.length ? pairs.join(", ") : "all ≈ 0 (no pairwise correlation)"}`;
+        }
+        case "magic": {
+          const m = magic(allPauliExpectations(res.state, n), n);
+          return `Stabilizer-Rényi magic M₂ = ${m.m2.toFixed(4)} bits (0 ⟺ stabilizer/Clifford state; >0 ⟺ non-Clifford resource). Pauli-weight distribution: [${m.weightDist.map((w) => w.toFixed(3)).join(", ")}].`;
+        }
+        case "purity": {
+          const per = [];
+          for (let q = 0; q < n; q++) per.push(`Tr(ρ_${q}²)=${purity(reducedDensityMatrix(res.state, n, [q])).toFixed(4)}`);
+          return `Per-qubit purity (1 = pure/unentangled, 0.5 = maximally mixed): ${per.join(", ")}.`;
+        }
+        case "coherence": {
+          const c = coherenceFromAmplitudes(res.state, n);
+          return `Z-basis coherence: l₁ = ${c.cL1.toFixed(4)} (max ${c.cL1Max}), relative-entropy = ${c.cRel.toFixed(4)} bits (max ${c.cRelMax}; 0 ⟺ a classical Z-basis mixture).`;
+        }
+        case "meyer_wallach": {
+          let sum = 0;
+          for (let q = 0; q < n; q++) sum += purity(reducedDensityMatrix(res.state, n, [q]));
+          const Q = Math.max(0, Math.min(1, 2 * (1 - sum / n)));
+          return `Meyer–Wallach global entanglement Q = ${Q.toFixed(4)} (0 ⟺ product state, 1 ⟺ maximally entangled per the average single-qubit purity).`;
+        }
+        default:
+          throw new Error(`unknown metric "${metric}"`);
+      }
+    }
+
+    case "get_noise": {
+      const nm = ctx.noise;
+      if (!nm) return "Noise model is not available here.";
+      return `Noise ${nm.enabled ? "ENABLED" : "disabled"} — 1q-depol=${nm.oneQubitDepolarising}, 2q-depol=${nm.twoQubitDepolarising}, amp-damp=${nm.amplitudeDamping}, phase-damp=${nm.phaseDamping}, readout=${nm.readoutBitFlip}, crosstalk=${nm.crosstalk}, trajectories=${nm.trajectories}.`;
+    }
+
+    case "run_benchmark": {
+      const kind = String(args.kind ?? "");
+      const nm = ctx.noise ?? { enabled: true, trajectories: 64, oneQubitDepolarising: 0.001, twoQubitDepolarising: 0.01, amplitudeDamping: 0, phaseDamping: 0, readoutBitFlip: 0, crosstalk: 0 } as NoiseModel;
+      const noiseOn: NoiseModel = { ...nm, enabled: true, trajectories: Math.min(nm.trajectories || 64, 128) };
+      if (kind === "rb") {
+        const r = randomizedBenchmarking(noiseOn, { lengths: [1, 2, 4, 8, 16, 32], sequences: 20 });
+        return `Randomized benchmarking: depolarising p = ${r.p.toFixed(5)}, error-per-Clifford r = ${r.epc.toExponential(3)}. Survival P(m) at m=[${r.lengths.join(",")}]: [${r.survival.map((s) => s.toFixed(4)).join(", ")}].`;
+      }
+      if (kind === "qv") {
+        const r = quantumVolume(noiseOn, { widths: [2, 3, 4], circuits: 20 });
+        const rows = r.widths.map((w) => `width ${w.width}: HOP=${w.meanHOP.toFixed(3)}±${w.sigma.toFixed(3)} (2σ lower ${w.lower.toFixed(3)}) ${w.pass ? "PASS" : "fail"}`);
+        return `Quantum Volume = ${r.quantumVolume} (ideal HOP ≈ ${r.idealHOP.toFixed(3)}, threshold 2/3).\n  ${rows.join("\n  ")}`;
+      }
+      if (kind === "xeb") {
+        const r = xeb(noiseOn, { numQubits: 2, depths: [1, 2, 4, 8], circuits: 20 });
+        return `Cross-entropy benchmarking (${r.numQubits}q): per-cycle fidelity λ = ${r.perCycle.toFixed(5)}. F at depths [${r.depths.join(",")}]: [${r.fidelity.map((f) => f.toFixed(4)).join(", ")}].`;
+      }
+      throw new Error(`kind must be one of rb, qv, xeb`);
     }
 
     case "set_circuit_qasm": {
