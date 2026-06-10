@@ -87,7 +87,7 @@ circuits across frameworks without leaving the browser.
 
 # Quality and correctness
 
-The numeric core is covered by a comprehensive automated test suite — 1001 tests
+The numeric core is covered by a comprehensive automated test suite — 1002 tests
 run under continuous integration on every commit — that validates the
 statevector simulator, every gate's matrix unitarity and algebraic identities,
 the stabilizer tableau (cross-checked against the dense simulator), Pauli

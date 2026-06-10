@@ -55,6 +55,15 @@ export type AgentContext = {
   /** Current noise model + setter, for the set_noise tool. */
   noise?: NoiseModel;
   setNoise?: (next: NoiseModel) => void;
+  /** Multi-tab management. */
+  listTabs?: () => Array<{ index: number; name: string; numQubits: number; active: boolean }>;
+  switchTab?: (index: number) => boolean;
+  /** Save a circuit as a reusable custom gate. */
+  saveCustomGate?: (circuit: Circuit, name: string) => void;
+  /** Set the parameter-slider values (free symbols). */
+  setParams?: (values: ParameterValues) => void;
+  /** Add a sandboxed `plotjs` program to the Custom plots panel. */
+  addPlotProgram?: (code: string) => void;
 };
 
 // ─── tool schemas (what the model sees) ───────────────────────────────
@@ -176,6 +185,21 @@ export const AGENT_TOOLS = [
       crosstalk: { type: "number" },
       trajectories: { type: "integer" },
     },
+  ),
+  t("list_tabs", "List the open circuit tabs (index, name, qubit count, which is active).", {}),
+  t("switch_tab", "Switch the active tab to a given index (from list_tabs).", { index: { type: "integer" } }, ["index"]),
+  t("save_as_custom_gate", "Save the current circuit as a reusable custom gate (appears in the palette).", { name: { type: "string" } }, ["name"]),
+  t(
+    "set_params",
+    "Set the parameter-slider values for free symbols (e.g. {\"theta\": 1.57, \"t\": 0}). Only the symbols you pass change.",
+    { values: { type: "object", description: "Map of symbol name → numeric value." } },
+    ["values"],
+  ),
+  t(
+    "add_plot_program",
+    "Add a sandboxed code plot: a `(data) => scene` snippet that draws a custom visual. Runs in a Web Worker (no DOM/network). Use only for visuals the spec catalog can't express.",
+    { code: { type: "string", description: "Body of (data)=>scene returning {width,height,elements:[…]}." } },
+    ["code"],
   ),
 ];
 
@@ -394,6 +418,50 @@ export function executeTool(name: string, args: Record<string, unknown>, ctx: Ag
       if (typeof args.trajectories === "number") next.trajectories = clampInt(args.trajectories, 256, 1, 8192);
       ctx.setNoise(next);
       return `Noise ${next.enabled ? "enabled" : "disabled"}: 1q=${next.oneQubitDepolarising}, 2q=${next.twoQubitDepolarising}, AD=${next.amplitudeDamping}, PD=${next.phaseDamping}, readout=${next.readoutBitFlip}, crosstalk=${next.crosstalk}, T=${next.trajectories}.`;
+    }
+
+    case "list_tabs": {
+      if (!ctx.listTabs) throw new Error("tab listing is not available here");
+      const tabs = ctx.listTabs();
+      return tabs.map((t2) => `  [${t2.index}] ${t2.active ? "* " : "  "}${t2.name} (${t2.numQubits}q)`).join("\n") || "no tabs";
+    }
+
+    case "switch_tab": {
+      if (!ctx.switchTab) throw new Error("tab switching is not available here");
+      const idx = clampInt(args.index, -1, 0, 1000);
+      if (!ctx.switchTab(idx)) throw new Error(`no tab at index ${idx}`);
+      return `Switched to tab ${idx}.`;
+    }
+
+    case "save_as_custom_gate": {
+      if (!ctx.saveCustomGate) throw new Error("saving custom gates is not available here");
+      const gname = String(args.name ?? "").trim();
+      if (!gname) throw new Error("name is required");
+      if (circuit.gates.length === 0) throw new Error("the circuit is empty — add gates first");
+      ctx.saveCustomGate(circuit, gname);
+      return `Saved the current circuit as custom gate "${gname}" (${circuit.numQubits} qubits). It's in the palette under "Your gates".`;
+    }
+
+    case "set_params": {
+      if (!ctx.setParams) throw new Error("setting parameters is not available here");
+      const raw = args.values;
+      if (!raw || typeof raw !== "object") throw new Error("values must be an object of symbol → number");
+      const values: Record<string, number> = {};
+      for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+        const x = typeof v === "number" ? v : Number(v);
+        if (Number.isFinite(x)) values[k] = x;
+      }
+      if (Object.keys(values).length === 0) throw new Error("no valid numeric values provided");
+      ctx.setParams(values);
+      return `Set parameters: ${Object.entries(values).map(([k, v]) => `${k}=${v}`).join(", ")}.`;
+    }
+
+    case "add_plot_program": {
+      if (!ctx.addPlotProgram) throw new Error("code plots are not available here");
+      const code = String(args.code ?? "");
+      if (!code.trim()) throw new Error("code is required");
+      ctx.addPlotProgram(code);
+      return "Added a sandboxed code plot to the Custom plots panel.";
     }
 
     default:

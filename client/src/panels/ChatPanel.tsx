@@ -72,6 +72,11 @@ type Props = {
   onApplyCircuit: (circuit: Circuit) => void;
   /** Update the noise model — used by the Agent's set_noise tool. */
   onSetNoise: (noise: NoiseModel) => void;
+  /** Agent tab/param/custom-gate controls. */
+  onListTabs: () => Array<{ index: number; name: string; numQubits: number; active: boolean }>;
+  onSwitchTab: (index: number) => boolean;
+  onSaveCustomGate: (circuit: Circuit, name: string) => void;
+  onSetParams: (values: ParameterValues) => void;
 };
 
 const SYSTEM_PROMPT =
@@ -134,7 +139,7 @@ const AGENT_SYSTEM_PROMPT =
 
 const MAX_AGENT_STEPS = 14;
 
-export function ChatPanel({ circuit, simResult, noise, customGates, paramValues, onLoadInNewTab, onApplyCircuit, onSetNoise }: Props) {
+export function ChatPanel({ circuit, simResult, noise, customGates, paramValues, onLoadInNewTab, onApplyCircuit, onSetNoise, onListTabs, onSwitchTab, onSaveCustomGate, onSetParams }: Props) {
   const [open, setOpen] = useState<boolean>(loadOpen);
   const [height, setHeight] = useState<number>(loadHeight);
   const [apiKey, setApiKey] = useState<string>(loadApiKey);
@@ -320,6 +325,11 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
       openInNewTab: onLoadInNewTab,
       noise,
       setNoise: onSetNoise,
+      listTabs: onListTabs,
+      switchTab: onSwitchTab,
+      saveCustomGate: onSaveCustomGate,
+      setParams: onSetParams,
+      addPlotProgram: (code) => { requestCustomPlotProgram(code); },
     };
 
     try {
@@ -355,7 +365,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
       setAgentRunning(false);
       agentAbortRef.current = null;
     }
-  }, [input, agentRunning, apiKey, model, circuit, customGates, paramValues, noise, onApplyCircuit, onLoadInNewTab, onSetNoise]);
+  }, [input, agentRunning, apiKey, model, circuit, customGates, paramValues, noise, onApplyCircuit, onLoadInNewTab, onSetNoise, onListTabs, onSwitchTab, onSaveCustomGate, onSetParams]);
 
   // Snapshot the current circuit + attached panels as the grounding context
   // shared by every dialogue turn (the circuit is fixed during a run).

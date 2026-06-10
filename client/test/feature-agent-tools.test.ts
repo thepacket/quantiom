@@ -11,6 +11,10 @@ function makeCtx(initial: Circuit) {
   const plots: unknown[] = [];
   const tabs: Circuit[] = [];
   const applied: string[] = [];
+  const programs: string[] = [];
+  const savedGates: string[] = [];
+  let params: Record<string, number> = {};
+  let activeTab = 0;
   const ctx: AgentContext = {
     getCircuit: () => current,
     customGates: [],
@@ -20,8 +24,13 @@ function makeCtx(initial: Circuit) {
     openInNewTab: (c) => tabs.push(c),
     noise,
     setNoise: (n) => { noise = n; },
+    listTabs: () => [{ index: 0, name: "A", numQubits: 1, active: activeTab === 0 }, { index: 1, name: "B", numQubits: 2, active: activeTab === 1 }],
+    switchTab: (i) => { if (i < 0 || i > 1) return false; activeTab = i; return true; },
+    saveCustomGate: (_c, name) => savedGates.push(name),
+    setParams: (v) => { params = { ...params, ...v }; },
+    addPlotProgram: (code) => programs.push(code),
   };
-  return { ctx, get: () => current, getNoise: () => noise, plots, tabs, applied };
+  return { ctx, get: () => current, getNoise: () => noise, plots, tabs, applied, programs, savedGates, getParams: () => params, getActiveTab: () => activeTab };
 }
 
 describe("agent tools", () => {
@@ -114,6 +123,21 @@ describe("agent tools", () => {
     executeTool("set_noise", { enabled: true, readoutBitFlip: 0.03 }, c.ctx);
     expect(c.getNoise().enabled).toBe(true);
     expect(c.getNoise().readoutBitFlip).toBeCloseTo(0.03, 10);
+  });
+
+  it("tranche-3: tabs, custom gate, params, plot program", () => {
+    const c = makeCtx(circ(1, [gate("h", [0])]));
+    expect(executeTool("list_tabs", {}, c.ctx)).toMatch(/\[0\]/);
+    executeTool("switch_tab", { index: 1 }, c.ctx);
+    expect(c.getActiveTab()).toBe(1);
+    expect(() => executeTool("switch_tab", { index: 9 }, c.ctx)).toThrow(/no tab/);
+    executeTool("save_as_custom_gate", { name: "myblock" }, c.ctx);
+    expect(c.savedGates).toEqual(["myblock"]);
+    executeTool("set_params", { values: { theta: 1.5, t: 0 } }, c.ctx);
+    expect(c.getParams().theta).toBe(1.5);
+    executeTool("add_plot_program", { code: "return {width:10,height:10,elements:[]};" }, c.ctx);
+    expect(c.programs.length).toBe(1);
+    expect(() => executeTool("save_as_custom_gate", { name: "" }, c.ctx)).toThrow(/name is required/);
   });
 
   it("add_plot forwards a spec", () => {
