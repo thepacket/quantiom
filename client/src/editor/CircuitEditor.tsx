@@ -1321,6 +1321,7 @@ export function CircuitEditor() {
             onSetNoise={setNoise}
             onListTabs={() => t.tabs.map((x, i) => ({ index: i, name: x.versioned.present.name ?? "Untitled", numQubits: x.versioned.present.numQubits, active: x.id === t.activeId }))}
             onSwitchTab={(i) => { const tab = t.tabs[i]; if (!tab) return false; t.switchTab(tab.id); return true; }}
+            onCloseTab={(i) => { const tab = t.tabs[i]; if (!tab) return false; t.closeTab(tab.id); return true; }}
             onSaveCustomGate={(c, name) => setCustomGates((prev) => [...prev, { id: newCustomGateId(), name: name.trim(), numQubits: c.numQubits, gates: c.gates.map((g) => ({ ...g })) }])}
             onSetParams={(vals) => setParamValues({ ...paramValues, ...vals })}
           />

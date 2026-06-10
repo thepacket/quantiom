@@ -483,9 +483,11 @@ host plus `/api/health`.
   purity / coherence / meyer_wallach state metrics] / get_noise / run_benchmark
   [rb / qv / xeb device characterization] / export_circuit / check_equivalent)
   and mutate tools
-  (set_circuit_qasm, place_gate, remove_gate, add_qubits, optimise, transpile,
+  (set_circuit_qasm, place_gate, remove_gate, add_qubits, insert_snippet
+  [Bell/GHZ/QFT/iQFT/Trotter blocks], optimise, transpile,
   compile, append_inverse, add_plot, prepare_state, synthesize_unitary,
-  trotterise, open_in_new_tab, set_noise, list_tabs, switch_tab,
+  trotterise, open_in_new_tab, set_noise, list_tabs, switch_tab, close_tab,
+  set_panel [reveal/collapse an analysis panel], list_tools [self-discovery],
   save_as_custom_gate, set_params, add_plot_program). Most circuit mutations
   route through `ctx.applyCircuit` → the `replace-circuit` reducer action, so they're
   **undo-able** (set_noise/open_in_new_tab use their own callbacks). `openrouter.ts` `chatCompletion` is the
@@ -629,7 +631,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (1005 tests): the simulator core is deeply covered —
+- **What's covered** (1008 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),

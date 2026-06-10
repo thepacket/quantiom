@@ -174,6 +174,45 @@ describe("agent tools", () => {
     expect(() => executeTool("run_benchmark", { kind: "nope" }, c.ctx)).toThrow(/rb, qv, xeb/);
   });
 
+  it("list_tools enumerates every tool with a mutate/read marker", () => {
+    const { ctx } = makeCtx(circ(1, []));
+    const out = executeTool("list_tools", {}, ctx);
+    expect(out).toMatch(/get_circuit_qasm/);
+    expect(out).toMatch(/✎ set_circuit_qasm/); // mutate marker
+    expect(out).toMatch(/· get_state/); // read marker
+    // every schema name shows up
+    for (const tl of AGENT_TOOLS) expect(out).toContain(tl.function.name);
+  });
+
+  it("insert_snippet appends a named gate block", () => {
+    const c = makeCtx(circ(2, []));
+    const out = executeTool("insert_snippet", { id: "bell" }, c.ctx);
+    expect(out).toMatch(/Bell/);
+    expect(c.get().gates.length).toBe(2); // H + CX
+    expect(c.get().gates.some((g) => g.gateId === "cx")).toBe(true);
+    // ghz on 3 qubits → H + 2 CX
+    const g3 = makeCtx(circ(3, []));
+    executeTool("insert_snippet", { id: "ghz" }, g3.ctx);
+    expect(g3.get().gates.length).toBe(3);
+    expect(() => executeTool("insert_snippet", { id: "bell" }, makeCtx(circ(1, [])).ctx)).toThrow(/at least 2 qubits/);
+    expect(() => executeTool("insert_snippet", { id: "nope" }, c.ctx)).toThrow(/unknown snippet/);
+  });
+
+  it("close_tab and set_panel use their callbacks", () => {
+    let closed = -1;
+    const panels: Array<{ id: string; open: boolean }> = [];
+    const c = makeCtx(circ(1, []));
+    c.ctx.closeTab = (i) => { if (i < 0 || i > 1) return false; closed = i; return true; };
+    c.ctx.setPanel = (id, open) => { panels.push({ id, open }); };
+    expect(executeTool("close_tab", { index: 1 }, c.ctx)).toMatch(/Closed tab 1/);
+    expect(closed).toBe(1);
+    expect(() => executeTool("close_tab", { index: 9 }, c.ctx)).toThrow(/no tab/);
+    executeTool("set_panel", { id: "magic", open: true }, c.ctx);
+    expect(panels).toEqual([{ id: "magic", open: true }]);
+    executeTool("set_panel", { id: "noise" }, c.ctx); // open defaults true
+    expect(panels[1]).toEqual({ id: "noise", open: true });
+  });
+
   it("add_plot forwards a spec", () => {
     const p = makeCtx(circ(1, [gate("h", [0])]));
     executeTool("add_plot", { quantity: "expZ", chart: "bars" }, p.ctx);

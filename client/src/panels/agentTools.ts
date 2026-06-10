@@ -48,6 +48,7 @@ import { coherenceFromAmplitudes } from "../sim/coherence";
 import { randomizedBenchmarking } from "../sim/randomizedBenchmarking";
 import { quantumVolume } from "../sim/quantumVolume";
 import { xeb } from "../sim/xeb";
+import { SNIPPETS } from "../editor/snippets";
 
 export type AgentContext = {
   getCircuit: () => Circuit;
@@ -73,6 +74,10 @@ export type AgentContext = {
   setParams?: (values: ParameterValues) => void;
   /** Add a sandboxed `plotjs` program to the Custom plots panel. */
   addPlotProgram?: (code: string) => void;
+  /** Reveal or collapse an analysis panel by id (window-event broadcast). */
+  setPanel?: (id: string, open: boolean) => void;
+  /** Close a tab by index. Returns false if the index is invalid. */
+  closeTab?: (index: number) => boolean;
 };
 
 // ─── tool schemas (what the model sees) ───────────────────────────────
@@ -85,6 +90,7 @@ const t = (name: string, description: string, properties: Record<string, unknown
 const TARGET_ENUM = ["clifford-t", "ibm-heavy-hex", "rigetti"];
 
 export const AGENT_TOOLS = [
+  t("list_tools", "List every tool you can call (name + one-line description), grouped read vs mutate. Use to discover your own capabilities. Read-only.", {}),
   t("get_circuit_qasm", "Return the current circuit as OpenQASM 3 so you can read its exact structure.", {}),
   t("get_resources", "Return gate counts, CX count, T-count/T-depth, parallel depth, and qubit usage of the current circuit.", {}),
   t(
@@ -155,6 +161,12 @@ export const AGENT_TOOLS = [
   }, ["target"]),
   t("append_inverse", "Append U† (the inverse of the current circuit) so the whole thing composes to identity. Undo-able.", {}),
   t(
+    "insert_snippet",
+    "Append a ready-made gate block to the current circuit. `id` ∈ bell, ghz, qft, iqft, trotter-ising. Builds for the circuit's current qubit count. Undo-able.",
+    { id: { type: "string", enum: SNIPPETS.filter((s) => s.id).map((s) => s.id) } },
+    ["id"],
+  ),
+  t(
     "add_plot",
     "Add a custom plot to the Custom plots panel. `quantity` is one of the catalog quantities (expZ, prob, mutualInfo, entropy, magic, pauli, energy, otoc, …); optional sweep (none/column/t), chart, and args.",
     {
@@ -219,6 +231,13 @@ export const AGENT_TOOLS = [
   ),
   t("list_tabs", "List the open circuit tabs (index, name, qubit count, which is active).", {}),
   t("switch_tab", "Switch the active tab to a given index (from list_tabs).", { index: { type: "integer" } }, ["index"]),
+  t("close_tab", "Close the tab at a given index (from list_tabs). Closing the last tab leaves a fresh blank one.", { index: { type: "integer" } }, ["index"]),
+  t(
+    "set_panel",
+    "Reveal (open) or collapse an analysis panel by id so the user sees what you computed. Common ids: statevector, probabilities, bloch, expectation, custom-plots, magic, mutual-info, entropy-profile, noise, resources, qasm. No-op if the id isn't mounted.",
+    { id: { type: "string" }, open: { type: "boolean", description: "true to reveal, false to collapse (default true)." } },
+    ["id"],
+  ),
   t("save_as_custom_gate", "Save the current circuit as a reusable custom gate (appears in the palette).", { name: { type: "string" } }, ["name"]),
   t(
     "set_params",
@@ -237,7 +256,7 @@ export const AGENT_TOOLS = [
 /** Names that mutate the circuit (for UI labelling / gating). */
 export const MUTATING_TOOLS = new Set([
   "set_circuit_qasm", "place_gate", "remove_gate", "add_qubits", "optimise", "transpile", "compile", "append_inverse",
-  "prepare_state", "synthesize_unitary", "trotterise", "set_noise",
+  "prepare_state", "synthesize_unitary", "trotterise", "set_noise", "insert_snippet",
 ]);
 
 // ─── execution ────────────────────────────────────────────────────────
@@ -249,6 +268,11 @@ const GATE_IDS = new Set(GATES.map((g) => g.id));
 export function executeTool(name: string, args: Record<string, unknown>, ctx: AgentContext): string {
   const circuit = ctx.getCircuit();
   switch (name) {
+    case "list_tools": {
+      const lines = AGENT_TOOLS.map((tl) => `  ${MUTATING_TOOLS.has(tl.function.name) ? "✎" : "·"} ${tl.function.name} — ${tl.function.description}`);
+      return `Tools (✎ = mutates the circuit/undo-able, · = read/app):\n${lines.join("\n")}`;
+    }
+
     case "get_circuit_qasm":
       return emitQasm3(circuit);
 
@@ -445,6 +469,18 @@ export function executeTool(name: string, args: Record<string, unknown>, ctx: Ag
       return `Appended ${inverted.length} inverse gates${skipped.length ? ` (${skipped.length} couldn't be inverted and were skipped)` : ""}. The circuit now composes to identity.`;
     }
 
+    case "insert_snippet": {
+      const id = String(args.id ?? "");
+      const snip = SNIPPETS.find((s) => s.id === id);
+      if (!snip) throw new Error(`unknown snippet "${id}" — choose from ${SNIPPETS.filter((s) => s.id).map((s) => s.id).join(", ")}`);
+      const n = circuit.numQubits;
+      if (n < snip.minQubits) throw new Error(`"${snip.label}" needs at least ${snip.minQubits} qubits (circuit has ${n}); add qubits first`);
+      const maxCol = circuit.gates.reduce((m, g) => Math.max(m, g.column), -1);
+      const block = snip.build(n).map((g, i) => ({ ...g, id: `ai${Date.now()}${i}`, column: g.column + maxCol + 1 }));
+      ctx.applyCircuit({ ...circuit, gates: [...circuit.gates, ...block] }, `AI: insert ${snip.label}`);
+      return `Inserted "${snip.label}" (${block.length} gates). ${resourceText({ ...circuit, gates: [...circuit.gates, ...block] })}`;
+    }
+
     case "add_plot": {
       ctx.addPlot({ quantity: args.quantity, sweep: args.sweep, chart: args.chart, args: args.args });
       return `Added a "${args.quantity}" plot to the Custom plots panel.`;
@@ -544,6 +580,22 @@ export function executeTool(name: string, args: Record<string, unknown>, ctx: Ag
       const idx = clampInt(args.index, -1, 0, 1000);
       if (!ctx.switchTab(idx)) throw new Error(`no tab at index ${idx}`);
       return `Switched to tab ${idx}.`;
+    }
+
+    case "close_tab": {
+      if (!ctx.closeTab) throw new Error("closing tabs is not available here");
+      const idx = clampInt(args.index, -1, 0, 1000);
+      if (!ctx.closeTab(idx)) throw new Error(`no tab at index ${idx}`);
+      return `Closed tab ${idx}.`;
+    }
+
+    case "set_panel": {
+      if (!ctx.setPanel) throw new Error("panel control is not available here");
+      const id = String(args.id ?? "").trim();
+      if (!id) throw new Error("id is required");
+      const open = args.open === undefined ? true : !!args.open;
+      ctx.setPanel(id, open);
+      return `${open ? "Revealed" : "Collapsed"} panel "${id}" (no-op if it isn't mounted).`;
     }
 
     case "save_as_custom_gate": {

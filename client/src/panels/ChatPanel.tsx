@@ -19,6 +19,7 @@ import {
 } from "./chatContext";
 import { PROMPT_LIBRARY } from "./promptLibrary";
 import { requestCustomPlot, requestCustomPlotProgram } from "./CustomPlotPanel";
+import { setPanelCollapsed } from "./PanelShell";
 import { coercePlotSpec, plotTitle } from "../sim/plotSpec";
 import { chatCompletion, type AgentMessage } from "../sim/openrouter";
 import { AGENT_TOOLS, executeTool, type AgentContext } from "./agentTools";
@@ -75,6 +76,7 @@ type Props = {
   /** Agent tab/param/custom-gate controls. */
   onListTabs: () => Array<{ index: number; name: string; numQubits: number; active: boolean }>;
   onSwitchTab: (index: number) => boolean;
+  onCloseTab: (index: number) => boolean;
   onSaveCustomGate: (circuit: Circuit, name: string) => void;
   onSetParams: (values: ParameterValues) => void;
 };
@@ -136,13 +138,15 @@ const AGENT_SYSTEM_PROMPT =
   "expectation / get_analysis / get_free_symbols) to verify your work — these " +
   "return computed numbers you must not fabricate. Call get_free_symbols before " +
   "set_params, and run_benchmark / get_noise for device characterization. Every " +
-  "edit is undo-able by the user. When " +
+  "edit is undo-able by the user. Call list_tools if unsure what you can do; " +
+  "use insert_snippet for common blocks (Bell/GHZ/QFT/iQFT/Trotter) and set_panel " +
+  "to reveal the panel that shows what you computed. When " +
   "done, give a short plain-language summary of what you did and what you found. " +
   "Write math in $…$ / $$…$$ (KaTeX). Be concise.";
 
 const MAX_AGENT_STEPS = 14;
 
-export function ChatPanel({ circuit, simResult, noise, customGates, paramValues, onLoadInNewTab, onApplyCircuit, onSetNoise, onListTabs, onSwitchTab, onSaveCustomGate, onSetParams }: Props) {
+export function ChatPanel({ circuit, simResult, noise, customGates, paramValues, onLoadInNewTab, onApplyCircuit, onSetNoise, onListTabs, onSwitchTab, onCloseTab, onSaveCustomGate, onSetParams }: Props) {
   const [open, setOpen] = useState<boolean>(loadOpen);
   const [height, setHeight] = useState<number>(loadHeight);
   const [apiKey, setApiKey] = useState<string>(loadApiKey);
@@ -330,9 +334,11 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
       setNoise: onSetNoise,
       listTabs: onListTabs,
       switchTab: onSwitchTab,
+      closeTab: onCloseTab,
       saveCustomGate: onSaveCustomGate,
       setParams: onSetParams,
       addPlotProgram: (code) => { requestCustomPlotProgram(code); },
+      setPanel: (id, open) => { setPanelCollapsed(id, !open); },
     };
 
     try {
