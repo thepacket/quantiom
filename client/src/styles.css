@@ -72,7 +72,6 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__header2 { gap: 10px; padding: 4px 10px; }
 .chat__usage { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .chat__usage b { color: var(--fg); font-weight: 600; }
-.chat__row2-spacer { flex: 1 1 auto; }
 .chat__maxtok { display: inline-flex; align-items: center; gap: 4px; }
 .chat__maxtok-select { font-size: 12px; padding: 2px 4px; color: var(--fg); background: var(--panel); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
 .chat__toggle { padding: 2px 8px; }
@@ -87,7 +86,6 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__steps-input { width: 38px; padding: 2px 4px; font-size: 12px; text-align: center; color: var(--fg); background: var(--panel); border: 1px solid var(--border); border-radius: 4px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
 .chat__steps-input::-webkit-outer-spin-button, .chat__steps-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .chat__steps-label { font-size: 11px; color: var(--muted); }
-.chat__tagline { flex: 1 1 0; min-width: 0; text-align: right; color: var(--muted); font-size: 13px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat__attach { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 15px; }
 .chat__settings { padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--bg); }
 .chat__settings-row { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--muted); }

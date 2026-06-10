@@ -147,8 +147,8 @@ const AGENT_SYSTEM_PROMPT =
 const DEFAULT_AGENT_STEPS = 14;
 
 /** Selectable "max out tokens" values, smallest → largest. */
-const MAX_TOKEN_CHOICES = [2500, 5000, 10000, 20000, 30000, 40000, 50000];
-const DEFAULT_OUT_TOKENS = 5000;
+const MAX_TOKEN_CHOICES = [1000, 2000, 4000];
+const DEFAULT_OUT_TOKENS = 2000;
 /** Char cost of the agent tool schema — re-sent on every agent step. */
 const AGENT_TOOLS_CHARS = JSON.stringify(AGENT_TOOLS).length;
 /** Serialized character size of whatever we send to / receive from the model. */
@@ -186,10 +186,11 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
     try { const v = parseInt(localStorage.getItem("quantiom:chat:max-tokens") ?? "", 10); return MAX_TOKEN_CHOICES.includes(v) ? v : DEFAULT_OUT_TOKENS; } catch { return DEFAULT_OUT_TOKENS; }
   });
   useEffect(() => { try { localStorage.setItem("quantiom:chat:max-tokens", String(maxTokens)); } catch { /* ignore */ } }, [maxTokens]);
-  // Running input / output character counters for this conversation. Reset to 0
-  // by Clear. Not persisted (session-scoped cost meter).
+  // Running input / output character counters + agent tool-step count for this
+  // conversation. Reset to 0 by Clear. Not persisted (session-scoped meters).
   const [usageIn, setUsageIn] = useState<number>(0);
   const [usageOut, setUsageOut] = useState<number>(0);
+  const [stepsTaken, setStepsTaken] = useState<number>(0);
   // AI ↔ AI dialogue mode + Agent (tool-use) mode.
   const [mode, setMode] = useState<"chat" | "dialogue" | "agent">("chat");
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([]);
@@ -329,7 +330,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
     if (mode === "dialogue") { setDialogue([]); setDialogueBuf(null); }
     else if (mode === "agent") { setAgentMessages([]); agentMsgsRef.current = []; }
     else { setHistory([]); setStreamBuf(""); }
-    setUsageIn(0); setUsageOut(0);
+    setUsageIn(0); setUsageOut(0); setStepsTaken(0);
     setError(null);
   }, [streaming, dialogueRunning, agentRunning, mode]);
 
@@ -382,6 +383,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
 
     try {
       for (let step = 0; step < maxAgentSteps; step++) {
+        setStepsTaken((n) => n + 1);
         // Input this step = the whole replayed transcript + the tool schema.
         setUsageIn((n) => n + charsOf(msgs) + AGENT_TOOLS_CHARS);
         const { content, toolCalls } = await chatCompletion(apiKey, model, msgs, AGENT_TOOLS, abort.signal, maxTokens);
@@ -605,14 +607,6 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
           open={showContext}
           onToggle={() => setShowContext((s) => !s)}
         />
-        <PromptPicker
-          open={showPrompts}
-          onToggle={() => setShowPrompts((s) => !s)}
-          onPick={insertPrompt}
-        />
-        <button className="chat__btn" onClick={() => setShowSettings((s) => !s)} title="API key & options">
-          ⚙
-        </button>
         <span className="chat__fontsize" title="Reply text size">
           <button className="chat__btn chat__fontsize-btn" onClick={() => adjustScale(-0.1)} disabled={replyScale <= 0.6} aria-label="Decrease reply text size">−</button>
           <button className="chat__fontsize-pct" onClick={() => setReplyScale(1)} title="Reset to 100%">{Math.round(replyScale * 100)}%</button>
@@ -628,6 +622,49 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
             export
           </button>
         )}
+        <button className="chat__btn" onClick={() => setShowSettings((s) => !s)} title="API key & options">
+          ⚙
+        </button>
+      </div>
+      <div className="chat__header chat__header2">
+        <PromptPicker
+          open={showPrompts}
+          onToggle={() => setShowPrompts((s) => !s)}
+          onPick={insertPrompt}
+        />
+        <span className="chat__usage" title="Characters sent to the model this conversation (the running input cost). Resets on Clear.">
+          in chars <b>{fmtChars(usageIn)}</b>
+        </span>
+        <span className="chat__usage" title="Characters received from the model this conversation (the running output). Resets on Clear.">
+          out chars <b>{fmtChars(usageOut)}</b>
+        </span>
+        <label className="chat__maxtok" title="Maximum output tokens per reply. Lower it if OpenRouter returns a 402 (“requires more credits”).">
+          <span className="chat__steps-label">max out tokens</span>
+          <select className="chat__maxtok-select" value={maxTokens} onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}>
+            {MAX_TOKEN_CHOICES.map((v) => <option key={v} value={v}>{fmtTokChoice(v)}</option>)}
+          </select>
+        </label>
+        {mode === "agent" && (
+          <span className="chat__usage" title="Tool-use steps the agent has taken this conversation. Resets on Clear.">
+            steps <b>{stepsTaken}</b>
+          </span>
+        )}
+        {mode === "agent" && (
+          <span className="chat__steps" title="Maximum tool-use steps the agent may take in one run before stopping. Raise it for long multi-step tasks; lower it to cap cost.">
+            <span className="chat__steps-label">max steps</span>
+            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(-1)} disabled={maxAgentSteps <= 1} aria-label="Fewer agent steps">−</button>
+            <input
+              className="chat__steps-input"
+              type="number"
+              min={1}
+              max={100}
+              value={maxAgentSteps}
+              onChange={(e) => setAgentSteps(parseInt(e.target.value, 10))}
+              aria-label="Maximum agent tool-use steps"
+            />
+            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(1)} disabled={maxAgentSteps >= 100} aria-label="More agent steps">+</button>
+          </span>
+        )}
         <button
           className="chat__btn"
           onClick={clearChat}
@@ -641,42 +678,6 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
         >
           clear
         </button>
-        <span className="chat__tagline">
-          {mode === "chat"
-            ? "Analyze, create, optimize and transform circuits."
-            : "Two AIs discuss your circuit — grounded in the simulator."}
-        </span>
-      </div>
-      <div className="chat__header chat__header2">
-        <span className="chat__usage" title="Characters sent to the model this conversation (the running input cost). Resets on Clear.">
-          in <b>{fmtChars(usageIn)}</b>
-        </span>
-        <span className="chat__usage" title="Characters received from the model this conversation (the running output). Resets on Clear.">
-          out <b>{fmtChars(usageOut)}</b>
-        </span>
-        <span className="chat__row2-spacer" />
-        {mode === "agent" && (
-          <span className="chat__steps" title="Maximum tool-use steps the agent may take in one run before stopping. Raise it for long multi-step tasks; lower it to cap cost.">
-            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(-1)} disabled={maxAgentSteps <= 1} aria-label="Fewer agent steps">−</button>
-            <input
-              className="chat__steps-input"
-              type="number"
-              min={1}
-              max={100}
-              value={maxAgentSteps}
-              onChange={(e) => setAgentSteps(parseInt(e.target.value, 10))}
-              aria-label="Maximum agent tool-use steps"
-            />
-            <span className="chat__steps-label">max steps</span>
-            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(1)} disabled={maxAgentSteps >= 100} aria-label="More agent steps">+</button>
-          </span>
-        )}
-        <label className="chat__maxtok" title="Maximum output tokens per reply. Lower it if OpenRouter returns a 402 (“requires more credits”).">
-          <span className="chat__steps-label">max out tokens</span>
-          <select className="chat__maxtok-select" value={maxTokens} onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}>
-            {MAX_TOKEN_CHOICES.map((v) => <option key={v} value={v}>{fmtTokChoice(v)}</option>)}
-          </select>
-        </label>
       </div>
       {showSettings && (
         <div className="chat__settings">
