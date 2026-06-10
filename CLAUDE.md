@@ -484,11 +484,13 @@ host plus `/api/health`.
   [rb / qv / xeb device characterization] / export_circuit / check_equivalent)
   and mutate tools
   (set_circuit_qasm, place_gate, remove_gate, add_qubits, insert_snippet
-  [Bell/GHZ/QFT/iQFT/Trotter blocks], optimise, transpile,
-  compile, append_inverse, add_plot, prepare_state, synthesize_unitary,
-  trotterise, open_in_new_tab, set_noise, list_tabs, switch_tab, close_tab,
-  set_panel [reveal/collapse an analysis panel], list_tools [self-discovery],
-  save_as_custom_gate, set_params, add_plot_program). Most circuit mutations
+  [Bell/GHZ/QFT/iQFT/Trotter blocks], optimise, transpile, compile, route
+  [greedy SWAP router against the coupling map], random_clifford [seeded random
+  stabilizer circuit], append_inverse, add_plot, prepare_state,
+  synthesize_unitary, trotterise, set_qubit_names, open_in_new_tab, set_noise,
+  list_tabs, switch_tab, close_tab, set_panel [reveal/collapse an analysis
+  panel], list_tools [self-discovery], save_as_custom_gate, set_params,
+  add_plot_program). Most circuit mutations
   route through `ctx.applyCircuit` → the `replace-circuit` reducer action, so they're
   **undo-able** (set_noise/open_in_new_tab use their own callbacks). `openrouter.ts` `chatCompletion` is the
   non-streaming tool-call request; ChatPanel runs a bounded loop
@@ -631,7 +633,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (1008 tests): the simulator core is deeply covered —
+- **What's covered** (1011 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),

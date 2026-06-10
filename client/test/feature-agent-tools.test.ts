@@ -213,6 +213,38 @@ describe("agent tools", () => {
     expect(panels[1]).toEqual({ id: "noise", open: true });
   });
 
+  it("route inserts SWAPs against a coupling map", () => {
+    // adjacency list for a line 0–1–2; a CX on 0–2 needs a SWAP to go adjacent.
+    const c = makeCtx(circ(3, [gate("cx", [2], [0])]));
+    c.ctx.coupling = [[1], [0, 2], [1]];
+    const out = executeTool("route", {}, c.ctx);
+    expect(out).toMatch(/1 SWAP/);
+    expect(c.get().gates.some((g) => g.gateId === "swap")).toBe(true);
+    const noMap = makeCtx(circ(2, [gate("cx", [1], [0])]));
+    expect(() => executeTool("route", {}, noMap.ctx)).toThrow(/no coupling map/);
+  });
+
+  it("random_clifford builds a seeded Clifford circuit", () => {
+    const cliffordIds = new Set(["h", "s", "sdg", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "cx", "cz", "cy", "swap"]);
+    const a = makeCtx(circ(1, []));
+    executeTool("random_clifford", { qubits: 4, depth: 5, seed: 123 }, a.ctx);
+    expect(a.get().numQubits).toBe(4);
+    expect(a.get().gates.length).toBeGreaterThan(0);
+    expect(a.get().gates.every((g) => cliffordIds.has(g.gateId))).toBe(true);
+    // deterministic for a fixed seed
+    const b = makeCtx(circ(1, []));
+    executeTool("random_clifford", { qubits: 4, depth: 5, seed: 123 }, b.ctx);
+    expect(b.get().gates.map((g) => g.gateId)).toEqual(a.get().gates.map((g) => g.gateId));
+  });
+
+  it("set_qubit_names labels qubits", () => {
+    const c = makeCtx(circ(3, [gate("h", [0])]));
+    const out = executeTool("set_qubit_names", { names: ["data", "ancilla", "syndrome", "extra"] }, c.ctx);
+    expect(out).toMatch(/q0="data"/);
+    expect(c.get().qubitNames).toEqual(["data", "ancilla", "syndrome"]); // clipped to numQubits
+    expect(() => executeTool("set_qubit_names", { names: [] }, c.ctx)).toThrow(/required/);
+  });
+
   it("add_plot forwards a spec", () => {
     const p = makeCtx(circ(1, [gate("h", [0])]));
     executeTool("add_plot", { quantity: "expZ", chart: "bars" }, p.ctx);

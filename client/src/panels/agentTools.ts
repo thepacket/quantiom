@@ -49,6 +49,8 @@ import { randomizedBenchmarking } from "../sim/randomizedBenchmarking";
 import { quantumVolume } from "../sim/quantumVolume";
 import { xeb } from "../sim/xeb";
 import { SNIPPETS } from "../editor/snippets";
+import { routeCircuit } from "../sim/router";
+import { mulberry32 } from "../sim/measure";
 
 export type AgentContext = {
   getCircuit: () => Circuit;
@@ -159,6 +161,20 @@ export const AGENT_TOOLS = [
   t("compile", "Run the full Transpile→Optimise→Route→Optimise pipeline for a target. Undo-able.", {
     target: { type: "string", enum: TARGET_ENUM },
   }, ["target"]),
+  t(
+    "route",
+    "Insert SWAPs so every 2-qubit gate acts on physically-adjacent qubits, against the imported coupling map (greedy router). Needs a coupling map (from an imported IBM backend); use `compile` to route for a built-in target. Undo-able.",
+    {},
+  ),
+  t(
+    "random_clifford",
+    "Replace the circuit with a random Clifford circuit (random 1-qubit Cliffords + a CZ/CX/SWAP brickwork) of a given width and depth — useful for stressing the stabilizer simulator, equivalence checker, or benchmarks. Seedable. Undo-able.",
+    {
+      qubits: { type: "integer", description: "Width (1–16, default = current circuit's)." },
+      depth: { type: "integer", description: "Number of layers (1–200, default 8)." },
+      seed: { type: "integer", description: "RNG seed for reproducibility (optional)." },
+    },
+  ),
   t("append_inverse", "Append U† (the inverse of the current circuit) so the whole thing composes to identity. Undo-able.", {}),
   t(
     "insert_snippet",
@@ -240,6 +256,12 @@ export const AGENT_TOOLS = [
   ),
   t("save_as_custom_gate", "Save the current circuit as a reusable custom gate (appears in the palette).", { name: { type: "string" } }, ["name"]),
   t(
+    "set_qubit_names",
+    "Set per-qubit display labels (e.g. [\"data\",\"ancilla\",\"syndrome\"]), indexed by qubit number. Improves legibility of the canvas + exports. Undo-able.",
+    { names: { type: "array", items: { type: "string" } } },
+    ["names"],
+  ),
+  t(
     "set_params",
     "Set the parameter-slider values for free symbols (e.g. {\"theta\": 1.57, \"t\": 0}). Only the symbols you pass change.",
     { values: { type: "object", description: "Map of symbol name → numeric value." } },
@@ -257,6 +279,7 @@ export const AGENT_TOOLS = [
 export const MUTATING_TOOLS = new Set([
   "set_circuit_qasm", "place_gate", "remove_gate", "add_qubits", "optimise", "transpile", "compile", "append_inverse",
   "prepare_state", "synthesize_unitary", "trotterise", "set_noise", "insert_snippet",
+  "route", "random_clifford", "set_qubit_names",
 ]);
 
 // ─── execution ────────────────────────────────────────────────────────
@@ -461,6 +484,40 @@ export function executeTool(name: string, args: Record<string, unknown>, ctx: Ag
       return `Compiled for ${target}. ${resourceText(r.circuit)}`;
     }
 
+    case "route": {
+      if (!ctx.coupling || ctx.coupling.length === 0) throw new Error("no coupling map available — import an IBM backend (NoisePanel) to set one, or use `compile` which routes for a built-in target");
+      const r = routeCircuit(circuit, ctx.coupling);
+      ctx.applyCircuit(r.circuit, "AI: route");
+      return `Routed to the coupling map: ${r.swapsInserted} SWAP(s) inserted (${r.violationsBefore} connectivity violation(s) before). ${resourceText(r.circuit)}`;
+    }
+
+    case "random_clifford": {
+      const qubits = clampInt(args.qubits, circuit.numQubits || 2, 1, 16);
+      const depth = clampInt(args.depth, 8, 1, 200);
+      const rng = mulberry32((typeof args.seed === "number" ? args.seed : Date.now()) >>> 0);
+      const ONE_Q = ["h", "s", "sdg", "x", "y", "z", "sx", "sxdg", "sy", "sydg"];
+      const TWO_Q = ["cx", "cz", "cy", "swap"];
+      const gates: Circuit["gates"] = [];
+      let col = 0, gid = 0;
+      const push = (gateId: string, controls: number[], targets: number[]) =>
+        gates.push({ id: `rc${gid++}`, gateId: gateId as GateId, column: col, controls, targets, clbits: [], params: [] });
+      for (let d = 0; d < depth; d++) {
+        for (let q = 0; q < qubits; q++) push(ONE_Q[(rng() * ONE_Q.length) | 0], [], [q]);
+        col++;
+        if (qubits >= 2) {
+          for (let q = d % 2; q + 1 < qubits; q += 2) {
+            const tw = TWO_Q[(rng() * TWO_Q.length) | 0];
+            if (tw === "swap") push("swap", [], [q, q + 1]);
+            else push(tw, [q], [q + 1]);
+          }
+          col++;
+        }
+      }
+      const out: Circuit = { numQubits: qubits, numClbits: 0, gates, name: "random Clifford" };
+      ctx.applyCircuit(out, "AI: random Clifford");
+      return `Built a random ${qubits}-qubit Clifford circuit, depth ${depth} (${gates.length} gates). It runs on the stabilizer fast path.`;
+    }
+
     case "append_inverse": {
       const maxCol = circuit.gates.reduce((m, g) => Math.max(m, g.column), -1);
       const { inverted, skipped } = inverseGates(circuit, 0, maxCol);
@@ -605,6 +662,14 @@ export function executeTool(name: string, args: Record<string, unknown>, ctx: Ag
       if (circuit.gates.length === 0) throw new Error("the circuit is empty — add gates first");
       ctx.saveCustomGate(circuit, gname);
       return `Saved the current circuit as custom gate "${gname}" (${circuit.numQubits} qubits). It's in the palette under "Your gates".`;
+    }
+
+    case "set_qubit_names": {
+      const names = strArray(args.names);
+      if (!names.length) throw new Error("names is required (an array of strings, indexed by qubit)");
+      const trimmed = names.slice(0, circuit.numQubits).map((s) => s.trim());
+      ctx.applyCircuit({ ...circuit, qubitNames: trimmed }, "AI: name qubits");
+      return `Set qubit names: ${trimmed.map((nm, i) => `q${i}="${nm}"`).join(", ")}.`;
     }
 
     case "set_params": {
