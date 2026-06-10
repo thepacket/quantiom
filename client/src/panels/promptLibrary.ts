@@ -694,4 +694,81 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
       },
     ],
   },
+  {
+    name: "Course foundations",
+    prompts: [
+      {
+        title: "Superposition & measurement",
+        text: "Build a one-qubit circuit that applies H to |0⟩, then open the Statevector, Probabilities and Bloch panels. Explain superposition, the 50/50 measurement statistics, and why the Bloch vector points along +X.",
+      },
+      {
+        title: "Bell state & entanglement",
+        text: "Build a Bell pair (H on q0, then CNOT q0→q1). Open the Statevector and Mutual-information panels and explain why the two qubits are maximally entangled and why measuring one instantly determines the other.",
+      },
+      {
+        title: "GHZ state",
+        text: "Build a 3-qubit GHZ state and open the Q-sphere and Mutual-information panels. Explain its (|000⟩+|111⟩)/√2 structure and how measuring any one qubit collapses all three.",
+      },
+      {
+        title: "No-cloning theorem",
+        text: "Explain the no-cloning theorem, then show why a CNOT 'copier' fails to clone an arbitrary qubit: prepare q0 in a superposition, apply CNOT to a blank q1, and use the Statevector/Mutual-information panels to show the result is entangled, not two copies.",
+      },
+      {
+        title: "Phase kickback",
+        text: "Demonstrate phase kickback: put a control qubit in |+⟩ and apply a controlled-Z (or controlled-T) onto a target eigenstate, then read the control's phase off the Phase-disk / Bloch panel. Explain why the eigenphase appears on the control — the mechanism behind Deutsch–Jozsa, Bernstein–Vazirani and phase estimation.",
+      },
+      {
+        title: "Quantum teleportation",
+        text: "Build the quantum-teleportation circuit (entangle an EPR pair, do a Bell-basis measurement on the unknown qubit + half the pair, then apply the conditional X/Z corrections). Use mid-circuit measurement and walk through how the unknown state moves to the third qubit without copying it.",
+      },
+      {
+        title: "Superdense coding",
+        text: "Build a superdense-coding circuit that sends two classical bits using one qubit of a shared Bell pair. Show the four encodings (I/X/Z/XZ) and explain how the receiver's Bell measurement decodes them.",
+      },
+      {
+        title: "Deutsch–Jozsa",
+        text: "Build the Deutsch–Jozsa algorithm on 3 input qubits with a balanced oracle, and explain how a single query distinguishes a constant from a balanced function via interference on the input register.",
+      },
+      {
+        title: "Bernstein–Vazirani",
+        text: "Build the Bernstein–Vazirani circuit that recovers a hidden bitstring s in one oracle query. Pick an s, show the output equals s, and explain the phase-kickback mechanism.",
+      },
+      {
+        title: "Simon's algorithm",
+        text: "Build Simon's algorithm for a 2-bit hidden period s. Explain how the measured samples form a linear system over GF(2) whose solution recovers s, and why this gives an exponential separation.",
+      },
+      {
+        title: "Grover's search",
+        text: "Build Grover's search on 3 qubits marking the state |101⟩, with the optimal number of iterations. Open the Probabilities panel and explain how the oracle + diffusion operator amplify the marked amplitude.",
+      },
+      {
+        title: "Quantum Fourier Transform",
+        text: "Build the 4-qubit Quantum Fourier Transform and open the unitary-heatmap panel. Explain the role of the Hadamards, the controlled-phase ladder, and the final bit-reversal swaps.",
+      },
+      {
+        title: "Quantum phase estimation",
+        text: "Build a quantum phase-estimation circuit that estimates the eigenphase of a T gate (phase 1/8) using a 3-qubit counting register and an inverse QFT. Show the readout and explain how precision scales with register size.",
+      },
+      {
+        title: "Shor period-finding core",
+        text: "Build the period-finding core of Shor's algorithm for a small modular-exponentiation oracle, and explain how quantum phase estimation extracts the period r and how that leads to factoring.",
+      },
+      {
+        title: "Bit-flip error-correcting code",
+        text: "Build the 3-qubit bit-flip code: encode a logical qubit, inject an X error on one physical qubit, then open the Syndrome panel and show how the syndrome detects and corrects it. Explain the repetition-code idea.",
+      },
+      {
+        title: "CHSH / Bell-inequality violation",
+        text: "Build a circuit for the CHSH game using a shared Bell pair and the optimal measurement angles. Use the Expectation panel to estimate the CHSH value and explain how it exceeds the classical bound of 2 (toward 2√2).",
+      },
+      {
+        title: "VQE for H₂ (variational)",
+        text: "Build a minimal hardware-efficient VQE ansatz for the H₂ molecule with a free parameter, set the Expectation panel to the H₂ Pauli-sum Hamiltonian, and run the optimiser. Explain the variational principle and what the minimum energy means.",
+      },
+      {
+        title: "QAOA for MaxCut",
+        text: "Build a depth-1 QAOA circuit for MaxCut on a 4-vertex ring with free γ and β parameters. Explain the cost and mixer layers and how optimising the angles approximates the maximum cut.",
+      },
+    ],
+  },
 ];

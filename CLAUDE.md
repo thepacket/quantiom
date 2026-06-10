@@ -458,16 +458,21 @@ host plus `/api/health`.
   & derive / Debug & verify / Export & hardware) whose entries insert a
   ready-made prompt into the input for editing (append, not auto-send;
   bracketed `[values]` are placeholders; shown in BOTH chat and dialogue
-  modes — in dialogue it seeds the topic). 13 categories / ~155 prompts
+  modes — in dialogue it seeds the topic). 14 categories / ~170 prompts
   (Analyze / Plot on demand / Custom visuals (code) / Create / Optimize /
   Transform / Explain & derive / Debug & verify / Export & hardware / Noise &
-  error / Benchmark & characterize / Visualize & interpret / **Visual demos**
+  error / Benchmark & characterize / Visualize & interpret / **Visual demos** /
+  **Course foundations**
   — the **Plot on
   demand** category emits ```plotspec blocks and **Custom visuals (code)**
   emits ```plotjs sandboxed programs for the Custom plots panel; **Visual
   demos** are agent-mode build-and-plot prompts for the most striking,
   animatable visuals — Ising-quench entanglement light-cone, Wigner negativity,
-  kicked-top chaos, OTOC scrambling, Bloch trajectory, Loschmidt/DQPT, Q-sphere).
+  kicked-top chaos, OTOC scrambling, Bloch trajectory, Loschmidt/DQPT, Q-sphere;
+  **Course foundations** are agent-mode build-and-explain prompts for the
+  canonical QC-lecture sequence — Bell/GHZ, no-cloning, teleportation, superdense
+  coding, Deutsch–Jozsa, Bernstein–Vazirani, Simon, Grover, QFT, phase estimation,
+  Shor, bit-flip code, CHSH, VQE, QAOA).
   The circuit QASM is auto-attached to every
   message, so prompts can say "this circuit"; the benchmark/visualize
   prompts are written to *interpret* Quantiom-computed results.

@@ -830,7 +830,8 @@ chatbot:
   categorized library (Analyze / Plot on demand / Custom visuals (code) /
   Create / Optimize / Transform / Explain & derive / Debug & verify /
   Export & hardware / Noise & error / Benchmark & characterize / Visualize &
-  interpret / Visual demos). Picking one drops a ready-made prompt into the message box for you to
+  interpret / Visual demos / Course foundations — the last builds the canonical
+  lecture circuits, Bell through Shor, in agent mode). Picking one drops a ready-made prompt into the message box for you to
   edit before sending; bracketed `[values]` are placeholders to fill in.
   The benchmark and visualize prompts are built to *interpret* what
   Quantiom computes — paste an RB/QV/XEB result or attach a panel snapshot

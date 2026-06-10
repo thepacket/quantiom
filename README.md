@@ -709,17 +709,21 @@ is still 100% client-side.
   token (and on partial `$$…$$`) would lock the main thread.
 - **Model picker.** Live-fetches the full OpenRouter catalog with
   search; click any model to switch. Choice persists per browser.
-- **Prompt library.** A searchable **prompts** picker with ~155
-  ready-made prompts across 13 categories (Analyze, Plot on demand, Custom
+- **Prompt library.** A searchable **prompts** picker with ~170
+  ready-made prompts across 14 categories (Analyze, Plot on demand, Custom
   visuals (code), Create, Optimize, Transform, Explain & derive, Debug &
   verify, Export & hardware, Noise & error, Benchmark & characterize,
-  Visualize & interpret, Visual demos). The
+  Visualize & interpret, Visual demos, Course foundations). The
   **Plot on demand** prompts ask the AI for a chart and it replies with a
   one-click `plotspec` block for the Custom plots panel; the **Visual demos**
   are agent-mode build-and-plot prompts for the most striking, animatable
   visuals (the Ising-quench entanglement light-cone, Wigner negativity,
   kicked-top chaos, OTOC scrambling, Bloch trajectories, Loschmidt/DQPT,
-  the Q-sphere). Selecting
+  the Q-sphere); and **Course foundations** are agent-mode build-and-explain
+  prompts for the canonical quantum-computing lecture sequence (Bell/GHZ,
+  no-cloning, teleportation, superdense coding, Deutsch–Jozsa,
+  Bernstein–Vazirani, Simon, Grover, QFT, phase estimation, Shor, the bit-flip
+  code, CHSH, VQE, QAOA). Selecting
   one drops it into the box for editing (it doesn't auto-send);
   bracketed `[values]` are fill-in placeholders, and the
   benchmark/visualize prompts are written to *interpret* what Quantiom
