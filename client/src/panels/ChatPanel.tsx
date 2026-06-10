@@ -621,6 +621,11 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
           open={showContext}
           onToggle={() => setShowContext((s) => !s)}
         />
+        <PromptPicker
+          open={showPrompts}
+          onToggle={() => setShowPrompts((s) => !s)}
+          onPick={insertPrompt}
+        />
         <span className="chat__fontsize" title="Reply text size">
           <button className="chat__btn chat__fontsize-btn" onClick={() => adjustScale(-0.1)} disabled={replyScale <= 0.6} aria-label="Decrease reply text size">−</button>
           <button className="chat__fontsize-pct" onClick={() => setReplyScale(1)} title="Reset to 100%">{Math.round(replyScale * 100)}%</button>
@@ -641,11 +646,6 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
         </button>
       </div>
       <div className="chat__header chat__header2">
-        <PromptPicker
-          open={showPrompts}
-          onToggle={() => setShowPrompts((s) => !s)}
-          onPick={insertPrompt}
-        />
         <span className="chat__usage" title="Characters sent to the model this conversation (the running input cost). Resets on Clear.">
           in chars <b>{fmtChars(usageIn)}</b>
         </span>
