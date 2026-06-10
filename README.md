@@ -180,7 +180,7 @@ tree — each checked against analytic ground truth.
 You don't have to take that on faith: the toolbar **Self-test** button
 re-runs a **413-check** cross-section of the same engine **live in your
 browser** in ~10 ms and shows the pass/fail report — itself a subset of
-the full **1002-test** suite that runs in CI on every commit. See
+the full **1011-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 
