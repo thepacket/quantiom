@@ -762,6 +762,18 @@ is still 100% client-side.
   - **Visualize & organize** — add custom plots, reveal the panel that
     shows a result, open variants in new tabs, switch and close tabs,
     and save reusable custom gates.
+- **Cost meters & request controls.** A second header row carries live
+  usage meters — **context chars** (the size of the auto-attached
+  circuit + "+ context" block sent with every message), plus running
+  **in chars** / **out chars** totals and a **steps** counter (agent
+  tool-steps or dialogue turns taken); all three reset on **Clear**.
+  Alongside them: **max out tokens** (1k / 2k / 4k, default 2k — sent as
+  `max_tokens` so OpenRouter's up-front credit check stays small and
+  low-limit keys don't 402) and **max steps** (the agent tool-step cap,
+  default 30, or the dialogue turn cap, shared by both modes).
+- **No orphaned turns.** If a send fails (e.g. a 402) or returns an empty
+  reply, the optimistic user message is rolled back and its text restored
+  to the input for retry — so a failed turn never persists across reload.
 - **Streaming responses** via SSE, with a Stop button to cancel
   mid-stream. ⌘/Ctrl+Enter sends. Two watchdogs guard against an
   unresponsive OpenRouter — a 20 s byte-idle (dead connection) and a 90 s

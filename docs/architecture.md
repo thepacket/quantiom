@@ -424,6 +424,8 @@ quantiom:probabilities-mode  "exact" or "shots" toggle
 quantiom:probabilities-shots N shots when in shots mode
 quantiom:tabs:v1             multi-tab state (per-tab versioned history)
 quantiom:chat:dialogue       AI-dialogue config (roles, models, turns)
+quantiom:chat:agent-steps    agent "max steps" cap (default 30)
+quantiom:chat:max-tokens     chat "max out tokens" (1k/2k/4k, default 2k)
 ```
 
 When you add a new persistable feature, pick the next version

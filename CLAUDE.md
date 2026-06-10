@@ -498,8 +498,21 @@ host plus `/api/health`.
   route through `ctx.applyCircuit` → the `replace-circuit` reducer action, so they're
   **undo-able** (set_noise/open_in_new_tab use their own callbacks). `openrouter.ts` `chatCompletion` is the
   non-streaming tool-call request; ChatPanel runs a bounded loop
-  (`MAX_AGENT_STEPS=14`): call → execute tools → feed results back → repeat
-  until a final text answer. The dispatcher is unit-tested (no network).
+  (cap = the **max steps** control, default `DEFAULT_AGENT_STEPS=30`): call →
+  execute tools → feed results back → repeat until a final text answer. The
+  dispatcher is unit-tested (no network).
+  **Chat-panel header is two rows.** Row 1: hide/title/mode toggle
+  (chat·dialogue·agent) / model (or roles) picker / + context / prompts /
+  font-scale / export(dialogue) / ⚙. Row 2 (the cost + request controls):
+  live **context chars** (size of the auto-attached circuit-QASM + "+ context"
+  block, `useMemo`), running **in chars** / **out chars** / **steps** meters
+  (all reset by Clear; "steps" = agent tool-steps or dialogue turns), **max out
+  tokens** (`MAX_TOKEN_CHOICES` 1k/2k/4k, default 2k → the `max_tokens` field on
+  every request, so OpenRouter's credit pre-auth stays small and low-limit keys
+  don't 402), **max steps** (agent step cap 1–100 OR dialogue turn cap 2–12,
+  bound to `dialogueCfg.maxTurns`), and **clear**. A **failed or empty send rolls
+  back** the optimistic user message and restores its text to the input, so a
+  failed turn never persists across reload.
   **dialogue** is an
   AI↔AI discussion where two model instances (roles A/B, each its own
   persona + model via `RolesPicker`) take turns about the current
@@ -578,7 +591,11 @@ host plus `/api/health`.
   `quantiom:inspector-w` (Inspector side-panel width),
   `quantiom:inspector-collapsed` (Inspector collapse),
   `quantiom:spotlight-w` (enlarged-panel dock width),
-  `quantiom:custom-plots:v1` (saved custom-plot specs).
+  `quantiom:custom-plots:v1` (saved custom-plot specs),
+  `quantiom:chat:agent-steps` (agent **max steps** cap),
+  `quantiom:chat:max-tokens` (chat **max out tokens**), plus the existing
+  `quantiom:chat:*` keys (key/model/height/history/open/attached/font-scale/
+  dialogue).
 - **Custom plots (on-demand visualisation)**: `sim/plotSpec.ts` defines a
   small validated `PlotSpec` — 33 `quantity` values across domains:
   **per qubit** (⟨Z⟩/⟨X⟩/⟨Y⟩, S(ρ_q), purity Tr(ρ_q²), l₁ coherence),

@@ -811,11 +811,26 @@ chatbot:
   button. Watching a Proposer get
   cross-examined by a Critic — with the equivalence/resource panels as
   the referee — is often more instructive than a monologue.
+- **Agent mode.** Flip the toggle to **agent** and the model *acts on
+  Quantiom through tools* instead of only describing changes — it reads the
+  state/resources/expectations, analyses (entanglement, magic, purity) and
+  benchmarks (RB/QV/XEB), then builds, edits, optimises, transpiles, routes,
+  prepares states, opens panels, and plots — calling tools in a bounded loop.
+  Every change routes through the undo stack, so anything it does is one ⌘Z
+  away. The **max steps** control (default 30) caps the tool-use loop; if a
+  task needs more, raise it and re-run.
+- **Cost meters & request controls.** The second header row shows, live,
+  the **context chars** attached to every message (circuit QASM + any "+
+  context" snapshots) and running **in / out chars** and **steps** totals
+  (reset by **Clear**), next to **max out tokens** (1k/2k/4k — keep it low if
+  OpenRouter says you need more credits) and **max steps**. A send that fails
+  or comes back empty puts your text back in the box rather than leaving a
+  dangling message.
 - **Prompt library.** The **prompts** button opens a searchable,
   categorized library (Analyze / Plot on demand / Custom visuals (code) /
   Create / Optimize / Transform / Explain & derive / Debug & verify /
   Export & hardware / Noise & error / Benchmark & characterize / Visualize &
-  interpret). Picking one drops a ready-made prompt into the message box for you to
+  interpret / Visual demos). Picking one drops a ready-made prompt into the message box for you to
   edit before sending; bracketed `[values]` are placeholders to fill in.
   The benchmark and visualize prompts are built to *interpret* what
   Quantiom computes — paste an RB/QV/XEB result or attach a panel snapshot
