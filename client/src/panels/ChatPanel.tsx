@@ -6,7 +6,6 @@ import { Markdown } from "../editor/Markdown";
 import {
   listModels,
   streamChat,
-  DEFAULT_MAX_TOKENS,
   type ChatMessage,
   type OpenRouterModel,
 } from "../sim/openrouter";
@@ -147,6 +146,21 @@ const AGENT_SYSTEM_PROMPT =
 
 const DEFAULT_AGENT_STEPS = 14;
 
+/** Selectable "max out tokens" values, smallest → largest. */
+const MAX_TOKEN_CHOICES = [2500, 5000, 10000, 20000, 30000, 40000, 50000];
+const DEFAULT_OUT_TOKENS = 5000;
+/** Char cost of the agent tool schema — re-sent on every agent step. */
+const AGENT_TOOLS_CHARS = JSON.stringify(AGENT_TOOLS).length;
+/** Serialized character size of whatever we send to / receive from the model. */
+const charsOf = (v: unknown): number => {
+  try { return JSON.stringify(v).length; } catch { return 0; }
+};
+/** Compact char count: 1234 → "1.2k", 1.2e6 → "1.2M". */
+const fmtChars = (n: number): string =>
+  n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n);
+/** Token-choice label: 2500 → "2.5k", 5000 → "5k". */
+const fmtTokChoice = (v: number): string => `${v % 1000 === 0 ? v / 1000 : (v / 1000).toFixed(1)}k`;
+
 export function ChatPanel({ circuit, simResult, noise, customGates, paramValues, onLoadInNewTab, onApplyCircuit, onSetNoise, onListTabs, onSwitchTab, onCloseTab, onSaveCustomGate, onSetParams }: Props) {
   const [open, setOpen] = useState<boolean>(loadOpen);
   const [height, setHeight] = useState<number>(loadHeight);
@@ -166,13 +180,16 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
     try { const v = parseFloat(localStorage.getItem("quantiom:chat:font-scale") ?? ""); return Number.isFinite(v) && v >= 0.6 && v <= 2 ? v : 1; } catch { return 1; }
   });
   // Max completion tokens per request. Bounds OpenRouter's up-front credit
-  // reservation (a missing/huge value 402s low-limit keys). Persisted; settable
-  // in the ⚙ drawer. Clamped to [256, 32768].
-  const [maxTokens, setMaxTokensState] = useState<number>(() => {
-    try { const v = parseInt(localStorage.getItem("quantiom:chat:max-tokens") ?? "", 10); return Number.isFinite(v) && v >= 256 && v <= 32768 ? v : DEFAULT_MAX_TOKENS; } catch { return DEFAULT_MAX_TOKENS; }
+  // reservation (a missing/huge value 402s low-limit keys). Chosen from a fixed
+  // set in the second header row. Persisted.
+  const [maxTokens, setMaxTokens] = useState<number>(() => {
+    try { const v = parseInt(localStorage.getItem("quantiom:chat:max-tokens") ?? "", 10); return MAX_TOKEN_CHOICES.includes(v) ? v : DEFAULT_OUT_TOKENS; } catch { return DEFAULT_OUT_TOKENS; }
   });
   useEffect(() => { try { localStorage.setItem("quantiom:chat:max-tokens", String(maxTokens)); } catch { /* ignore */ } }, [maxTokens]);
-  const setMaxTokens = useCallback((n: number) => setMaxTokensState(Math.max(256, Math.min(32768, Math.round(n || 0) || DEFAULT_MAX_TOKENS))), []);
+  // Running input / output character counters for this conversation. Reset to 0
+  // by Clear. Not persisted (session-scoped cost meter).
+  const [usageIn, setUsageIn] = useState<number>(0);
+  const [usageOut, setUsageOut] = useState<number>(0);
   // AI ↔ AI dialogue mode + Agent (tool-use) mode.
   const [mode, setMode] = useState<"chat" | "dialogue" | "agent">("chat");
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([]);
@@ -267,6 +284,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
     // Show only the user's actual text (without attached QASM) in history.
     const visibleUser: ChatMessage = { role: "user", content: text };
     setHistory((h) => [...h, visibleUser]);
+    setUsageIn((n) => n + charsOf(msgs));
     setInput("");
     setStreaming(true);
     setStreamBuf("");
@@ -281,6 +299,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
         cancelFlush();
         setStreaming(false);
         abortRef.current = null;
+        setUsageOut((n) => n + full.length);
         if (full.length > 0) setHistory((h) => [...h, { role: "assistant", content: full }]);
         setStreamBuf("");
         streamAccumRef.current = "";
@@ -310,6 +329,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
     if (mode === "dialogue") { setDialogue([]); setDialogueBuf(null); }
     else if (mode === "agent") { setAgentMessages([]); agentMsgsRef.current = []; }
     else { setHistory([]); setStreamBuf(""); }
+    setUsageIn(0); setUsageOut(0);
     setError(null);
   }, [streaming, dialogueRunning, agentRunning, mode]);
 
@@ -362,7 +382,10 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
 
     try {
       for (let step = 0; step < maxAgentSteps; step++) {
+        // Input this step = the whole replayed transcript + the tool schema.
+        setUsageIn((n) => n + charsOf(msgs) + AGENT_TOOLS_CHARS);
         const { content, toolCalls } = await chatCompletion(apiKey, model, msgs, AGENT_TOOLS, abort.signal, maxTokens);
+        setUsageOut((n) => n + (content?.length ?? 0) + charsOf(toolCalls));
         if (toolCalls.length === 0) {
           msgs = [...msgs, { role: "assistant", content: content || "(done)" }];
           setAgentMessages(msgs);
@@ -411,9 +434,10 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
   const runTurn = useCallback(
     (role: Role, msgs: ChatMessage[], onDelta: (c: string) => void): Promise<string | null> =>
       new Promise((resolve) => {
+        setUsageIn((n) => n + charsOf(msgs));
         abortRef.current = streamChat(apiKey, role.model, msgs, {
           onDelta,
-          onDone: (full) => { abortRef.current = null; resolve(full); },
+          onDone: (full) => { abortRef.current = null; setUsageOut((n) => n + full.length); resolve(full); },
           onError: (m) => { abortRef.current = null; setError(m); resolve(null); },
         }, maxTokens);
       }),
@@ -575,22 +599,6 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
         {mode === "dialogue"
           ? <RolesPicker cfg={dialogueCfg} onChange={setDialogueCfg} apiKey={apiKey} open={showRoles} onToggle={() => setShowRoles((s) => !s)} />
           : <ModelPicker model={model} onPick={setModel} apiKey={apiKey} />}
-        {mode === "agent" && (
-          <span className="chat__steps" title="Maximum tool-use steps the agent may take in one run before stopping. Raise it for long multi-step tasks; lower it to cap cost.">
-            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(-1)} disabled={maxAgentSteps <= 1} aria-label="Fewer agent steps">−</button>
-            <input
-              className="chat__steps-input"
-              type="number"
-              min={1}
-              max={100}
-              value={maxAgentSteps}
-              onChange={(e) => setAgentSteps(parseInt(e.target.value, 10))}
-              aria-label="Maximum agent tool-use steps"
-            />
-            <span className="chat__steps-label">steps</span>
-            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(1)} disabled={maxAgentSteps >= 100} aria-label="More agent steps">+</button>
-          </span>
-        )}
         <ContextPicker
           attached={attached}
           onChange={setAttached}
@@ -639,6 +647,37 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
             : "Two AIs discuss your circuit — grounded in the simulator."}
         </span>
       </div>
+      <div className="chat__header chat__header2">
+        <span className="chat__usage" title="Characters sent to the model this conversation (the running input cost). Resets on Clear.">
+          in <b>{fmtChars(usageIn)}</b>
+        </span>
+        <span className="chat__usage" title="Characters received from the model this conversation (the running output). Resets on Clear.">
+          out <b>{fmtChars(usageOut)}</b>
+        </span>
+        <span className="chat__row2-spacer" />
+        {mode === "agent" && (
+          <span className="chat__steps" title="Maximum tool-use steps the agent may take in one run before stopping. Raise it for long multi-step tasks; lower it to cap cost.">
+            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(-1)} disabled={maxAgentSteps <= 1} aria-label="Fewer agent steps">−</button>
+            <input
+              className="chat__steps-input"
+              type="number"
+              min={1}
+              max={100}
+              value={maxAgentSteps}
+              onChange={(e) => setAgentSteps(parseInt(e.target.value, 10))}
+              aria-label="Maximum agent tool-use steps"
+            />
+            <span className="chat__steps-label">max steps</span>
+            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(1)} disabled={maxAgentSteps >= 100} aria-label="More agent steps">+</button>
+          </span>
+        )}
+        <label className="chat__maxtok" title="Maximum output tokens per reply. Lower it if OpenRouter returns a 402 (“requires more credits”).">
+          <span className="chat__steps-label">max out tokens</span>
+          <select className="chat__maxtok-select" value={maxTokens} onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}>
+            {MAX_TOKEN_CHOICES.map((v) => <option key={v} value={v}>{fmtTokChoice(v)}</option>)}
+          </select>
+        </label>
+      </div>
       {showSettings && (
         <div className="chat__settings">
           <label className="chat__settings-row">
@@ -656,22 +695,6 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
             Stored in this browser only (localStorage). Sent only to
             openrouter.ai as a Bearer token. Get a key at{" "}
             <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys</a>.
-          </div>
-          <label className="chat__settings-row">
-            <span>Max reply tokens</span>
-            <input
-              type="number"
-              min={256}
-              max={32768}
-              step={256}
-              value={maxTokens}
-              onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}
-            />
-          </label>
-          <div className="chat__settings-note">
-            Caps each reply's length. Lower this if OpenRouter returns a 402
-            (“requires more credits”) — without a cap it reserves the model's
-            full output budget up front, which low-limit keys can't afford.
           </div>
         </div>
       )}

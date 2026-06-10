@@ -69,6 +69,12 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__resize { position: absolute; top: 0; left: 0; right: 0; height: 4px; cursor: ns-resize; background: transparent; }
 .chat__resize:hover { background: var(--accent); opacity: 0.4; }
 .chat__header { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg-2); flex-wrap: wrap; }
+.chat__header2 { gap: 10px; padding: 4px 10px; }
+.chat__usage { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chat__usage b { color: var(--fg); font-weight: 600; }
+.chat__row2-spacer { flex: 1 1 auto; }
+.chat__maxtok { display: inline-flex; align-items: center; gap: 4px; }
+.chat__maxtok-select { font-size: 12px; padding: 2px 4px; color: var(--fg); background: var(--panel); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
 .chat__toggle { padding: 2px 8px; }
 .chat__title { font-size: 15px; color: var(--muted); letter-spacing: 0.5px; }
 .chat__btn { padding: 2px 8px; }
