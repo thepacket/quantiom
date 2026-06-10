@@ -206,6 +206,19 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
   const setAgentSteps = useCallback((n: number) => setMaxAgentSteps(Math.max(1, Math.min(100, Math.round(n || 0) || DEFAULT_AGENT_STEPS))), []);
   const bumpSteps = useCallback((d: number) => setMaxAgentSteps((p) => Math.max(1, Math.min(100, p + d))), []);
   const [dialogueCfg, setDialogueCfg] = useState<DialogueConfig>(loadDialogue);
+  // "max steps" / "steps" controls are shared by agent + dialogue modes:
+  // agent → tool-step cap (1–100); dialogue → conversation-turn cap (2–12).
+  const stepCapMin = mode === "dialogue" ? 2 : 1;
+  const stepCapMax = mode === "dialogue" ? 12 : 100;
+  const stepCap = mode === "dialogue" ? dialogueCfg.maxTurns : maxAgentSteps;
+  const setStepCap = (n: number) => {
+    if (mode === "dialogue") setDialogueCfg((c) => ({ ...c, maxTurns: Math.max(2, Math.min(12, Math.round(n) || 2)) }));
+    else setAgentSteps(n);
+  };
+  const bumpStepCap = (d: number) => {
+    if (mode === "dialogue") setDialogueCfg((c) => ({ ...c, maxTurns: Math.max(2, Math.min(12, c.maxTurns + d)) }));
+    else bumpSteps(d);
+  };
   const [dialogue, setDialogue] = useState<DialogueTurn[]>([]);
   const [dialogueBuf, setDialogueBuf] = useState<DialogueTurn | null>(null);
   const [dialogueRunning, setDialogueRunning] = useState<boolean>(false);
@@ -478,6 +491,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
       let speaker = nextSpeakerOf(transcript);
       for (let t = 0; t < maxTurns; t++) {
         if (dialogueAbortRef.current) break;
+        setStepsTaken((n) => n + 1);
         setDialogueProgress({ i: t + 1, n: maxTurns });
         const role = speaker === "A" ? roleA : roleB;
         const msgs = buildTurnMessages(speaker, { roleA, roleB }, contextBlock, seed, transcript);
@@ -644,25 +658,25 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
             {MAX_TOKEN_CHOICES.map((v) => <option key={v} value={v}>{fmtTokChoice(v)}</option>)}
           </select>
         </label>
-        {mode === "agent" && (
-          <span className="chat__usage" title="Tool-use steps the agent has taken this conversation. Resets on Clear.">
+        {mode !== "chat" && (
+          <span className="chat__usage" title={mode === "dialogue" ? "Dialogue turns taken this conversation. Resets on Clear." : "Tool-use steps the agent has taken this conversation. Resets on Clear."}>
             steps <b>{stepsTaken}</b>
           </span>
         )}
-        {mode === "agent" && (
-          <span className="chat__steps" title="Maximum tool-use steps the agent may take in one run before stopping. Raise it for long multi-step tasks; lower it to cap cost.">
+        {mode !== "chat" && (
+          <span className="chat__steps" title={mode === "dialogue" ? "Maximum dialogue turns per run." : "Maximum tool-use steps the agent may take in one run before stopping."}>
             <span className="chat__steps-label">max steps</span>
-            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(-1)} disabled={maxAgentSteps <= 1} aria-label="Fewer agent steps">−</button>
+            <button className="chat__btn chat__steps-btn" onClick={() => bumpStepCap(-1)} disabled={stepCap <= stepCapMin} aria-label="Fewer steps">−</button>
             <input
               className="chat__steps-input"
               type="number"
-              min={1}
-              max={100}
-              value={maxAgentSteps}
-              onChange={(e) => setAgentSteps(parseInt(e.target.value, 10))}
-              aria-label="Maximum agent tool-use steps"
+              min={stepCapMin}
+              max={stepCapMax}
+              value={stepCap}
+              onChange={(e) => setStepCap(parseInt(e.target.value, 10))}
+              aria-label="Maximum steps"
             />
-            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(1)} disabled={maxAgentSteps >= 100} aria-label="More agent steps">+</button>
+            <button className="chat__btn chat__steps-btn" onClick={() => bumpStepCap(1)} disabled={stepCap >= stepCapMax} aria-label="More steps">+</button>
           </span>
         )}
         <button
