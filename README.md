@@ -721,8 +721,8 @@ is still 100% client-side.
   benchmark/visualize prompts are written to *interpret* what Quantiom
   computes. Available in both chat and dialogue modes (in dialogue it
   seeds the discussion topic).
-- **AI ↔ AI dialogue mode.** A `chat | dialogue` toggle turns the panel
-  into a debate between two model instances. Each side gets its own
+- **AI ↔ AI dialogue mode.** A `chat | dialogue | agent` toggle turns the
+  panel into a debate between two model instances. Each side gets its own
   **name, persona, and model** (presets: Proposer ↔ Critic, Professor ↔
   Student, IBM ↔ Rigetti); they take alternating turns about the current
   circuit, **every turn grounded in the same circuit + attached
@@ -732,6 +732,32 @@ is still 100% client-side.
   own message and continue. Proposed circuits get a click-to-open-as-tab
   button, and **export** downloads the whole transcript — with the
   circuit embedded — as Markdown.
+- **Agent mode.** A third `agent` toggle lets the model **act on
+  Quantiom through tools**, not just describe changes — it calls tools
+  in a bounded loop until the task is done, and **every circuit change
+  is one ⌘Z away**. What it can do:
+  - **Read & understand** — inspect the simulated state (top outcomes,
+    amplitudes, probabilities), report resources (gate / two-qubit / T
+    counts, depth), evaluate any Pauli string or full Hamiltonian, and
+    list the circuit's tunable parameters.
+  - **Analyze the physics** — entanglement entropy across every cut,
+    mutual information, "magic" (non-Cliffordness), per-qubit purity and
+    coherence — all computed by the simulator, so the numbers are real.
+  - **Benchmark & characterize** — randomized benchmarking, quantum
+    volume, and cross-entropy benchmarking against the noise model,
+    which it can also read and adjust.
+  - **Build & edit** — write or rewrite circuits from a description,
+    drop in ready-made blocks (Bell / GHZ / QFT / iQFT / Trotter), add
+    / remove / label gates and qubits, prepare an arbitrary target
+    state, synthesize a unitary, build Trotter circuits, append the
+    inverse, and generate random Clifford test circuits.
+  - **Optimize & target hardware** — optimise redundant gates,
+    transpile to IBM / Rigetti / Clifford+T, route onto a device
+    coupling map, compile end-to-end, check two circuits are
+    equivalent, and export to eleven formats.
+  - **Visualize & organize** — add custom plots, reveal the panel that
+    shows a result, open variants in new tabs, switch and close tabs,
+    and save reusable custom gates.
 - **Streaming responses** via SSE, with a Stop button to cancel
   mid-stream. ⌘/Ctrl+Enter sends. Two watchdogs guard against an
   unresponsive OpenRouter — a 20 s byte-idle (dead connection) and a 90 s
