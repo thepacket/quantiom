@@ -744,10 +744,11 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
               <div className="chat__empty">
                 Tell the AI what to do and it will <b>act on Quantiom</b> — read the
                 state and build / edit / optimise / transpile the circuit via tools.
-                Every change is undo-able (⌘Z). Try “build a 6-qubit Trotterized
-                transverse-field Ising quench with a time parameter <code>t</code>,
-                then open the space-time entropy panel” — press play on the
-                <code>t</code> slider to watch the entanglement light-cone spread.
+                Every change is undo-able (⌘Z). Try “Build a kicked-top Floquet
+                circuit (alternating global rotations and a nonlinear twist) on 4
+                qubits with a free parameter <code>t</code>, then open the Wigner and
+                Husimi panels. Describe how the phase-space portrait breaks up into
+                chaotic structure as the kick strength grows.”
               </div>
             )}
             {agentMessages.map((m, i) => <AgentMessageView key={i} message={m} />)}
