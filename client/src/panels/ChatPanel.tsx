@@ -144,7 +144,7 @@ const AGENT_SYSTEM_PROMPT =
   "done, give a short plain-language summary of what you did and what you found. " +
   "Write math in $…$ / $$…$$ (KaTeX). Be concise.";
 
-const DEFAULT_AGENT_STEPS = 14;
+const DEFAULT_AGENT_STEPS = 30;
 
 /** Selectable "max out tokens" values, smallest → largest. */
 const MAX_TOKEN_CHOICES = [1000, 2000, 4000];
