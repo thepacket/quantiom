@@ -144,7 +144,7 @@ const AGENT_SYSTEM_PROMPT =
   "done, give a short plain-language summary of what you did and what you found. " +
   "Write math in $…$ / $$…$$ (KaTeX). Be concise.";
 
-const MAX_AGENT_STEPS = 14;
+const DEFAULT_AGENT_STEPS = 14;
 
 export function ChatPanel({ circuit, simResult, noise, customGates, paramValues, onLoadInNewTab, onApplyCircuit, onSetNoise, onListTabs, onSwitchTab, onCloseTab, onSaveCustomGate, onSetParams }: Props) {
   const [open, setOpen] = useState<boolean>(loadOpen);
@@ -170,6 +170,14 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
   const [agentRunning, setAgentRunning] = useState<boolean>(false);
   const agentMsgsRef = useRef<AgentMessage[]>([]);
   const agentAbortRef = useRef<AbortController | null>(null);
+  // Max tool-use steps per agent run (bounds cost/runaway loops). Settable in
+  // the header, persisted. Clamped to [1, 100].
+  const [maxAgentSteps, setMaxAgentSteps] = useState<number>(() => {
+    try { const v = parseInt(localStorage.getItem("quantiom:chat:agent-steps") ?? "", 10); return Number.isFinite(v) && v >= 1 && v <= 100 ? v : DEFAULT_AGENT_STEPS; } catch { return DEFAULT_AGENT_STEPS; }
+  });
+  useEffect(() => { try { localStorage.setItem("quantiom:chat:agent-steps", String(maxAgentSteps)); } catch { /* ignore */ } }, [maxAgentSteps]);
+  const setAgentSteps = useCallback((n: number) => setMaxAgentSteps(Math.max(1, Math.min(100, Math.round(n || 0) || DEFAULT_AGENT_STEPS))), []);
+  const bumpSteps = useCallback((d: number) => setMaxAgentSteps((p) => Math.max(1, Math.min(100, p + d))), []);
   const [dialogueCfg, setDialogueCfg] = useState<DialogueConfig>(loadDialogue);
   const [dialogue, setDialogue] = useState<DialogueTurn[]>([]);
   const [dialogueBuf, setDialogueBuf] = useState<DialogueTurn | null>(null);
@@ -344,7 +352,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
     };
 
     try {
-      for (let step = 0; step < MAX_AGENT_STEPS; step++) {
+      for (let step = 0; step < maxAgentSteps; step++) {
         const { content, toolCalls } = await chatCompletion(apiKey, model, msgs, AGENT_TOOLS, abort.signal);
         if (toolCalls.length === 0) {
           msgs = [...msgs, { role: "assistant", content: content || "(done)" }];
@@ -364,8 +372,8 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
           msgs = [...msgs, { role: "tool", tool_call_id: call.id, name: call.name, content: result }];
           setAgentMessages(msgs);
         }
-        if (step === MAX_AGENT_STEPS - 1) {
-          msgs = [...msgs, { role: "assistant", content: "(reached the tool-step limit — stopping)" }];
+        if (step === maxAgentSteps - 1) {
+          msgs = [...msgs, { role: "assistant", content: `(reached the ${maxAgentSteps}-step tool limit — raise “steps” in the header to let it continue)` }];
           setAgentMessages(msgs);
         }
       }
@@ -376,7 +384,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
       setAgentRunning(false);
       agentAbortRef.current = null;
     }
-  }, [input, agentRunning, apiKey, model, circuit, customGates, paramValues, noise, onApplyCircuit, onLoadInNewTab, onSetNoise, onListTabs, onSwitchTab, onSaveCustomGate, onSetParams]);
+  }, [input, agentRunning, apiKey, model, circuit, customGates, paramValues, noise, maxAgentSteps, onApplyCircuit, onLoadInNewTab, onSetNoise, onListTabs, onSwitchTab, onSaveCustomGate, onSetParams]);
 
   // Snapshot the current circuit + attached panels as the grounding context
   // shared by every dialogue turn (the circuit is fixed during a run).
@@ -558,6 +566,22 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
         {mode === "dialogue"
           ? <RolesPicker cfg={dialogueCfg} onChange={setDialogueCfg} apiKey={apiKey} open={showRoles} onToggle={() => setShowRoles((s) => !s)} />
           : <ModelPicker model={model} onPick={setModel} apiKey={apiKey} />}
+        {mode === "agent" && (
+          <span className="chat__steps" title="Maximum tool-use steps the agent may take in one run before stopping. Raise it for long multi-step tasks; lower it to cap cost.">
+            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(-1)} disabled={maxAgentSteps <= 1} aria-label="Fewer agent steps">−</button>
+            <input
+              className="chat__steps-input"
+              type="number"
+              min={1}
+              max={100}
+              value={maxAgentSteps}
+              onChange={(e) => setAgentSteps(parseInt(e.target.value, 10))}
+              aria-label="Maximum agent tool-use steps"
+            />
+            <span className="chat__steps-label">steps</span>
+            <button className="chat__btn chat__steps-btn" onClick={() => bumpSteps(1)} disabled={maxAgentSteps >= 100} aria-label="More agent steps">+</button>
+          </span>
+        )}
         <ContextPicker
           attached={attached}
           onChange={setAttached}

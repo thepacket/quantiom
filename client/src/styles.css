@@ -76,6 +76,11 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__fontsize-btn { padding: 2px 6px; font-weight: 600; min-width: 22px; }
 .chat__fontsize-pct { padding: 2px 4px; min-width: 40px; font-size: 12px; color: var(--muted); background: transparent; border: none; cursor: pointer; font-variant-numeric: tabular-nums; text-align: center; }
 .chat__fontsize-pct:hover { color: var(--fg); }
+.chat__steps { display: inline-flex; align-items: center; gap: 2px; }
+.chat__steps-btn { padding: 2px 6px; font-weight: 600; min-width: 22px; }
+.chat__steps-input { width: 38px; padding: 2px 4px; font-size: 12px; text-align: center; color: var(--fg); background: var(--panel); border: 1px solid var(--border); border-radius: 4px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.chat__steps-input::-webkit-outer-spin-button, .chat__steps-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.chat__steps-label { font-size: 11px; color: var(--muted); }
 .chat__tagline { flex: 1 1 0; min-width: 0; text-align: right; color: var(--muted); font-size: 13px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat__attach { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 15px; }
 .chat__settings { padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--bg); }
