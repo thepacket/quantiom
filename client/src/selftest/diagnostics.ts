@@ -2,7 +2,7 @@
  * In-browser self-test: a broad, live cross-section of Quantiom's numeric
  * core, runnable from the app's "Self-test" button.
  *
- * This is a *subset* of the project's full ~900-case Vitest suite (run in
+ * This is a *subset* of the project's full ~1000-case Vitest suite (run in
  * Node and in CI on every commit — see `client/test/` and
  * `.github/workflows/ci.yml`), reimplemented with plain assertions so it can
  * run in the browser against the very modules powering the user's session.
@@ -50,6 +50,13 @@ import { decomposeKAK4x4 } from "../sim/kak";
 import { mutualInformationMatrix, entropyProfile } from "../sim/entanglement";
 import { computePlot, validatePlotSpec, coercePlotSpec, type PlotSpec } from "../sim/plotSpec";
 import { sanitizeColor, sanitizePathD, sanitizePlotScene } from "../sim/plotProgram";
+import { optimiseCircuit } from "../sim/optimisePasses";
+import { synthesizeStatePrep } from "../sim/statePrep";
+import { synthesizeUnitary } from "../sim/unitarySynth";
+import { applyReadoutError, mitigateReadout } from "../sim/readoutMitigation";
+import { buildClassicalShadows, estimatePauli } from "../sim/classicalShadows";
+import { routeCircuit, countConnectivityViolations } from "../sim/router";
+import { executeTool, type AgentContext } from "../panels/agentTools";
 import { DEFAULT_NOISE, type NoiseModel } from "../sim/noise";
 import type { Complex } from "../sim/complex";
 import type { Circuit, PlacedGate, GateId } from "../editor/types";
@@ -646,6 +653,153 @@ export function runSelfTest(): SelfTestReport {
       const many = Array.from({ length: 9000 }, () => ({ type: "line", x1: 0, y1: 0, x2: 1, y2: 1 }));
       const r = sanitizePlotScene({ elements: many });
       return !("error" in r) && r.scene.elements.length <= 4000;
+    });
+  }
+
+  // ── Optimiser (peephole rewrite passes) ────────────────────────────
+  s.group("Optimiser (peephole passes)");
+  {
+    s.check("H·H cancels to an empty circuit", () =>
+      optimiseCircuit(circ(1, [gate("h", [0], [], [], 0), gate("h", [0], [], [], 1)])).after === 0);
+    s.check("T·T merges to S", () => {
+      const r = optimiseCircuit(circ(1, [gate("t", [0], [], [], 0), gate("t", [0], [], [], 1)]));
+      return r.after === 1 && r.circuit.gates[0].gateId === "s";
+    });
+    s.check("H·CZ·H rewrites to a single CX", () => {
+      const c = circ(2, [gate("h", [1], [], [], 0), gate("cz", [1], [0], [], 1), gate("h", [1], [], [], 2)]);
+      const r = optimiseCircuit(c);
+      return r.after === 1 && r.circuit.gates[0].gateId === "cx" && equivalenceCheck(c, r.circuit, [], [], {}).equivalent;
+    });
+    s.check("optimised circuit stays equivalent to the original", () => {
+      const c = circ(2, [gate("h", [0], [], [], 0), gate("cx", [1], [0], [], 1), gate("t", [1], [], [], 2), gate("t", [1], [], [], 3), gate("h", [0], [], [], 4), gate("h", [0], [], [], 5)]);
+      return equivalenceCheck(c, optimiseCircuit(c).circuit, [], [], {}).equivalent;
+    });
+  }
+
+  // ── State-preparation synthesis (Möttönen) ─────────────────────────
+  s.group("State-preparation synthesis (fidelity 1)");
+  {
+    const fidelity = (re: number[], im: number[], n: number): number => {
+      const r = synthesizeStatePrep(re, im, n);
+      if (!r) return 0;
+      const st = simulate({ numQubits: n, numClbits: 0, gates: r.gates }, {}, []).state;
+      let norm = 0;
+      for (let i = 0; i < re.length; i++) norm += re[i] * re[i] + im[i] * im[i];
+      norm = Math.sqrt(norm);
+      let ipRe = 0, ipIm = 0;
+      for (let i = 0; i < re.length; i++) {
+        const tr = re[i] / norm, ti = im[i] / norm;
+        const sr = st[2 * i], si = st[2 * i + 1];
+        ipRe += tr * sr + ti * si;
+        ipIm += tr * si - ti * sr;
+      }
+      return ipRe * ipRe + ipIm * ipIm;
+    };
+    s.check("prepares |1⟩ at fidelity 1", () => close(fidelity([0, 1], [0, 0], 1), 1, 1e-9));
+    s.check("prepares |+⟩ at fidelity 1", () => close(fidelity([1, 1], [0, 0], 1), 1, 1e-9));
+    s.check("prepares a Bell state at fidelity 1", () => close(fidelity([1, 0, 0, 1], [0, 0, 0, 0], 2), 1, 1e-9));
+    s.check("prepares a phased 3-qubit state at fidelity 1", () =>
+      close(fidelity([1, 0.5, 0, 0.5, 0, 0.5, 0, 0.5], [0, 0.2, 0, -0.1, 0, 0.3, 0, 0], 3), 1, 1e-7));
+  }
+
+  // ── Arbitrary-unitary synthesis (Givens two-level) ─────────────────
+  s.group("Unitary synthesis (process fidelity 1)");
+  {
+    type Cx = { re: number; im: number };
+    const unitaryOf = (c: Circuit, n: number): Cx[][] => {
+      const dim = 1 << n;
+      const U: Cx[][] = Array.from({ length: dim }, () => Array.from({ length: dim }, () => ({ re: 0, im: 0 })));
+      for (let j = 0; j < dim; j++) {
+        const st = simulate(c, {}, [], { startIndex: j }).state;
+        for (let i = 0; i < dim; i++) U[i][j] = { re: st[2 * i], im: st[2 * i + 1] };
+      }
+      return U;
+    };
+    const procFid = (U: Cx[][], V: Cx[][]): number => {
+      const dim = U.length;
+      let re = 0, im = 0;
+      for (let i = 0; i < dim; i++)
+        for (let j = 0; j < dim; j++) {
+          re += U[i][j].re * V[i][j].re + U[i][j].im * V[i][j].im;
+          im += U[i][j].re * V[i][j].im - U[i][j].im * V[i][j].re;
+        }
+      return (re * re + im * im) / (dim * dim);
+    };
+    const rt = (c: Circuit, n: number): number => {
+      const U = unitaryOf(c, n);
+      const gates = synthesizeUnitary(U, n);
+      if (!gates) return 0;
+      return procFid(U, unitaryOf({ numQubits: n, numClbits: 0, gates }, n));
+    };
+    s.check("H synthesizes at fidelity 1", () => close(rt(circ(1, [gate("h", [0])]), 1), 1, 1e-7));
+    s.check("T synthesizes at fidelity 1", () => close(rt(circ(1, [gate("t", [0])]), 1), 1, 1e-7));
+    s.check("Bell circuit synthesizes at fidelity 1", () => close(rt(circ(2, [gate("h", [0]), gate("cx", [1], [0])]), 2), 1, 1e-7));
+  }
+
+  // ── Readout-error mitigation (confusion-matrix inversion) ──────────
+  s.group("Readout-error mitigation");
+  {
+    s.check("forward model flips |0⟩ with probability p", () => {
+      const d = applyReadoutError([1, 0], 1, 0.1);
+      return close(d[0], 0.9, 1e-10) && close(d[1], 0.1, 1e-10);
+    });
+    s.check("mitigation inverts the forward model (1 qubit)", () => {
+      const { corrected } = mitigateReadout(applyReadoutError([0.7, 0.3], 1, 0.08), 1, 0.08);
+      return close(corrected[0], 0.7, 1e-7) && close(corrected[1], 0.3, 1e-7);
+    });
+    s.check("mitigation inverts the forward model (2 qubits, tensor)", () => {
+      const { corrected } = mitigateReadout(applyReadoutError([0.5, 0, 0, 0.5], 2, 0.05), 2, 0.05);
+      return close(corrected[0], 0.5, 1e-6) && close(corrected[3], 0.5, 1e-6) && close(corrected[1], 0, 1e-6);
+    });
+  }
+
+  // ── Classical shadows (seeded estimates) ───────────────────────────
+  s.group("Classical shadows (Bell estimates)");
+  {
+    const bellC = circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+    const sh = buildClassicalShadows(bellC, {}, [], 6000, mulberry32(7));
+    s.check("shadows build for a 2-qubit state", () => sh !== null);
+    s.check("estimated ⟨ZZ⟩ ≈ +1", () => sh !== null && Math.abs(estimatePauli(sh, "ZZ")! - 1) < 0.25);
+    s.check("estimated ⟨XX⟩ ≈ +1", () => sh !== null && Math.abs(estimatePauli(sh, "XX")! - 1) < 0.25);
+    s.check("estimated ⟨YY⟩ ≈ −1", () => sh !== null && Math.abs(estimatePauli(sh, "YY")! + 1) < 0.25);
+  }
+
+  // ── SWAP router (satisfies the coupling map) ───────────────────────
+  s.group("SWAP router");
+  {
+    const line3 = [[1], [0, 2], [1]]; // adjacency list for a 0–1–2 line
+    s.check("a distance-2 CX is routed with a SWAP", () =>
+      routeCircuit(circ(3, [gate("cx", [2], [0])]), line3).swapsInserted >= 1);
+    s.check("a routed circuit has zero connectivity violations", () => {
+      const c = circ(3, [gate("cx", [1], [0], [], 0), gate("cx", [2], [1], [], 1), gate("cx", [2], [0], [], 2)]);
+      return countConnectivityViolations(routeCircuit(c, line3).circuit, line3) === 0;
+    });
+  }
+
+  // ── AI agent tools (the dispatcher the chat's agent mode drives) ───
+  s.group("AI agent tools");
+  {
+    const makeCtx = (c: Circuit) => {
+      let cur = c;
+      const ctx: AgentContext = { getCircuit: () => cur, customGates: [], paramValues: {}, applyCircuit: (n) => { cur = n; }, addPlot: () => {} };
+      return { ctx, get: () => cur };
+    };
+    const bellC = circ(2, [gate("h", [0]), gate("cx", [1], [0])]);
+    s.check("get_resources reports CX=1 on a Bell circuit", () => executeTool("get_resources", {}, makeCtx(bellC).ctx).includes("CX=1"));
+    s.check("expectation ⟨ZZ⟩ = 1 on a Bell state", () => executeTool("expectation", { observable: "ZZ" }, makeCtx(bellC).ctx).includes("1.0000"));
+    s.check("get_analysis magic = 0 on a Clifford state", () => executeTool("get_analysis", { metric: "magic" }, makeCtx(bellC).ctx).includes("M₂ = 0.0000"));
+    s.check("place_gate appends a gate via applyCircuit", () => {
+      const m = makeCtx(circ(1, []));
+      executeTool("place_gate", { gate: "h", targets: [0] }, m.ctx);
+      return m.get().gates.length === 1 && m.get().gates[0].gateId === "h";
+    });
+    s.check("set_circuit_qasm rebuilds the circuit from QASM", () => {
+      const m = makeCtx(circ(1, []));
+      executeTool("set_circuit_qasm", { qasm: "OPENQASM 3;\nqubit[2] q;\nh q[0];\ncx q[0], q[1];\n" }, m.ctx);
+      return m.get().numQubits === 2 && m.get().gates.length === 2;
+    });
+    s.check("an unknown tool name throws", () => {
+      try { executeTool("nope", {}, makeCtx(bellC).ctx); return false; } catch { return true; }
     });
   }
 
