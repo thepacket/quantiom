@@ -474,7 +474,19 @@ host plus `/api/health`.
   a 20s byte-idle (dead connection) and a 90s content-stall (keep-alives
   but no tokens, reset on each real token) — so an unresponsive OpenRouter
   errors out instead of hanging. The chat
-  has two modes (header toggle): **chat** (1:1) and **dialogue** — an
+  has three modes (header toggle): **chat** (1:1), **dialogue** (AI↔AI),
+  and **agent** (tool use). **Agent mode** lets the model *act on Quantiom*:
+  `panels/agentTools.ts` defines the OpenRouter function-tool schemas
+  (`AGENT_TOOLS`) + a pure `executeTool(name, args, ctx)` dispatcher wired to
+  existing code — read tools (get_circuit_qasm / get_resources / get_state /
+  expectation) and mutate tools (set_circuit_qasm, place_gate, remove_gate,
+  add_qubits, optimise, transpile, compile, append_inverse, add_plot). Every
+  mutation routes through `ctx.applyCircuit` → the `replace-circuit` reducer
+  action, so it's **undo-able**. `openrouter.ts` `chatCompletion` is the
+  non-streaming tool-call request; ChatPanel runs a bounded loop
+  (`MAX_AGENT_STEPS=14`): call → execute tools → feed results back → repeat
+  until a final text answer. The dispatcher is unit-tested (no network).
+  **dialogue** is an
   AI↔AI discussion where two model instances (roles A/B, each its own
   persona + model via `RolesPicker`) take turns about the current
   circuit, every turn grounded in the same QASM+context. Presets
@@ -611,7 +623,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (991 tests): the simulator core is deeply covered —
+- **What's covered** (998 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
@@ -654,7 +666,11 @@ host plus `/api/health`.
   ground-truth-tested: `emitStim`, `readoutMitigation` (forward∘inverse =
   identity, clip→valid), `classicalShadows` (Bell ⟨ZZ⟩/⟨XX⟩/⟨YY⟩ estimates),
   `statePrep` (synthesized circuit reproduces random targets at fidelity 1),
-  and `unitarySynth` (synthesized unitary matches at process fidelity 1). The
+  and `unitarySynth` (synthesized unitary matches at process fidelity 1).
+  The **Agent-mode** tool dispatcher (`agentTools.ts` `executeTool`) is
+  covered with a mock context — read tools return the right text, mutate
+  tools update the circuit via `applyCircuit`, transforms/QASM-load work,
+  bad input throws. The
   AI-dialogue pure core is covered too
   (`dialogue.ts`: `buildTurnMessages` alternation, `mergeConsecutive`,
   `nextSpeakerOf`, `turnsAreConverging`, `dialogueToMarkdown`).

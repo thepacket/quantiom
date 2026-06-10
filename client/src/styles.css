@@ -134,6 +134,16 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__mode { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
 .chat__mode-btn { padding: 3px 9px; font-size: 14px; background: transparent; color: var(--muted); border: none; cursor: pointer; }
 .chat__mode-btn--on { background: var(--accent); color: var(--bg); }
+/* Agent mode (tool use) */
+.chat__agent-step { margin: 4px 0; }
+.chat__tool-call { font-size: 12px; color: var(--fg); font-family: ui-monospace, "SF Mono", Menlo, monospace; padding: 2px 0; }
+.chat__tool-arrow { color: var(--accent); }
+.chat__tool-args { color: var(--muted); margin-left: 4px; }
+.chat__tool-result { margin: 2px 0 6px; border-left: 2px solid var(--border); padding-left: 8px; }
+.chat__tool-result--err { border-left-color: #ff9a5a; }
+.chat__tool-name { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.chat__tool-out { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.4; color: var(--muted); white-space: pre-wrap; margin: 2px 0 0; max-height: 140px; overflow: auto; }
+.chat__agent-running { font-size: 12px; color: var(--muted); font-style: italic; padding: 4px 0; }
 /* Dialogue roles picker */
 .chat__roles { position: relative; }
 .chat__roles-pop { position: absolute; top: 100%; left: 0; margin-top: 4px; width: 360px; max-height: 420px; overflow: auto; display: flex; flex-direction: column; gap: 8px; background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 200; padding: 8px; }

@@ -28,6 +28,72 @@ export type ChatMessage = {
   content: string;
 };
 
+// ─── tool-calling (Agent mode) ────────────────────────────────────────
+
+/** OpenAI/OpenRouter function-tool schema (see `panels/agentTools.ts`). */
+export type ToolDef = {
+  type: "function";
+  function: { name: string; description: string; parameters: unknown };
+};
+
+/** A message in an agent loop — supports assistant tool_calls and tool results. */
+export type AgentMessage = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string | null;
+  /** Present on an assistant turn that requested tool calls. */
+  tool_calls?: Array<{ id: string; type: "function"; function: { name: string; arguments: string } }>;
+  /** Present on a tool-result message. */
+  tool_call_id?: string;
+  name?: string;
+};
+
+export type ParsedToolCall = { id: string; name: string; arguments: string };
+
+/**
+ * Non-streaming chat completion with optional tool calling. Returns the
+ * assistant's text (may be empty) and any tool calls it requested. Used by the
+ * Agent loop, which executes the tools and continues the conversation. Throws
+ * on HTTP / network error so the caller can surface it.
+ */
+export async function chatCompletion(
+  apiKey: string,
+  model: string,
+  messages: AgentMessage[],
+  tools?: ToolDef[],
+  signal?: AbortSignal,
+): Promise<{ content: string; toolCalls: ParsedToolCall[] }> {
+  const body: Record<string, unknown> = { model, messages, stream: false };
+  if (tools && tools.length) {
+    body.tools = tools;
+    body.tool_choice = "auto";
+  }
+  const res = await fetch(`${BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "HTTP-Referer": APP_REFERER,
+      "X-Title": APP_TITLE,
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${(await safeText(res)) || res.statusText}`);
+  const json = await res.json();
+  const msg = json?.choices?.[0]?.message;
+  const content = typeof msg?.content === "string" ? msg.content : "";
+  const rawCalls = Array.isArray(msg?.tool_calls) ? msg.tool_calls : [];
+  const toolCalls: ParsedToolCall[] = rawCalls
+    .filter((c: unknown): c is { id: string; function: { name: string; arguments: string } } =>
+      !!c && typeof (c as { id?: unknown }).id === "string" && !!(c as { function?: unknown }).function)
+    .map((c: { id: string; function: { name: string; arguments?: string } }) => ({
+      id: c.id,
+      name: c.function.name,
+      arguments: typeof c.function.arguments === "string" ? c.function.arguments : "{}",
+    }));
+  return { content, toolCalls };
+}
+
 export type OpenRouterModel = {
   id: string;
   name: string;

@@ -1314,7 +1314,10 @@ export function CircuitEditor() {
             circuit={circuit}
             simResult={dataOf(simState)}
             noise={noise}
+            customGates={customGates}
+            paramValues={paramValues}
             onLoadInNewTab={(c, n) => t.newTab(c, n)}
+            onApplyCircuit={(c) => dispatch({ type: "replace-circuit", circuit: c })}
           />
         </ErrorBoundary>
       </div>

@@ -20,6 +20,10 @@ import {
 import { PROMPT_LIBRARY } from "./promptLibrary";
 import { requestCustomPlot, requestCustomPlotProgram } from "./CustomPlotPanel";
 import { coercePlotSpec, plotTitle } from "../sim/plotSpec";
+import { chatCompletion, type AgentMessage } from "../sim/openrouter";
+import { AGENT_TOOLS, executeTool, type AgentContext } from "./agentTools";
+import type { CustomGate } from "../editor/customGates";
+import type { ParameterValues } from "../sim/simulate";
 import {
   DIALOGUE_PRESETS,
   buildTurnMessages,
@@ -61,7 +65,11 @@ type Props = {
    *  Used to populate optional context attachments. */
   simResult: SimResult | null;
   noise: NoiseModel;
+  customGates: CustomGate[];
+  paramValues: ParameterValues;
   onLoadInNewTab: (circuit: Circuit, name?: string) => void;
+  /** Replace the active circuit (undo-able) — used by Agent mode tools. */
+  onApplyCircuit: (circuit: Circuit) => void;
 };
 
 const SYSTEM_PROMPT =
@@ -110,7 +118,21 @@ const SYSTEM_PROMPT =
   "(KaTeX renders it, including \\ket{}, \\bra{}, \\braket{}{}). Be " +
   "concise; do not over-explain quantum-computing basics.";
 
-export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) {
+const AGENT_SYSTEM_PROMPT =
+  "You are an agent embedded in Quantiom, a browser quantum-circuit editor. " +
+  "You can ACT on the app by calling the provided tools: read the circuit and " +
+  "its simulated state/resources/expectations, and modify it (set the whole " +
+  "circuit from OpenQASM 3, place/remove gates, add qubits, optimise, " +
+  "transpile, compile, append the inverse, add plots). Prefer `set_circuit_qasm` " +
+  "for building or substantially rewriting circuits, and the incremental tools " +
+  "for small edits. Always inspect with read tools (get_resources / get_state / " +
+  "expectation) to verify your work. Every edit is undo-able by the user. When " +
+  "done, give a short plain-language summary of what you did and what you found. " +
+  "Write math in $…$ / $$…$$ (KaTeX). Be concise.";
+
+const MAX_AGENT_STEPS = 14;
+
+export function ChatPanel({ circuit, simResult, noise, customGates, paramValues, onLoadInNewTab, onApplyCircuit }: Props) {
   const [open, setOpen] = useState<boolean>(loadOpen);
   const [height, setHeight] = useState<number>(loadHeight);
   const [apiKey, setApiKey] = useState<string>(loadApiKey);
@@ -128,8 +150,12 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
   const [replyScale, setReplyScale] = useState<number>(() => {
     try { const v = parseFloat(localStorage.getItem("quantiom:chat:font-scale") ?? ""); return Number.isFinite(v) && v >= 0.6 && v <= 2 ? v : 1; } catch { return 1; }
   });
-  // AI ↔ AI dialogue mode.
-  const [mode, setMode] = useState<"chat" | "dialogue">("chat");
+  // AI ↔ AI dialogue mode + Agent (tool-use) mode.
+  const [mode, setMode] = useState<"chat" | "dialogue" | "agent">("chat");
+  const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([]);
+  const [agentRunning, setAgentRunning] = useState<boolean>(false);
+  const agentMsgsRef = useRef<AgentMessage[]>([]);
+  const agentAbortRef = useRef<AbortController | null>(null);
   const [dialogueCfg, setDialogueCfg] = useState<DialogueConfig>(loadDialogue);
   const [dialogue, setDialogue] = useState<DialogueTurn[]>([]);
   const [dialogueBuf, setDialogueBuf] = useState<DialogueTurn | null>(null);
@@ -181,7 +207,7 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [history, streamBuf, open, dialogue, dialogueBuf]);
+  }, [history, streamBuf, open, dialogue, dialogueBuf, agentMessages]);
 
   const send = useCallback(() => {
     const text = input.trim();
@@ -245,14 +271,86 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
+    agentAbortRef.current?.abort();
   }, []);
 
   const clearChat = useCallback(() => {
-    if (streaming || dialogueRunning) return;
+    if (streaming || dialogueRunning || agentRunning) return;
     if (mode === "dialogue") { setDialogue([]); setDialogueBuf(null); }
+    else if (mode === "agent") { setAgentMessages([]); agentMsgsRef.current = []; }
     else { setHistory([]); setStreamBuf(""); }
     setError(null);
-  }, [streaming, dialogueRunning, mode]);
+  }, [streaming, dialogueRunning, agentRunning, mode]);
+
+  // ── Agent mode: tool-use loop ─────────────────────────────────────
+  const runAgent = useCallback(async () => {
+    const text = input.trim();
+    if (!text || agentRunning) return;
+    if (!apiKey) { setError("Set your OpenRouter API key (Settings)"); return; }
+    if (!model) { setError("Pick a model (Settings)"); return; }
+    setError(null);
+    setInput("");
+
+    const qasm = emitQasm3(circuit);
+    const userMsg: AgentMessage = {
+      role: "user",
+      content: `${text}\n\nCurrent circuit (OpenQASM 3):\n\`\`\`qasm\n${qasm}\n\`\`\``,
+    };
+    const base: AgentMessage[] = agentMsgsRef.current.length
+      ? agentMsgsRef.current
+      : [{ role: "system", content: AGENT_SYSTEM_PROMPT }];
+    let msgs: AgentMessage[] = [...base, userMsg];
+    setAgentMessages(msgs);
+    setAgentRunning(true);
+    const abort = new AbortController();
+    agentAbortRef.current = abort;
+
+    // The agent's working circuit — kept in sync within the loop (the `circuit`
+    // prop is stale inside this async closure until React re-renders).
+    let working = circuit;
+    const ctx: AgentContext = {
+      getCircuit: () => working,
+      customGates,
+      paramValues,
+      coupling: noise.coupling,
+      applyCircuit: (next) => { working = next; onApplyCircuit(next); },
+      addPlot: (spec) => { requestCustomPlot(spec); },
+    };
+
+    try {
+      for (let step = 0; step < MAX_AGENT_STEPS; step++) {
+        const { content, toolCalls } = await chatCompletion(apiKey, model, msgs, AGENT_TOOLS, abort.signal);
+        if (toolCalls.length === 0) {
+          msgs = [...msgs, { role: "assistant", content: content || "(done)" }];
+          setAgentMessages(msgs);
+          break;
+        }
+        msgs = [...msgs, { role: "assistant", content: content || null, tool_calls: toolCalls.map((c) => ({ id: c.id, type: "function", function: { name: c.name, arguments: c.arguments } })) }];
+        setAgentMessages(msgs);
+        for (const call of toolCalls) {
+          let result: string;
+          try {
+            const a = call.arguments ? JSON.parse(call.arguments) : {};
+            result = executeTool(call.name, a, ctx);
+          } catch (e) {
+            result = `Error: ${e instanceof Error ? e.message : String(e)}`;
+          }
+          msgs = [...msgs, { role: "tool", tool_call_id: call.id, name: call.name, content: result }];
+          setAgentMessages(msgs);
+        }
+        if (step === MAX_AGENT_STEPS - 1) {
+          msgs = [...msgs, { role: "assistant", content: "(reached the tool-step limit — stopping)" }];
+          setAgentMessages(msgs);
+        }
+      }
+    } catch (e) {
+      if (!abort.signal.aborted) setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      agentMsgsRef.current = msgs;
+      setAgentRunning(false);
+      agentAbortRef.current = null;
+    }
+  }, [input, agentRunning, apiKey, model, circuit, customGates, paramValues, noise.coupling, onApplyCircuit]);
 
   // Snapshot the current circuit + attached panels as the grounding context
   // shared by every dialogue turn (the circuit is fixed during a run).
@@ -425,10 +523,15 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
             onClick={() => setMode("dialogue")}
             title="Watch two AIs discuss your circuit"
           >dialogue</button>
+          <button
+            className={`chat__mode-btn${mode === "agent" ? " chat__mode-btn--on" : ""}`}
+            onClick={() => setMode("agent")}
+            title="Let the AI act on Quantiom via tools (read + edit the circuit). Every edit is undo-able."
+          >agent</button>
         </div>
-        {mode === "chat"
-          ? <ModelPicker model={model} onPick={setModel} apiKey={apiKey} />
-          : <RolesPicker cfg={dialogueCfg} onChange={setDialogueCfg} apiKey={apiKey} open={showRoles} onToggle={() => setShowRoles((s) => !s)} />}
+        {mode === "dialogue"
+          ? <RolesPicker cfg={dialogueCfg} onChange={setDialogueCfg} apiKey={apiKey} open={showRoles} onToggle={() => setShowRoles((s) => !s)} />
+          : <ModelPicker model={model} onPick={setModel} apiKey={apiKey} />}
         <ContextPicker
           attached={attached}
           onChange={setAttached}
@@ -493,7 +596,20 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
         </div>
       )}
       <div className="chat__messages" ref={scrollRef} style={{ "--chat-scale": replyScale } as React.CSSProperties}>
-        {mode === "chat" ? (
+        {mode === "agent" ? (
+          <>
+            {agentMessages.length === 0 && (
+              <div className="chat__empty">
+                Tell the AI what to do and it will <b>act on Quantiom</b> — read the
+                state and build / edit / optimise / transpile the circuit via tools.
+                Every change is undo-able (⌘Z). E.g. “build a 3-qubit GHZ, then plot
+                its mutual information”.
+              </div>
+            )}
+            {agentMessages.map((m, i) => <AgentMessageView key={i} message={m} />)}
+            {agentRunning && <div className="chat__agent-running">working…</div>}
+          </>
+        ) : mode === "chat" ? (
           <>
             {history.length === 0 && !streamBuf && (
               <div className="chat__empty">
@@ -540,7 +656,9 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
                   : dialogue.length === 0
                     ? "Discussion topic for the two AIs (Enter to start)"
                     : "Optional: jump in with a message, then continue (Enter)")
-              : (streaming ? "streaming…" : "Message (Enter to send · Shift+Enter for newline)")
+              : mode === "agent"
+                ? (agentRunning ? "working…" : "Tell the AI what to build or change (Enter) — it acts via tools")
+                : (streaming ? "streaming…" : "Message (Enter to send · Shift+Enter for newline)")
           }
           rows={2}
           spellCheck={false}
@@ -550,12 +668,18 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
             // sends too so muscle memory from the old binding keeps working.
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
-              if (mode === "dialogue") runDialogue(); else send();
+              if (mode === "dialogue") runDialogue(); else if (mode === "agent") runAgent(); else send();
             }
           }}
-          disabled={streaming || dialogueRunning}
+          disabled={streaming || dialogueRunning || agentRunning}
         />
-        {mode === "dialogue" ? (
+        {mode === "agent" ? (
+          agentRunning ? (
+            <button className="chat__send" onClick={stop} title="Stop the agent">stop</button>
+          ) : (
+            <button className="chat__send" onClick={runAgent} disabled={!input.trim()} title="Run the agent (Enter)">act</button>
+          )
+        ) : mode === "dialogue" ? (
           dialogueRunning ? (
             <>
               {dialogueProgress && <span className="chat__turn-count">turn {dialogueProgress.i}/{dialogueProgress.n}</span>}
@@ -576,6 +700,56 @@ export function ChatPanel({ circuit, simResult, noise, onLoadInNewTab }: Props) 
       </div>
     </div>
   );
+}
+
+// ─── Agent (tool-use) message rendering ───────────────────────────────
+
+function prettyArgs(s: string): string {
+  try {
+    const o = JSON.parse(s);
+    const parts = Object.entries(o).map(([k, v]) => `${k}=${typeof v === "string" ? (v.length > 30 ? v.slice(0, 30) + "…" : v) : JSON.stringify(v)}`);
+    const j = parts.join(", ");
+    return j ? `(${j.length > 90 ? j.slice(0, 90) + "…" : j})` : "()";
+  } catch {
+    return "()";
+  }
+}
+
+function AgentMessageView({ message }: { message: AgentMessage }) {
+  if (message.role === "system") return null;
+  if (message.role === "user") {
+    const text = (message.content ?? "").split("\n\nCurrent circuit (OpenQASM 3):")[0];
+    return (
+      <div className="chat__msg chat__msg--user">
+        <div className="chat__msg-role">you</div>
+        <div className="chat__msg-body"><div className="chat__text">{text}</div></div>
+      </div>
+    );
+  }
+  if (message.role === "tool") {
+    const isErr = (message.content ?? "").startsWith("Error:");
+    return (
+      <div className={`chat__tool-result${isErr ? " chat__tool-result--err" : ""}`}>
+        <span className="chat__tool-name">{message.name}</span>
+        <pre className="chat__tool-out">{message.content}</pre>
+      </div>
+    );
+  }
+  // assistant
+  if (message.tool_calls && message.tool_calls.length) {
+    return (
+      <div className="chat__agent-step">
+        {message.content ? <div className="chat__md"><Markdown source={message.content} /></div> : null}
+        {message.tool_calls.map((c, i) => (
+          <div key={i} className="chat__tool-call">
+            <span className="chat__tool-arrow">→</span> <b>{c.function.name}</b>
+            <span className="chat__tool-args">{prettyArgs(c.function.arguments)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <Message message={{ role: "assistant", content: message.content ?? "" }} />;
 }
 
 // ─── Message rendering with QASM-block detection ───────────────────────

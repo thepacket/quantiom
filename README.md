@@ -97,7 +97,11 @@ categorized **prompt library** drops ready-made prompts into the box. A
 discuss the circuit turn by turn — every turn grounded in the same
 simulator context, so the exchange stays checkable. Stop or jump in at
 any point, and export the whole transcript (with the circuit embedded) as
-Markdown.
+Markdown. An **agent mode** goes further: the model **acts on Quantiom
+through tools** — it reads the simulated state / resources / expectations
+and builds, edits, optimises, transpiles, or plots the circuit, calling
+tools in a bounded loop. Every change routes through the undo stack, so
+anything the agent does is one ⌘Z away.
 
 **Interoperability.** Circuits round-trip OpenQASM 3 (and parse
 OpenQASM 2), export to Qiskit, Cirq, Braket, Q#, PyQuil, pytket,
@@ -156,7 +160,7 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**991 tests (~96% statement coverage)** that run in continuous integration
+**998 tests (~96% statement coverage)** that run in continuous integration
 on **every push** (`.github/workflows/ci.yml`). They verify the statevector
 simulator (incl. the `initialize()` gate and X/Y-basis measurement), every
 gate's matrix unitarity and algebra, the Clifford tableau (with the
@@ -173,7 +177,7 @@ tree — each checked against analytic ground truth.
 You don't have to take that on faith: the toolbar **Self-test** button
 re-runs a **413-check** cross-section of the same engine **live in your
 browser** in ~10 ms and shows the pass/fail report — itself a subset of
-the full **991-test** suite that runs in CI on every commit. See
+the full **998-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 
