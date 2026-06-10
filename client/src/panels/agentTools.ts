@@ -652,7 +652,9 @@ export function executeTool(name: string, args: Record<string, unknown>, ctx: Ag
       if (!id) throw new Error("id is required");
       const open = args.open === undefined ? true : !!args.open;
       ctx.setPanel(id, open);
-      return `${open ? "Revealed" : "Collapsed"} panel "${id}" (no-op if it isn't mounted).`;
+      return open
+        ? `Revealed panel "${id}" and expanded the panel column (no effect if no panel has that id).`
+        : `Collapsed panel "${id}".`;
     }
 
     case "save_as_custom_gate": {

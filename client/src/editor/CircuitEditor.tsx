@@ -51,7 +51,7 @@ import { randomCliffordCircuit } from "../sim/randomClifford";
 import { compileForDevice } from "../sim/compile";
 import { recordAnimationWebM } from "./recordAnimation";
 import { EndiannessToggle } from "../panels/endianness";
-import { setAllPanelsCollapsed, SpotlightProvider, SPOTLIGHT_DND_MIME } from "../panels/PanelShell";
+import { setAllPanelsCollapsed, SpotlightProvider, SPOTLIGHT_DND_MIME, PANEL_COLUMN_REVEAL_EVENT } from "../panels/PanelShell";
 import { HoverTip } from "./HoverTip";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
@@ -649,6 +649,13 @@ export function CircuitEditor() {
   useEffect(() => {
     try { localStorage.setItem("quantiom:panels-collapsed", panelsCollapsed ? "1" : "0"); } catch { /* ignore */ }
   }, [panelsCollapsed]);
+  // When a panel is revealed (e.g. by the AI agent's set_panel tool), expand the
+  // whole panel column if it's collapsed — otherwise the panel stays hidden.
+  useEffect(() => {
+    const onReveal = () => setPanelsCollapsed(false);
+    window.addEventListener(PANEL_COLUMN_REVEAL_EVENT, onReveal);
+    return () => window.removeEventListener(PANEL_COLUMN_REVEAL_EVENT, onReveal);
+  }, []);
 
   // Inspector side-panel collapse (right of the canvas). Persisted.
   const [inspectorCollapsed, setInspectorCollapsed] = useState<boolean>(() => {

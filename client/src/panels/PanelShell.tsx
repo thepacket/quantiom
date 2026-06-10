@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 /**
@@ -56,6 +56,10 @@ type Props = {
 const STORAGE_KEY = "quantiom:panel-collapsed:v1";
 const SET_ALL_EVENT = "quantiom:set-all-panels";
 const SET_ONE_EVENT = "quantiom:set-one-panel";
+/** Fired when a panel is revealed, so the editor can expand the whole panel
+ *  column if it happens to be collapsed (otherwise the revealed panel stays
+ *  hidden behind the collapsed column). */
+export const PANEL_COLUMN_REVEAL_EVENT = "quantiom:reveal-panel-column";
 
 /** Expand (collapsed=false) or collapse (collapsed=true) every mounted panel.
  *  Broadcast to all PanelShell instances via a window event, so callers don't
@@ -68,6 +72,9 @@ export function setAllPanelsCollapsed(collapsed: boolean): void {
  *  just pushed content into). No-op if no panel with that id is mounted. */
 export function setPanelCollapsed(id: string, collapsed: boolean): void {
   window.dispatchEvent(new CustomEvent(SET_ONE_EVENT, { detail: { id, collapsed } }));
+  // Revealing a panel is pointless if the whole column is collapsed — ask the
+  // editor to open it so the panel is actually visible.
+  if (!collapsed) window.dispatchEvent(new CustomEvent(PANEL_COLUMN_REVEAL_EVENT, { detail: { id } }));
 }
 
 function loadCollapsedMap(): Record<string, boolean> {
@@ -109,11 +116,19 @@ export function PanelShell({ id, title, children, toolbar, defaultCollapsed = fa
     return () => window.removeEventListener(SET_ALL_EVENT, onSetAll);
   }, []);
 
-  // Respond to a targeted single-panel expand/collapse.
+  // Respond to a targeted single-panel expand/collapse. When a panel is
+  // revealed (e.g. by an agent's set_panel), scroll it into view so the user
+  // actually sees what was just surfaced.
+  const sectionRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const onSetOne = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (detail && detail.id === id && typeof detail.collapsed === "boolean") setCollapsed(detail.collapsed);
+      if (!detail || detail.id !== id || typeof detail.collapsed !== "boolean") return;
+      setCollapsed(detail.collapsed);
+      if (!detail.collapsed) {
+        // Defer so the column-reveal + un-collapse have laid out first.
+        requestAnimationFrame(() => sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+      }
     };
     window.addEventListener(SET_ONE_EVENT, onSetOne);
     return () => window.removeEventListener(SET_ONE_EVENT, onSetOne);
@@ -133,7 +148,7 @@ export function PanelShell({ id, title, children, toolbar, defaultCollapsed = fa
   const inlineHidden = collapsed && !isSpotlit;
 
   return (
-    <section className={`panel${className ? " " + className : ""}${isSpotlit ? " panel--spotlit" : ""}`}>
+    <section ref={sectionRef} className={`panel${className ? " " + className : ""}${isSpotlit ? " panel--spotlit" : ""}`}>
       <header className="panel__head">
         <button
           className="panel__collapse"
