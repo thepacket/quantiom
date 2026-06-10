@@ -41,13 +41,17 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .app__main { flex: 1; min-height: 0; display: flex; }
 
 /* ─── Editor layout ─────────────────────────────────────────────────── */
-.editor { display: grid; grid-template-columns: var(--palette-w, minmax(220px, 280px)) minmax(0, 1fr) var(--panels-w, minmax(280px, 360px)); grid-template-rows: auto 1fr; flex: 1; min-height: 0; height: 100%; }
-/* Narrow viewports: shrink side columns further so the canvas never overlaps. */
+/* The centre column keeps a usable min width so it never collapses to ~0 (which
+ * made the chat/canvas spill out and "overlap" the panels at high browser zoom).
+ * When the three columns can't fit — narrow window or zoomed in — the whole grid
+ * scrolls horizontally instead of overlapping. */
+.editor { display: grid; grid-template-columns: var(--palette-w, minmax(220px, 280px)) minmax(260px, 1fr) var(--panels-w, minmax(280px, 360px)); grid-template-rows: auto 1fr; flex: 1; min-height: 0; height: 100%; overflow: auto; }
+/* Narrow viewports: shrink columns further to delay the horizontal scroll. */
 @media (max-width: 1100px) {
-  .editor { grid-template-columns: var(--palette-w, minmax(180px, 220px)) minmax(0, 1fr) var(--panels-w, minmax(240px, 300px)); }
+  .editor { grid-template-columns: var(--palette-w, minmax(180px, 220px)) minmax(200px, 1fr) var(--panels-w, minmax(240px, 300px)); }
 }
 @media (max-width: 880px) {
-  .editor { grid-template-columns: var(--palette-w, minmax(160px, 200px)) minmax(0, 1fr) var(--panels-w, minmax(220px, 260px)); }
+  .editor { grid-template-columns: var(--palette-w, minmax(160px, 200px)) minmax(160px, 1fr) var(--panels-w, minmax(220px, 260px)); }
 }
 /* Whole-column collapse: the side column shrinks to a thin reopen strip at
    every breakpoint (the variable wins over the media-query fallbacks). */
@@ -63,7 +67,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 }
 .editor--panels-collapsed .panels__reopen:hover { color: var(--fg); background: var(--bg-2); }
 /* Chat panel sits inside editor__center, below the Inspector. */
-.chat { display: flex; flex-direction: column; position: relative; border-top: 1px solid var(--border); background: var(--panel); min-height: 0; }
+.chat { display: flex; flex-direction: column; position: relative; border-top: 1px solid var(--border); background: var(--panel); min-height: 0; min-width: 0; }
 .chat--collapsed { height: 24px; min-height: 24px; }
 .chat--collapsed .chat__toggle { width: 100%; height: 100%; border: none; border-radius: 0; background: var(--bg-2); color: var(--muted); font-size: 15px; }
 .chat__resize { position: absolute; top: 0; left: 0; right: 0; height: 4px; cursor: ns-resize; background: transparent; }
@@ -92,7 +96,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__settings-row input { flex: 1; padding: 4px 8px; }
 .chat__settings-note { margin-top: 4px; font-size: 14px; color: var(--muted); }
 .chat__settings-note a { color: var(--accent); }
-.chat__messages { flex: 1; overflow: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 10px; min-height: 0; font-size: calc(17px * var(--chat-scale, 1)); }
+.chat__messages { flex: 1; overflow: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; font-size: calc(17px * var(--chat-scale, 1)); }
 .chat__empty { color: var(--muted); font-size: 16px; padding: 16px; text-align: center; }
 .chat__msg { display: flex; gap: 8px; }
 .chat__msg-role { width: 32px; flex-shrink: 0; color: var(--muted); font-size: 14px; text-transform: uppercase; padding-top: 2px; }
@@ -102,7 +106,10 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__msg--streaming .chat__msg-body { opacity: 0.85; }
 .chat__text { white-space: pre-wrap; word-wrap: break-word; font-size: 1em; line-height: 1.5; }
 /* Rendered-markdown body for assistant replies. */
-.chat__md { font-size: 1em; line-height: 1.5; word-wrap: break-word; overflow-wrap: anywhere; }
+.chat__md { font-size: 1em; line-height: 1.5; word-wrap: break-word; overflow-wrap: anywhere; min-width: 0; }
+/* Wide display-math doesn't wrap; let it scroll within the bubble rather than
+ * stretch the whole chat column (which used to overlap the panels at zoom). */
+.chat__md .katex-display { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
 .chat__md > :first-child { margin-top: 0; }
 .chat__md > :last-child { margin-bottom: 0; }
 .chat__md p { margin: 6px 0; }
@@ -118,7 +125,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__open-tab { padding: 2px 8px; font-size: 14px; }
 .chat__code { margin: 0; padding: 8px; background: var(--bg); color: var(--fg); font-family: ui-monospace, monospace; font-size: 0.94em; overflow: auto; max-height: 320px; }
 .chat__input-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--border); background: var(--bg-2); }
-.chat__input { flex: 1; padding: 8px 10px; font-family: inherit; font-size: 17px; font-weight: 400; line-height: 1.4; resize: vertical; min-height: 44px; max-height: 240px; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; }
+.chat__input { flex: 1; min-width: 0; padding: 8px 10px; font-family: inherit; font-size: 17px; font-weight: 400; line-height: 1.4; resize: vertical; min-height: 44px; max-height: 240px; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; }
 .chat__input:focus { outline: none; border-color: var(--accent); }
 .chat__send { align-self: center; min-width: 72px; font-size: 17px; font-weight: 400; padding: 8px 14px; background: var(--panel); }
 .chat__error { padding: 6px 10px; color: #ff8a8a; font-size: 16px; }
@@ -209,6 +216,7 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
    side) · ChatPanel (auto; its own internal flex layout drives height). */
 .editor__center {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto 1fr auto;
   min-width: 0; min-height: 0;
 }
