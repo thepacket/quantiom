@@ -70,6 +70,8 @@ type Props = {
   onLoadInNewTab: (circuit: Circuit, name?: string) => void;
   /** Replace the active circuit (undo-able) — used by Agent mode tools. */
   onApplyCircuit: (circuit: Circuit) => void;
+  /** Update the noise model — used by the Agent's set_noise tool. */
+  onSetNoise: (noise: NoiseModel) => void;
 };
 
 const SYSTEM_PROMPT =
@@ -132,7 +134,7 @@ const AGENT_SYSTEM_PROMPT =
 
 const MAX_AGENT_STEPS = 14;
 
-export function ChatPanel({ circuit, simResult, noise, customGates, paramValues, onLoadInNewTab, onApplyCircuit }: Props) {
+export function ChatPanel({ circuit, simResult, noise, customGates, paramValues, onLoadInNewTab, onApplyCircuit, onSetNoise }: Props) {
   const [open, setOpen] = useState<boolean>(loadOpen);
   const [height, setHeight] = useState<number>(loadHeight);
   const [apiKey, setApiKey] = useState<string>(loadApiKey);
@@ -315,6 +317,9 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
       coupling: noise.coupling,
       applyCircuit: (next) => { working = next; onApplyCircuit(next); },
       addPlot: (spec) => { requestCustomPlot(spec); },
+      openInNewTab: onLoadInNewTab,
+      noise,
+      setNoise: onSetNoise,
     };
 
     try {
@@ -350,7 +355,7 @@ export function ChatPanel({ circuit, simResult, noise, customGates, paramValues,
       setAgentRunning(false);
       agentAbortRef.current = null;
     }
-  }, [input, agentRunning, apiKey, model, circuit, customGates, paramValues, noise.coupling, onApplyCircuit]);
+  }, [input, agentRunning, apiKey, model, circuit, customGates, paramValues, noise, onApplyCircuit, onLoadInNewTab, onSetNoise]);
 
   // Snapshot the current circuit + attached panels as the grounding context
   // shared by every dialogue turn (the circuit is fixed during a run).

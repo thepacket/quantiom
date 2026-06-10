@@ -24,6 +24,20 @@ import { compileForDevice } from "../sim/compile";
 import { inverseGates } from "../editor/inverse";
 import { parseQasm3 } from "../qasm/parse";
 import { emitQasm3 } from "../qasm/emit";
+import { emitQasm2 } from "../qasm/emitQasm2";
+import { emitQiskit } from "../qasm/emitQiskit";
+import { emitCirq } from "../qasm/emitCirq";
+import { emitBraket } from "../qasm/emitBraket";
+import { emitQSharp } from "../qasm/emitQSharp";
+import { emitPyQuil } from "../qasm/emitPyQuil";
+import { emitPytket } from "../qasm/emitPytket";
+import { emitQuantikz } from "../qasm/emitQuantikz";
+import { emitStim } from "../qasm/emitStim";
+import { parseTargetState, statePrepCircuit } from "../sim/statePrep";
+import { synthesizeUnitary, type Cx } from "../sim/unitarySynth";
+import { buildTrotterCircuit, type TrotterOrder } from "../sim/trotter";
+import { equivalenceCheck } from "../sim/equivalence";
+import type { NoiseModel } from "../sim/noise";
 import { GATES } from "../editor/gates";
 
 export type AgentContext = {
@@ -36,6 +50,11 @@ export type AgentContext = {
   coupling?: number[][];
   /** Push a custom plot spec (the `requestCustomPlot` bridge). */
   addPlot: (spec: unknown) => void;
+  /** Open a circuit in a new tab (keeps the current one). */
+  openInNewTab?: (circuit: Circuit, name?: string) => void;
+  /** Current noise model + setter, for the set_noise tool. */
+  noise?: NoiseModel;
+  setNoise?: (next: NoiseModel) => void;
 };
 
 // ─── tool schemas (what the model sees) ───────────────────────────────
@@ -106,11 +125,64 @@ export const AGENT_TOOLS = [
     },
     ["quantity"],
   ),
+  t(
+    "prepare_state",
+    "Synthesize a circuit that prepares a target statevector from |0…0⟩ (Möttönen) and make it the current circuit. Undo-able.",
+    {
+      target: { type: "string", description: "Amplitude list of 2ⁿ values (reals or a+bi) OR a basis-state label like \"011\"." },
+      qubits: { type: "integer", description: "Number of qubits n (1–8)." },
+    },
+    ["target", "qubits"],
+  ),
+  t("synthesize_unitary", "Re-express the current circuit's unitary as controlled-u_arb two-level gates (universal, not CNOT-optimal). ≤ 4 qubits. Undo-able.", {}),
+  t(
+    "trotterise",
+    "Replace the circuit with a Trotter circuit for a Pauli-sum Hamiltonian (exp(-iHt)). Undo-able.",
+    {
+      hamiltonian: { type: "string", description: "Pauli sum, e.g. \"0.5 ZZ + X\" (all terms same length)." },
+      steps: { type: "integer", description: "Trotter steps (default 1)." },
+      order: { type: "integer", enum: [1, 2, 4], description: "Splitting order (default 1)." },
+    },
+    ["hamiltonian"],
+  ),
+  t(
+    "export_circuit",
+    "Return the current circuit as code/text in a given format (read-only). Use to show the user a code export.",
+    { format: { type: "string", enum: ["qasm3", "qasm2", "qiskit", "cirq", "braket", "qsharp", "pyquil", "pytket", "quantikz", "stim", "json"] } },
+    ["format"],
+  ),
+  t(
+    "check_equivalent",
+    "Compare the current circuit to a circuit you provide as OpenQASM 3 and report whether they're equivalent (process fidelity, trace distance). Read-only.",
+    { qasm: { type: "string", description: "OpenQASM 3 of the comparison circuit." } },
+    ["qasm"],
+  ),
+  t(
+    "open_in_new_tab",
+    "Open a circuit (OpenQASM 3) in a NEW tab, leaving the current circuit untouched. Use for variants/alternatives.",
+    { qasm: { type: "string" }, name: { type: "string", description: "Tab name (optional)." } },
+    ["qasm"],
+  ),
+  t(
+    "set_noise",
+    "Update the noise model. Only the fields you pass change. Not on the circuit undo stack.",
+    {
+      enabled: { type: "boolean" },
+      oneQubitDepolarising: { type: "number" },
+      twoQubitDepolarising: { type: "number" },
+      amplitudeDamping: { type: "number" },
+      phaseDamping: { type: "number" },
+      readoutBitFlip: { type: "number" },
+      crosstalk: { type: "number" },
+      trajectories: { type: "integer" },
+    },
+  ),
 ];
 
 /** Names that mutate the circuit (for UI labelling / gating). */
 export const MUTATING_TOOLS = new Set([
   "set_circuit_qasm", "place_gate", "remove_gate", "add_qubits", "optimise", "transpile", "compile", "append_inverse",
+  "prepare_state", "synthesize_unitary", "trotterise", "set_noise",
 ]);
 
 // ─── execution ────────────────────────────────────────────────────────
@@ -239,6 +311,89 @@ export function executeTool(name: string, args: Record<string, unknown>, ctx: Ag
     case "add_plot": {
       ctx.addPlot({ quantity: args.quantity, sweep: args.sweep, chart: args.chart, args: args.args });
       return `Added a "${args.quantity}" plot to the Custom plots panel.`;
+    }
+
+    case "prepare_state": {
+      const qubits = clampInt(args.qubits, 0, 1, 8);
+      const parsed = parseTargetState(String(args.target ?? ""), qubits);
+      if (!parsed) throw new Error(`could not parse target for ${qubits} qubits (need 2^${qubits}=${1 << qubits} amplitudes or an ${qubits}-bit basis label)`);
+      const out = statePrepCircuit(parsed.re, parsed.im, qubits, "state prep");
+      if (!out) throw new Error("state-prep synthesis failed");
+      ctx.applyCircuit(out, "AI: prepare state");
+      return `Prepared the target state. ${resourceText(out)}`;
+    }
+
+    case "synthesize_unitary": {
+      const n = circuit.numQubits;
+      if (n < 1 || n > 4) throw new Error("unitary synthesis is capped at 4 qubits");
+      const dim = 1 << n;
+      const U: Cx[][] = Array.from({ length: dim }, () => Array.from({ length: dim }, () => ({ re: 0, im: 0 })));
+      for (let j = 0; j < dim; j++) {
+        const res = simulate(circuit, ctx.paramValues, ctx.customGates, { startIndex: j });
+        if (res.isStabilizer) throw new Error("not available on the Clifford fast path");
+        for (let i = 0; i < dim; i++) U[i][j] = { re: res.state[2 * i], im: res.state[2 * i + 1] };
+      }
+      const gates = synthesizeUnitary(U, n);
+      if (!gates) throw new Error("synthesis failed");
+      const out: Circuit = { numQubits: n, numClbits: 0, gates, name: "unitary synthesis" };
+      ctx.applyCircuit(out, "AI: synthesize unitary");
+      return `Re-synthesized the unitary into two-level gates. ${resourceText(out)}`;
+    }
+
+    case "trotterise": {
+      let terms;
+      try { terms = parsePauliSum(String(args.hamiltonian ?? "")); } catch (e) { throw new Error(`could not parse Hamiltonian: ${e instanceof Error ? e.message : e}`); }
+      const steps = clampInt(args.steps, 1, 1, 200);
+      const order = ([1, 2, 4].includes(Number(args.order)) ? Number(args.order) : 1) as TrotterOrder;
+      const out = buildTrotterCircuit(terms, { steps, delta: "t", order });
+      ctx.applyCircuit(out, "AI: trotterise");
+      return `Built a Trotter circuit (order ${order}, ${steps} step(s), δ="t"). ${resourceText(out)}`;
+    }
+
+    case "export_circuit": {
+      const fmt = String(args.format ?? "");
+      const map: Record<string, () => string> = {
+        qasm3: () => emitQasm3(circuit),
+        qasm2: () => emitQasm2(circuit, ctx.paramValues),
+        qiskit: () => emitQiskit(circuit),
+        cirq: () => emitCirq(circuit),
+        braket: () => emitBraket(circuit),
+        qsharp: () => emitQSharp(circuit),
+        pyquil: () => emitPyQuil(circuit),
+        pytket: () => emitPytket(circuit),
+        quantikz: () => emitQuantikz(circuit),
+        stim: () => emitStim(circuit),
+        json: () => JSON.stringify(circuit, null, 2),
+      };
+      const fn = map[fmt];
+      if (!fn) throw new Error(`unknown format "${fmt}"`);
+      return fn();
+    }
+
+    case "check_equivalent": {
+      const parsed = parseQasm3(String(args.qasm ?? ""));
+      if (!parsed.ok) throw new Error(`QASM parse error on line ${parsed.line}: ${parsed.error}`);
+      const r = equivalenceCheck(circuit, parsed.circuit, ctx.customGates, ctx.customGates, ctx.paramValues);
+      return `${r.equivalent ? "EQUIVALENT" : "NOT equivalent"} — process fidelity ${r.processFidelity.toFixed(6)}, max deviation ${r.maxDeviation.toFixed(6)}, trace-distance bound ${r.traceDistanceProxy.toFixed(6)}.`;
+    }
+
+    case "open_in_new_tab": {
+      if (!ctx.openInNewTab) throw new Error("opening new tabs is not available here");
+      const parsed = parseQasm3(String(args.qasm ?? ""));
+      if (!parsed.ok) throw new Error(`QASM parse error on line ${parsed.line}: ${parsed.error}`);
+      ctx.openInNewTab(parsed.circuit, typeof args.name === "string" ? args.name : "AI circuit");
+      return `Opened a new tab. ${resourceText(parsed.circuit)}`;
+    }
+
+    case "set_noise": {
+      if (!ctx.setNoise || !ctx.noise) throw new Error("noise control is not available here");
+      const next: NoiseModel = { ...ctx.noise };
+      const numKeys = ["oneQubitDepolarising", "twoQubitDepolarising", "amplitudeDamping", "phaseDamping", "readoutBitFlip", "crosstalk"] as const;
+      for (const k of numKeys) if (typeof args[k] === "number") (next[k] as number) = Math.max(0, Math.min(1, args[k] as number));
+      if (typeof args.enabled === "boolean") next.enabled = args.enabled;
+      if (typeof args.trajectories === "number") next.trajectories = clampInt(args.trajectories, 256, 1, 8192);
+      ctx.setNoise(next);
+      return `Noise ${next.enabled ? "enabled" : "disabled"}: 1q=${next.oneQubitDepolarising}, 2q=${next.twoQubitDepolarising}, AD=${next.amplitudeDamping}, PD=${next.phaseDamping}, readout=${next.readoutBitFlip}, crosstalk=${next.crosstalk}, T=${next.trajectories}.`;
     }
 
     default:

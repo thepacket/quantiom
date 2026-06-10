@@ -1318,6 +1318,7 @@ export function CircuitEditor() {
             paramValues={paramValues}
             onLoadInNewTab={(c, n) => t.newTab(c, n)}
             onApplyCircuit={(c) => dispatch({ type: "replace-circuit", circuit: c })}
+            onSetNoise={setNoise}
           />
         </ErrorBoundary>
       </div>

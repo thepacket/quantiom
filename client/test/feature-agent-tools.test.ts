@@ -3,9 +3,13 @@ import { circ, gate } from "./helpers";
 import { executeTool, AGENT_TOOLS, MUTATING_TOOLS, type AgentContext } from "../src/panels/agentTools";
 import type { Circuit } from "../src/editor/types";
 
+import { DEFAULT_NOISE } from "../src/sim/noise";
+
 function makeCtx(initial: Circuit) {
   let current = initial;
+  let noise = { ...DEFAULT_NOISE };
   const plots: unknown[] = [];
+  const tabs: Circuit[] = [];
   const applied: string[] = [];
   const ctx: AgentContext = {
     getCircuit: () => current,
@@ -13,8 +17,11 @@ function makeCtx(initial: Circuit) {
     paramValues: {},
     applyCircuit: (next, label) => { current = next; applied.push(label); },
     addPlot: (spec) => plots.push(spec),
+    openInNewTab: (c) => tabs.push(c),
+    noise,
+    setNoise: (n) => { noise = n; },
   };
-  return { ctx, get: () => current, plots, applied };
+  return { ctx, get: () => current, getNoise: () => noise, plots, tabs, applied };
 }
 
 describe("agent tools", () => {
@@ -74,6 +81,39 @@ describe("agent tools", () => {
     const inv = makeCtx(circ(2, [gate("h", [0]), gate("cx", [1], [0])]));
     executeTool("append_inverse", {}, inv.ctx);
     expect(inv.get().gates.length).toBe(4); // original 2 + 2 inverse
+  });
+
+  it("prepare_state / synthesize_unitary / trotterise build circuits", () => {
+    const sp = makeCtx(circ(1, []));
+    executeTool("prepare_state", { target: "1, 1", qubits: 1 }, sp.ctx); // |+⟩
+    expect(sp.get().gates.length).toBeGreaterThan(0);
+
+    const us = makeCtx(circ(2, [gate("h", [0]), gate("cx", [1], [0])]));
+    executeTool("synthesize_unitary", {}, us.ctx);
+    expect(us.get().gates.every((g) => g.gateId === "u_arb")).toBe(true);
+
+    const tr = makeCtx(circ(1, []));
+    const out = executeTool("trotterise", { hamiltonian: "0.5 Z + X", steps: 2 }, tr.ctx);
+    expect(out).toMatch(/Trotter circuit/);
+    expect(tr.get().gates.length).toBeGreaterThan(0);
+  });
+
+  it("export_circuit returns code; check_equivalent compares", () => {
+    const { ctx } = makeCtx(circ(2, [gate("h", [0]), gate("cx", [1], [0])]));
+    expect(executeTool("export_circuit", { format: "qiskit" }, ctx)).toMatch(/qc\.h\(0\)/);
+    expect(executeTool("export_circuit", { format: "stim" }, ctx)).toMatch(/^CX 0 1$/m);
+    expect(() => executeTool("export_circuit", { format: "nope" }, ctx)).toThrow(/unknown format/);
+    const same = "OPENQASM 3;\nqubit[2] q;\nh q[0];\ncx q[0], q[1];\n";
+    expect(executeTool("check_equivalent", { qasm: same }, ctx)).toMatch(/EQUIVALENT/);
+  });
+
+  it("open_in_new_tab and set_noise use their callbacks", () => {
+    const c = makeCtx(circ(1, []));
+    executeTool("open_in_new_tab", { qasm: "OPENQASM 3;\nqubit[1] q;\nh q[0];\n" }, c.ctx);
+    expect(c.tabs.length).toBe(1);
+    executeTool("set_noise", { enabled: true, readoutBitFlip: 0.03 }, c.ctx);
+    expect(c.getNoise().enabled).toBe(true);
+    expect(c.getNoise().readoutBitFlip).toBeCloseTo(0.03, 10);
   });
 
   it("add_plot forwards a spec", () => {
