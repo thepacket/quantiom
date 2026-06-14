@@ -13,6 +13,7 @@ workstation, and visualizer.**
 
 To get the latest version of Quantiom, do the following in your web browser:
 Windows — `Ctrl + Shift + R` (or `Ctrl + F5`); macOS — `Cmd + Shift + R`.
+Tested with Chrome.
 
 ![Quantiom — the circuit editor with an analysis panel enlarged in a dock beside the circuit, the gate palette, the right-hand panel column, and the AI assistant](screenshots/quantiom3.png)
 
