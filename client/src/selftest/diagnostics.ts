@@ -108,6 +108,33 @@ import { lyapunovExponent } from "../sim/lyapunov";
 import { temporalAutocorrelation } from "../sim/autocorrelation";
 import { ptMoments } from "../sim/ptMoments";
 import { allPauliExpectations } from "../sim/pauliSpectrum";
+// Older visualiser / metrology / spectrum substrates (pure, browser-safe).
+import { quantumFisherPure, collectiveSpinGenerator } from "../sim/qfi";
+import { quantumGeometricTensor } from "../sim/qgt";
+import { coherenceFromAmplitudes } from "../sim/coherence";
+import { concurrenceMatrix } from "../sim/concurrence";
+import { participation } from "../sim/participation";
+import { symmetrySectors } from "../sim/symmetrySectors";
+import { levelStatistics } from "../sim/levelStatistics";
+import { spectralFormFactor } from "../sim/spectralFormFactor";
+import { diagonalEnsemble } from "../sim/diagonalEnsemble";
+import { structureFactor } from "../sim/structureFactor";
+import { krylovComplexity } from "../sim/krylov";
+import { operatorEntanglement } from "../sim/operatorEntanglement";
+import { magic } from "../sim/magic";
+import { discreteWigner } from "../sim/wigner";
+import { husimiQ } from "../sim/husimi";
+import { negativityMatrix } from "../sim/negativity";
+import { pauliTransferMatrix } from "../sim/ptm";
+import { loschmidtEcho } from "../sim/loschmidt";
+import { otoc } from "../sim/otoc";
+import { spaceTimeZ, spaceTimeEntropy } from "../sim/spacetime";
+import { tSweepZ } from "../sim/tsweep";
+import { qSphere } from "../sim/qsphere";
+import { blochTrajectories } from "../sim/blochPath";
+import { interactionGraph } from "../sim/interaction";
+import { buildUnitary } from "../sim/unitary";
+import { repetitionExact } from "../sim/qec";
 
 export type CheckResult = { name: string; passed: boolean; detail?: string };
 export type CheckGroup = { name: string; checks: CheckResult[] };
@@ -1060,6 +1087,89 @@ export function runSelfTest(): SelfTestReport {
     });
     s.check("Coherent information: pure Bell ⇒ I_c = S(ρ_B) = 1", () => { const r = coherentInformation(pureRho(bell2, 4), 2, [0])!; return close(r.sFull, 0, 1e-6) && close(r.sB, 1, 1e-6) && close(r.coherentInfo, 1, 1e-6); });
     s.check("Negativity dynamics: static Bell ⇒ E_N ≡ 1", () => negativityDynamics(circ(2, [gate("h", [0]), gate("cx", [1], [0])]), {}, [], [0], 16)!.logNeg.every((v) => close(v, 1, 1e-6)));
+  }
+
+  // ── Visualiser / metrology / spectrum substrates ───────────────────
+  const tState = simulate(circ(1, [gate("h", [0]), gate("t", [0])]), {}).state;
+
+  s.group("Metrology — QFI, QGT, coherence");
+  {
+    s.check("QFI: GHZ-3 saturates the Heisenberg limit N² = 9", () => close(quantumFisherPure(ghz3, 3, collectiveSpinGenerator(3, "Z")).qfi, 9, 1e-6));
+    s.check("QFI: |+⟩⊗4 sits at the SQL = N = 4", () => close(quantumFisherPure(uniform(4), 4, collectiveSpinGenerator(4, "Z")).qfi, 4, 1e-6));
+    s.check("QFI: |0…0⟩ has zero variance", () => close(quantumFisherPure(basis(3), 3, collectiveSpinGenerator(3, "Z")).qfi, 0, 1e-9));
+    s.check("QGT: single RY(θ) Fubini–Study metric = 1/4", () => close(quantumGeometricTensor(circ(1, [gate("ry", [0], [], ["th"])]), [], { th: 0.5 }, ["th"])!.metric[0][0], 0.25, 1e-4));
+    s.check("QGT: RZ on |0⟩ (eigenstate) has zero metric", () => close(quantumGeometricTensor(circ(1, [gate("rz", [0], [], ["ph"])]), [], { ph: 0.5 }, ["ph"])!.metric[0][0], 0, 1e-4));
+    s.check("Coherence: |+⟩ has l₁ = 1, relative-entropy = 1 bit", () => { const c = coherenceFromAmplitudes(plus1, 1); return close(c.cL1, 1, 1e-9) && close(c.cRel, 1, 1e-9); });
+    s.check("Coherence: |0⟩ is incoherent (0)", () => { const c = coherenceFromAmplitudes(zero1, 1); return close(c.cL1, 0) && close(c.cRel, 0); });
+  }
+
+  s.group("Entanglement — concurrence, negativity matrix, operator entanglement");
+  {
+    s.check("Concurrence: Bell pair = 1", () => close(concurrenceMatrix(bell2, 2)!.c[0][1], 1, 1e-6));
+    s.check("Concurrence: GHZ-3 has no pairwise concurrence", () => concurrenceMatrix(ghz3, 3)!.c[0][1] < 1e-6);
+    s.check("Concurrence: W-state pairs = 2/3", () => close(concurrenceMatrix(wState(), 3)!.c[0][1], 2 / 3, 1e-6));
+    s.check("Negativity matrix: Bell pair entangled, product not", () => { const r = negativityMatrix(bell2, 2)!; const p = negativityMatrix(simulate(circ(2, [gate("h", [0])]), {}).state, 2)!; return r.neg[0][1] > 0.4 && close(r.neg[1][0], r.neg[0][1]) && close(r.neg[0][0], 0) && p.maxNeg < 1e-6; });
+    s.check("Operator entanglement: CNOT = 1 ebit", () => close(operatorEntanglement(circ(2, [gate("cx", [1], [0])]), {}, [])!.entropy, 1, 1e-6));
+    s.check("Operator entanglement: SWAP = 2 ebits", () => close(operatorEntanglement(circ(2, [gate("swap", [0, 1])]), {}, [])!.entropy, 2, 1e-6));
+    s.check("Operator entanglement: product gate = 0", () => close(operatorEntanglement(circ(2, [gate("h", [0]), gate("h", [1])]), {}, [])!.entropy, 0, 1e-9));
+  }
+
+  s.group("Localization — participation, symmetry sectors, structure factor");
+  {
+    const uniform2 = simulate(circ(2, [gate("h", [0]), gate("h", [1])]), {});
+    const zero2 = simulate(circ(2, []), {});
+    s.check("Participation: |+⊗+⟩ ⇒ PR = D = 4", () => close(participation(uniform2.probabilities, 2).participationRatio, 4, 1e-6));
+    s.check("Participation: basis state ⇒ PR = 1, Shannon = 0", () => { const r = participation(zero2.probabilities, 2); return close(r.participationRatio, 1) && close(r.shannon, 0); });
+    s.check("Symmetry sectors: |00⟩ all weight in sector 0, even parity", () => { const r = symmetrySectors(zero2.probabilities, 2); return close(r.weightSectors[0], 1) && close(r.parityEven, 1) && close(r.parityOdd, 0); });
+    s.check("Symmetry sectors: weights sum to 1", () => { const r = symmetrySectors(uniform2.probabilities, 2); return close(r.weightSectors.reduce((a, b) => a + b, 0), 1, 1e-9); });
+    s.check("Structure factor: antiferromagnetic Ψ⁺ Bell peaks at k = π", () => { const psiPlus = simulate(circ(2, [gate("h", [0]), gate("x", [1]), gate("cx", [1], [0])]), {}).state; return Math.abs(structureFactor(psiPlus, 2)!.peakK - Math.PI) < 0.2; });
+  }
+
+  s.group("Spectrum & thermalization — level stats, SFF, diagonal ensemble, Krylov");
+  {
+    s.check("Level statistics: picket fence ⇒ ratios = 1", () => { const r = levelStatistics([0, 1, 2, 3, 4, 5])!; return r.ratios.every((x) => close(x, 1, 1e-9)); });
+    s.check("SFF: aligned at t=0 (sff[0] = 1); two levels ⇒ plateau ½", () => { const r = spectralFormFactor([0, 1])!; return close(r.sff[0], 1, 1e-3) && close(r.plateau, 0.5, 1e-6); });
+    s.check("Diagonal ensemble: |0⟩ eigenstate of Z ⇒ ⟨H⟩=1, spread 0, d_eff 1", () => { const r = diagonalEnsemble(parsePauliSum("1*Z"), zero1, 1)!; return close(r.meanEnergy, 1) && close(r.energySpread, 0, 1e-9) && close(r.effectiveDim, 1, 1e-6); });
+    s.check("Diagonal ensemble: |+⟩ under Z ⇒ ⟨H⟩=0, populations ½/½", () => { const r = diagonalEnsemble(parsePauliSum("1*Z"), plus1, 1)!; return close(r.meanEnergy, 0, 1e-9) && close(r.populations[0], 0.5, 1e-6) && close(r.populations[1], 0.5, 1e-6); });
+    s.check("Krylov: Lanczos b has length |a|−1; spread C(0) = 0", () => { const r = krylovComplexity(parsePauliSum("1*ZZ + 0.5*XI + 0.5*IX"), bell2, 2)!; return r.b.length === r.a.length - 1 && close(r.complexity[0], 0, 1e-9) && r.complexity.every((c) => c >= -1e-9); });
+  }
+
+  s.group("Phase space & magic — magic M₂, Wigner, Husimi");
+  {
+    s.check("Magic M₂: Bell is a stabilizer state (M₂ = 0)", () => close(magic(allPauliExpectations(bell2, 2), 2).m2, 0, 1e-9));
+    s.check("Magic M₂: T|+⟩ is a magic state (M₂ > 0)", () => magic(allPauliExpectations(tState, 1), 1).m2 > 0.01);
+    s.check("Magic: Pauli-weight distribution sums to 1", () => close(magic(allPauliExpectations(bell2, 2), 2).weightDist.reduce((a, b) => a + b, 0), 1, 1e-9));
+    s.check("Wigner: |0⟩ stabilizer ⇒ non-negative, zero negativity; grid sums to 1", () => { const w = discreteWigner(zero1, 1)!; let sum = 0; for (const row of w.W) for (const v of row) sum += v; return close(w.negativity, 0, 1e-9) && close(sum, 1, 1e-9); });
+    s.check("Wigner: T|+⟩ has negativity (non-classical)", () => discreteWigner(tState, 1)!.negativity > 1e-6);
+    s.check("Husimi-Q: everywhere non-negative", () => { const h = husimiQ(bell2, 2)!; return h.Q.every((row) => row.every((v) => v >= -1e-12)) && h.max > 0; });
+  }
+
+  s.group("Operator views — PTM, unitary, Pauli spectrum, interaction graph");
+  {
+    s.check("Pauli spectrum: ⟨I⟩ = 1; all ⟨P⟩ ∈ [−1, 1]", () => { const e = allPauliExpectations(bell2, 2); return close(e[0], 1) && Array.from(e).every((x) => x >= -1 - 1e-9 && x <= 1 + 1e-9); });
+    s.check("PTM: identity-corner R[0][0] = 1; entries in [−1, 1]", () => { const r = pauliTransferMatrix(circ(1, [gate("h", [0])]), {}, [])!; return close(r.R[0][0], 1, 1e-6) && r.R.every((row) => row.every((v) => v >= -1 - 1e-9 && v <= 1 + 1e-9)); });
+    s.check("buildUnitary: H circuit gives unit-norm columns", () => { const u = buildUnitary(circ(1, [gate("h", [0])]), {}, [])!; const d = u.dim; for (let j = 0; j < d; j++) { let s2 = 0; for (let i = 0; i < d; i++) { const m = u.mag[i * d + j]; s2 += m * m; } if (!close(s2, 1, 1e-6)) return false; } return true; });
+    s.check("Interaction graph: symmetric, zero diagonal", () => { const g = interactionGraph(circ(3, [gate("cx", [1], [0]), gate("cx", [2], [1])])); return close(g.weight[0][1], g.weight[1][0]) && close(g.weight[0][0], 0) && close(g.weight[1][1], 0); });
+  }
+
+  s.group("Dynamics substrates — space-time, t-sweep, Loschmidt, OTOC, Bloch path, Q-sphere");
+  {
+    const dyn = circ(3, [gate("h", [0]), gate("cx", [1], [0]), gate("cx", [2], [1])]);
+    s.check("Space-time ⟨Z⟩: entries in [−1, 1]", () => spaceTimeZ(dyn, {}, [])!.z.every((row) => row.every((v) => v >= -1 - 1e-9 && v <= 1 + 1e-9)));
+    s.check("Space-time entropy: |0…0⟩ start is separable (s[q][0] = 0); entries in [0,1]", () => { const r = spaceTimeEntropy(dyn, {}, [])!; return r.s.every((row, q) => close(row[0], 0, 1e-9) && row.every((v) => v >= -1e-9 && v <= 1 + 1e-9) && q >= 0); });
+    s.check("t-sweep ⟨Z⟩: entries in [−1, 1]", () => tSweepZ(circ(1, [gate("rx", [0], [], ["t"])]), {}, [])!.z.every((row) => row.every((v) => v >= -1 - 1e-9 && v <= 1 + 1e-9)));
+    s.check("Loschmidt: L(0) = 1, L(t) ∈ [0, 1]", () => { const r = loschmidtEcho(circ(1, [gate("rx", [0], [], ["t"])]), {}, [])!; return close(r.L[0], 1, 1e-6) && r.L.every((v) => v >= -1e-9 && v <= 1 + 1e-9); });
+    s.check("OTOC: C(t) ∈ [0, 2] over the sweep", () => otoc(dyn, {}, [], 0, 2, "Z", "Z", 12, 6)!.C.every((v) => v >= -1e-6 && v <= 2 + 1e-6));
+    s.check("Bloch trajectories: every point inside the Bloch ball", () => blochTrajectories(circ(1, [gate("rx", [0], [], ["t"])]), {}, [])!.path.every((tr) => tr.every((p) => p.x * p.x + p.y * p.y + p.z * p.z <= 1 + 1e-6)));
+    s.check("Q-sphere: every basis point lies on the unit sphere", () => qSphere(simulate(dyn, {}).amplitudes, 3)!.points.every((p) => close(p.x * p.x + p.y * p.y + p.z * p.z, 1, 1e-6)));
+  }
+
+  s.group("Error correction — repetition code (exact)");
+  {
+    s.check("Repetition d=3: zero physical error ⇒ zero logical error", () => close(repetitionExact(3, 0), 0, 1e-12));
+    s.check("Repetition d=3 at p=½ ⇒ logical error = ½", () => close(repetitionExact(3, 0.5), 0.5, 1e-9));
+    s.check("Repetition d=3 exact = 3p² − 2p³ (p = 0.1)", () => close(repetitionExact(3, 0.1), 3 * 0.01 - 2 * 0.001, 1e-9));
+    s.check("Repetition is monotone in p (d=5)", () => repetitionExact(5, 0.1) < repetitionExact(5, 0.3));
   }
 
   let passed = 0, failed = 0;

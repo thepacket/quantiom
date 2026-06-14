@@ -542,7 +542,7 @@ thoroughly and verified against analytic ground truth.
   on **every push and pull request**. A green build means all 1106 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
-  **518-check** browser-side cross-section of the same engine the
+  **563-check** browser-side cross-section of the same engine the
   session is using (`client/src/selftest/diagnostics.ts`) — a
   deterministic subset of the full Vitest suite, now covering every
   analysis-panel helper as well as the gate catalog / simulator / QASM /
