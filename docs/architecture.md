@@ -542,12 +542,16 @@ thoroughly and verified against analytic ground truth.
   on **every push and pull request**. A green build means all 1106 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
-  **380-check** browser-side cross-section of the same engine the
+  **518-check** browser-side cross-section of the same engine the
   session is using (`client/src/selftest/diagnostics.ts`) — a
-  deterministic subset of the full Vitest suite — against known-correct
-  results, and reports pass/fail in ~10 ms, so a user can validate the
-  engine in their own browser without taking "it's tested" on faith. It's
-  a lazily-imported chunk: zero cost until the dialog is opened.
+  deterministic subset of the full Vitest suite, now covering every
+  analysis-panel helper as well as the gate catalog / simulator / QASM /
+  export / synthesis core — against known-correct results, and reports
+  pass/fail in ~10 ms, so a user can validate the engine in their own
+  browser without taking "it's tested" on faith. It's a lazily-imported
+  chunk: zero cost until the dialog is opened. The CI test
+  `test/feature-selftest.test.ts` runs the same `runSelfTest()` and fails
+  if any check regresses, so the two bodies stay in lock-step.
 - **Commands.** `npm test` (CI mode), `npm run test:watch`,
   `npm run test:coverage`, `npm run typecheck:test`. The lockfile is
   pinned to npm 10 (see `CLAUDE.md`) so the suite installs identically

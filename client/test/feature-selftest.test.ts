@@ -16,9 +16,10 @@ describe("in-app self-test diagnostics", () => {
   });
 
   test("covers a meaningful breadth of checks and groups", () => {
-    expect(report.groups.length).toBeGreaterThanOrEqual(10);
-    // The live suite sweeps the gate catalog, so it should be in the hundreds;
-    // guard against a regression that silently collapses it back to a handful.
-    expect(report.total).toBeGreaterThanOrEqual(250);
+    expect(report.groups.length).toBeGreaterThanOrEqual(40);
+    // The live suite sweeps the gate catalog and covers every analysis-panel
+    // helper, so it runs 500+ checks; guard against a regression that silently
+    // collapses it back to a handful.
+    expect(report.total).toBeGreaterThanOrEqual(450);
   });
 });

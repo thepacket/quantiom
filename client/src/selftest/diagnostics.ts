@@ -2,7 +2,7 @@
  * In-browser self-test: a broad, live cross-section of Quantiom's numeric
  * core, runnable from the app's "Self-test" button.
  *
- * This is a *subset* of the project's full ~1000-case Vitest suite (run in
+ * This is a *subset* of the project's full ~1,100-case Vitest suite (run in
  * Node and in CI on every commit — see `client/test/` and
  * `.github/workflows/ci.yml`), reimplemented with plain assertions so it can
  * run in the browser against the very modules powering the user's session.
@@ -63,6 +63,51 @@ import { reducedDensityMatrix, purity } from "../sim/density";
 import { DEFAULT_NOISE, type NoiseModel } from "../sim/noise";
 import type { Complex } from "../sim/complex";
 import type { Circuit, PlacedGate, GateId } from "../editor/types";
+// Analysis-panel helpers (batches 1–5) — pure, browser-safe, ground-truthed.
+import { pageCurve, pageEntropyBits } from "../sim/pageCurve";
+import { tripartiteInformation } from "../sim/tripartiteInfo";
+import { entanglementHamiltonian } from "../sim/entanglementHamiltonian";
+import { countingStatistics } from "../sim/countingStatistics";
+import { spinSqueezing } from "../sim/spinSqueezing";
+import { observableMoments, shotError } from "../sim/observableVariance";
+import { characteristicFunction } from "../sim/charFunction";
+import { imbalanceSweep } from "../sim/imbalance";
+import { butterflyVelocity } from "../sim/butterflyVelocity";
+import { densityOfStates } from "../sim/densityOfStates";
+import { berryPhase } from "../sim/berryPhase";
+import { gateFidelityMetrics } from "../sim/gateFidelity";
+import { entanglementContour } from "../sim/entanglementContour";
+import { schmidtGap } from "../sim/schmidtGap";
+import { renyiSpectrum } from "../sim/renyiSpectrum";
+import { correlationLength } from "../sim/correlationLength";
+import { operatorWeightGrowth } from "../sim/operatorWeight";
+import { workDistribution } from "../sim/workDistribution";
+import { majoranaStars } from "../sim/majoranaStars";
+import { magicSpectrum } from "../sim/magicSpectrum";
+import { multiparameterQFI } from "../sim/multiparamQfi";
+import { densitySpectrum } from "../sim/mixedStateSpectrum";
+import { mpsBondDimension } from "../sim/mpsBondDimension";
+import { negativitySpectrum } from "../sim/negativitySpectrum";
+import { threeTangle } from "../sim/threeTangle";
+import { totalCorrelation } from "../sim/totalCorrelation";
+import { entanglementVelocity } from "../sim/entanglementVelocity";
+import { anticoncentration } from "../sim/anticoncentration";
+import { effectiveTemperature } from "../sim/effectiveTemperature";
+import { coherentInformation } from "../sim/coherentInformation";
+import { chshMap } from "../sim/chsh";
+import { quantumDiscordMap } from "../sim/quantumDiscord";
+import { entanglementSpectrumStats } from "../sim/entanglementSpectrumStats";
+import { multifractal } from "../sim/multifractal";
+import { negativityDynamics } from "../sim/negativityDynamics";
+import { otocLightcone } from "../sim/otocLightcone";
+import { ethOffDiagonal } from "../sim/ethOffDiagonal";
+import { floquetSpectrum } from "../sim/floquetSpectrum";
+import { eigenstateEntanglement } from "../sim/eigenstateEntanglement";
+import { chernNumber } from "../sim/chernNumber";
+import { lyapunovExponent } from "../sim/lyapunov";
+import { temporalAutocorrelation } from "../sim/autocorrelation";
+import { ptMoments } from "../sim/ptMoments";
+import { allPauliExpectations } from "../sim/pauliSpectrum";
 
 export type CheckResult = { name: string; passed: boolean; detail?: string };
 export type CheckGroup = { name: string; checks: CheckResult[] };
@@ -873,6 +918,148 @@ export function runSelfTest(): SelfTestReport {
       const r = reducedDensityMatrix(plus, 1, [0]);
       return close(r[0][0].re, 0.5) && close(r[0][1].re, 0.5) && close(r[1][0].re, 0.5) && close(r[1][1].re, 0.5);
     });
+  }
+
+  // ── Analysis panels (batches 1–5) ──────────────────────────────────
+  // Shared fixtures.
+  const ghz = (k: number) => {
+    const gs = [gate("h", [0])];
+    for (let q = 1; q < k; q++) gs.push(gate("cx", [q], [q - 1]));
+    return simulate(circ(k, gs), {}).state;
+  };
+  const bell2 = ghz(2);
+  const ghz3 = ghz(3);
+  const ghz4 = ghz(4);
+  const zero1 = simulate(circ(1, []), {}).state;
+  const plus1 = simulate(circ(1, [gate("h", [0])]), {}).state;
+  const uniform = (k: number) => simulate(circ(k, Array.from({ length: k }, (_, q) => gate("h", [q]))), {}).state;
+  const basis = (k: number) => simulate(circ(k, []), {}).state;
+  const wState = () => { const a = 1 / Math.sqrt(3); const v = new Float64Array(2 * 8); for (const i of [0b100, 0b010, 0b001]) v[2 * i] = a; return v; };
+  /** |ψ⟩⟨ψ| as an interleaved-re/im density matrix. */
+  const pureRho = (psi: Float64Array, dim: number) => {
+    const r = new Float64Array(2 * dim * dim);
+    for (let i = 0; i < dim; i++) for (let j = 0; j < dim; j++) {
+      const o = 2 * (i * dim + j), ar = psi[2 * i], ai = psi[2 * i + 1], br = psi[2 * j], bj = psi[2 * j + 1];
+      r[o] = ar * br + ai * bj; r[o + 1] = ai * br - ar * bj;
+    }
+    return r;
+  };
+
+  s.group("Analysis — Page curve, tripartite & total correlation");
+  {
+    s.check("pageEntropyBits(1,1) = (1/3)/ln2 and < 1", () => close(pageEntropyBits(1, 1), (1 / 3) / Math.LN2) && pageEntropyBits(1, 1) < 1);
+    s.check("Page curve: Bell cut entropy = 1 bit", () => close(pageCurve(bell2, 2)!.entropy[0], 1));
+    s.check("Tripartite info: GHZ-4 I₃ = 1", () => close(tripartiteInformation(ghz4, 4, 0, 1, 2)!.i3, 1, 1e-5));
+    s.check("Total correlation: GHZ-4 = 4 bits", () => close(totalCorrelation(ghz4, 4)!.total, 4, 1e-5));
+  }
+
+  s.group("Analysis — entanglement spectrum & MPS bond");
+  {
+    s.check("Li–Haldane: Bell cut has two levels at ξ = ln2", () => {
+      const r = entanglementHamiltonian(bell2, 2, [0])!;
+      return r.levels.length === 2 && r.levels.every((x) => close(x, Math.LN2, 1e-6));
+    });
+    s.check("Schmidt gap: Bell cut degenerate (Δλ = 0)", () => close(schmidtGap(bell2, 2)!.gap[0], 0));
+    s.check("Schmidt gap: product cut full (Δλ = 1)", () => close(schmidtGap(simulate(circ(2, [gate("x", [1])]), {}).state, 2)!.gap[0], 1));
+    s.check("Rényi spectrum: Bell cut flat at 1 for all α", () => renyiSpectrum(bell2, 2, [0])!.entropies.every((x) => close(x, 1, 1e-6)));
+    s.check("MPS bond: Bell needs χ = 2", () => mpsBondDimension(bell2, 2)!.maxChi === 2);
+    s.check("MPS bond: product needs χ = 1", () => mpsBondDimension(simulate(circ(3, [gate("x", [1])]), {}).state, 3)!.maxChi === 1);
+    s.check("Ent-spectrum stats: gap ratios in [0,1]", () => {
+      const r = entanglementSpectrumStats(uniform(4), 4, [0, 1]);
+      return r === null || (r.meanR >= 0 && r.meanR <= 1 && r.ratios.every((x) => x >= 0 && x <= 1));
+    });
+  }
+
+  s.group("Analysis — contour, three-tangle, negativity, PT moments");
+  {
+    s.check("Contour: Bell region-1 sums to S(A) = 1", () => { const r = entanglementContour(bell2, 2, 1)!; return close(r.total, 1) && close(r.contour.reduce((a, b) => a + b, 0), r.total); });
+    s.check("Three-tangle: GHZ-3 τ₃ = 1", () => close(threeTangle(ghz3, 3, 0, 1, 2)!.tau3, 1, 1e-5));
+    s.check("Three-tangle: W-state τ₃ = 0 (entangled but not tripartite)", () => { const r = threeTangle(wState(), 3, 0, 1, 2)!; return r.tau3 < 1e-4 && r.oneTangle > 0.1; });
+    s.check("Negativity spectrum: Bell 𝒩 = ½, E_N = 1", () => { const r = negativitySpectrum(bell2, 2, [0])!; return close(r.negativity, 0.5, 1e-6) && close(r.logNegativity, 1, 1e-6); });
+    s.check("PT moments: Bell p₂ = 1, p₃ = ¼, p₃ < p₂² flags entanglement", () => { const r = ptMoments(bell2, 2, [0])!; return close(r.p2, 1, 1e-6) && close(r.p3, 0.25, 1e-6) && r.entangledByP3; });
+  }
+
+  s.group("Analysis — counting statistics, multifractal, correlation length");
+  {
+    s.check("Counting stats: Bell over both qubits → P(0)=P(2)=½, Var=1", () => { const r = countingStatistics(bell2, 2, [0, 1])!; return close(r.p[0], 0.5) && close(r.p[2], 0.5) && close(r.mean, 1) && close(r.variance, 1); });
+    s.check("Multifractal: uniform superposition is ergodic (D₂ ≈ 1)", () => close(multifractal(uniform(4), 4)!.d2, 1, 1e-6));
+    s.check("Multifractal: basis state is localized (D₂ ≈ 0)", () => { const r = multifractal(basis(4), 4)!; return close(r.d2, 0, 1e-9) && close(r.dInf, 0, 1e-9); });
+    s.check("Correlation length: GHZ uniform-correlated ⇒ ξ → ∞", () => !Number.isFinite(correlationLength(ghz4, 4)!.xi));
+  }
+
+  s.group("Analysis — CHSH / Bell nonlocality & quantum discord");
+  {
+    s.check("CHSH: Bell reaches the Tsirelson bound 2√2", () => { const r = chshMap(bell2, 2)!; return close(r.s[0][1], 2 * Math.SQRT2, 1e-4) && r.max > 2; });
+    s.check("CHSH: separable state is local (S ≤ 2)", () => chshMap(simulate(circ(2, [gate("h", [0])]), {}).state, 2)!.max <= 2 + 1e-9);
+    s.check("Discord: Bell pair ≈ 1 bit", () => close(quantumDiscordMap(bell2, 2)!.d[0][1], 1, 0.02));
+    s.check("Discord: product state ≈ 0", () => quantumDiscordMap(simulate(circ(2, [gate("h", [0])]), {}).state, 2)!.max < 0.02);
+  }
+
+  s.group("Analysis — metrology (spin squeezing, variance, QFI matrix)");
+  {
+    s.check("Spin squeezing: coherent |0…0⟩ at the SQL (ξ²_R = 1)", () => { const r = spinSqueezing(basis(4), 4)!; return close(r.xiR2, 1, 1e-5) && !r.squeezed; });
+    s.check("Spin squeezing: GHZ has zero mean spin ⇒ ξ²_R undefined", () => { const r = spinSqueezing(ghz4, 4)!; return close(r.meanLength, 0, 1e-6) && !Number.isFinite(r.xiR2); });
+    s.check("Observable variance: ⟨Z⟩ on |0⟩ → mean 1, var 0", () => { const m = observableMoments(zero1, 1, [{ coefficient: 1, paulis: "Z" }]); return close(m.mean, 1) && close(m.variance, 0); });
+    s.check("Observable variance: ⟨X⟩ on |0⟩ → var 1, σ 1", () => { const m = observableMoments(zero1, 1, [{ coefficient: 1, paulis: "X" }]); return close(m.variance, 1) && close(m.std, 1); });
+    s.check("Shot error scales as σ/√N", () => close(shotError(1, 100), 0.1) && close(shotError(2, 4), 1));
+    s.check("QFI matrix: |00⟩ max eig = N", () => close(multiparameterQFI(basis(2), 2)!.maxEig, 2));
+    s.check("QFI matrix: Bell reaches N² = 4 (Heisenberg)", () => close(multiparameterQFI(bell2, 2)!.maxEig, 4, 1e-4));
+  }
+
+  s.group("Analysis — phase space (characteristic fn, Majorana, magic spectrum)");
+  {
+    s.check("Characteristic fn: |0⟩ χ(0,0)=1, Z-cell=1, total=2", () => { const r = characteristicFunction(zero1, 1)!; return close(r.mag[0][0], 1) && close(r.mag[0][1], 1) && close(r.total, 2); });
+    s.check("Majorana: |000⟩ stacks all stars at the north pole", () => { const r = majoranaStars(basis(3), 3)!; return r.stars.length === 3 && r.stars.every((st) => st.theta < 1e-3) && close(r.symmetricWeight, 1, 1e-6); });
+    s.check("Majorana: |111⟩ stacks all stars at the south pole", () => majoranaStars(simulate(circ(3, [gate("x", [0]), gate("x", [1]), gate("x", [2])]), {}).state, 3)!.stars.every((st) => Math.abs(st.theta - Math.PI) < 1e-3));
+    s.check("Magic spectrum: |+⟩ stabilizer ⇒ M_α = 0 ∀α", () => magicSpectrum(allPauliExpectations(plus1, 1), 1).m.every((m) => close(m, 0, 1e-9)));
+    s.check("Magic spectrum: T|+⟩ has magic (M₂ > 0)", () => magicSpectrum(allPauliExpectations(simulate(circ(1, [gate("h", [0]), gate("t", [0])]), {}).state, 1), 1).m2 > 0.01);
+  }
+
+  s.group("Analysis — dynamics (imbalance, butterfly, operator weight, ent velocity, autocorrelation)");
+  {
+    s.check("Imbalance: Néel |01⟩ ≡ 1", () => imbalanceSweep(circ(2, [gate("x", [1])]), {}, [])!.imbalance.every((v) => close(v, 1, 1e-9)));
+    s.check("Imbalance: uniform |00⟩ ≡ 0", () => imbalanceSweep(circ(2, []), {}, [])!.imbalance.every((v) => close(v, 0, 1e-9)));
+    s.check("Butterfly velocity: one OTOC series per non-reference qubit", () => { const r = butterflyVelocity(circ(3, [gate("h", [0]), gate("cx", [1], [0]), gate("cx", [2], [1])]), {}, [], 0, "Z", "Z", 16, 5)!; return r.series.length === 2; });
+    s.check("Operator weight: identity circuit keeps weight 1; rows sum to 1", () => operatorWeightGrowth(circ(2, []), {}, [], 0, "Z", 8, 4)!.weights.every((row) => close(row[1], 1, 1e-6) && close(row.reduce((a, b) => a + b, 0), 1, 1e-6)));
+    s.check("Entanglement velocity: static circuit has zero growth", () => close(entanglementVelocity(circ(2, [gate("h", [0]), gate("cx", [1], [0])]), {}, [])!.velocity, 0, 1e-9));
+    s.check("Autocorrelation: identity circuit ⟨Z(t)Z(0)⟩ ≡ 1", () => temporalAutocorrelation(circ(2, []), {}, [], 0, 12, 6)!.C.every((v) => close(v, 1, 1e-9)));
+  }
+
+  s.group("Analysis — spectrum & thermalization (DOS, work, ETH, Floquet)");
+  {
+    s.check("Density of states: bins 5 energies, counts sum to 5", () => { const r = densityOfStates([0, 0, 1, 1, 2], 4)!; return r.total === 5 && r.counts.reduce((a, b) => a + b, 0) === 5 && close(r.eMin, 0) && close(r.eMax, 2); });
+    s.check("Work distribution: H=Z, identity quench ⇒ zero work", () => { const r = workDistribution(parsePauliSum("1*Z"), circ(1, []), {}, [], 16, 5)!; return close(r.meanWork, 0, 1e-6) && close(r.variance, 0, 1e-6); });
+    s.check("Work distribution: H=Z, X quench ⇒ deterministic work −2", () => close(workDistribution(parsePauliSum("1*Z"), circ(1, [gate("x", [0])]), {}, [], 16, 5)!.meanWork, -2, 1e-5));
+    s.check("Effective temperature: Boltzmann fit recovers β with R² = 1", () => {
+      const energies = [-2, -1, 0, 1, 2], beta = 0.8;
+      const raw = energies.map((e) => Math.exp(-beta * e)); const Z = raw.reduce((a, b) => a + b, 0);
+      const r = effectiveTemperature({ energies, populations: raw.map((p) => p / Z), meanEnergy: 0, energySpread: 0, ipr: 0, effectiveDim: 0, numQubits: 3, dim: 8 });
+      return close(r.beta, beta, 1e-6) && close(r.r2, 1, 1e-6);
+    });
+    s.check("Eigenstate entanglement: non-interacting Z field ⇒ product eigenstates (S=0)", () => eigenstateEntanglement(parsePauliSum("1*ZI + 1*IZ"), 2)!.entropies.every((sv) => close(sv, 0, 1e-6)));
+    s.check("ETH off-diagonal: returns off-diagonal + 4 diagonal elements", () => { const r = ethOffDiagonal(parsePauliSum("-1*ZZ - 0.7*XI - 0.7*IX"), parsePauliSum("1*ZI"), 2)!; return r.offDiag.length > 0 && r.diag.length === 4; });
+    s.check("Floquet: identity circuit ⇒ all quasi-energies 0", () => floquetSpectrum(circ(2, []), {}, [])!.quasiEnergies.every((th) => close(th, 0, 1e-6)));
+    s.check("Floquet: Z gate ⇒ quasi-energies {0, π}", () => { const q = floquetSpectrum(circ(1, [gate("z", [0])]), {}, [])!.quasiEnergies.map((t) => Math.abs(t)).sort((a, b) => a - b); return close(q[0], 0, 1e-6) && close(q[1], Math.PI, 1e-6); });
+  }
+
+  s.group("Analysis — geometry, scrambling, noise diagnostics");
+  {
+    s.check("Berry phase: identical symbols rejected", () => berryPhase(circ(1, [gate("ry", [0], [], ["a"])]), { a: 1 }, [], "a", "a") === null);
+    s.check("Berry phase: Bloch loop reproduces the half-solid-angle", () => { const rr = Math.PI / 4; const res = berryPhase(circ(1, [gate("ry", [0], [], ["theta"]), gate("rz", [0], [], ["phi"])]), { theta: Math.PI / 2, phi: 0 }, [], "theta", "phi", rr, 24)!; const expected = 0.5 * (4 * rr * Math.sin(Math.PI / 2) * Math.sin(rr)); return Math.abs(Math.abs(res.gamma) - expected) < 0.15; });
+    s.check("Chern number: separable parameterization ⇒ C ≈ 0", () => Math.abs(chernNumber(circ(2, [gate("rx", [0], [], ["a"]), gate("rz", [1], [], ["b"])]), { a: 0, b: 0 }, [], "a", "b", 10)!.chern) < 0.5);
+    s.check("Lyapunov: returns an OTOC growth series", () => { const r = lyapunovExponent(circ(3, [gate("h", [0]), gate("cx", [1], [0]), gate("cx", [2], [1])]), {}, [], 0, undefined, 24, 6)!; return r.ts.length === 24; });
+    s.check("OTOC light-cone: one row per qubit, W-row ≈ 0", () => { const r = otocLightcone(circ(3, [gate("h", [0]), gate("cx", [1], [0]), gate("cx", [2], [1])]), {}, [], 0, "Z", "Z", 12, 5)!; return r.grid.length === 3 && r.grid[0].every((v) => close(v, 0, 1e-9)); });
+    s.check("Anticoncentration: |000⟩ peaked (R = D = 8)", () => close(anticoncentration(basis(3), 3)!.collisionRatio, 8, 1e-6));
+    s.check("Anticoncentration: uniform flat (R = 1)", () => close(anticoncentration(uniform(3), 3)!.collisionRatio, 1, 1e-6));
+    s.check("Gate fidelity: F=1 ⇒ F̄=1; F=0,d=2 ⇒ F̄=1/3", () => close(gateFidelityMetrics(1, 3).avgGateFidelity, 1) && close(gateFidelityMetrics(0, 1).avgGateFidelity, 1 / 3));
+    s.check("Mixed-state spectrum: pure ρ → {1,0}; I/2 → purity ½, rank 2", () => {
+      const p = densitySpectrum(pureRho(zero1, 2), 2);
+      const mm = new Float64Array(8); mm[0] = 0.5; mm[6] = 0.5;
+      const m = densitySpectrum(mm, 2);
+      return close(p.spectrum[0], 1) && close(p.purity, 1) && close(m.purity, 0.5) && close(m.effectiveRank, 2) && close(m.entropy, 1);
+    });
+    s.check("Coherent information: pure Bell ⇒ I_c = S(ρ_B) = 1", () => { const r = coherentInformation(pureRho(bell2, 4), 2, [0])!; return close(r.sFull, 0, 1e-6) && close(r.sB, 1, 1e-6) && close(r.coherentInfo, 1, 1e-6); });
+    s.check("Negativity dynamics: static Bell ⇒ E_N ≡ 1", () => negativityDynamics(circ(2, [gate("h", [0]), gate("cx", [1], [0])]), {}, [], [0], 16)!.logNeg.every((v) => close(v, 1, 1e-6)));
   }
 
   let passed = 0, failed = 0;
