@@ -88,6 +88,25 @@ readouts, a fidelity / purity and decoherence-movie view in noise mode, a
 dynamic-measurement branch tree, a Tanner / check graph, a Q-sphere, a
 ZX-calculus diagram, and a causal-cone overlay.
 
+A later analysis push roughly doubled this set. Among the additions:
+the **Page curve**, entanglement **contour**, **Schmidt gap**, Rényi
+entanglement spectrum, **Li–Haldane** entanglement-Hamiltonian spectrum,
+**MPS bond dimension**, **three-tangle**, tripartite and total correlation,
+**CHSH / Bell-nonlocality** and **quantum-discord** maps, the negativity
+spectrum and its dynamics, entanglement-spectrum statistics, the
+**multifractal** D_q spectrum, and partial-transpose moments; **spin
+squeezing**, observable-variance / shot-noise, and the multiparameter **QFI
+matrix**; the **characteristic function**, **Majorana stars**, and the
+magic-Rényi spectrum; density **imbalance**, **butterfly velocity**,
+operator-weight growth, entanglement velocity, the **OTOC light-cone**, the
+quantum **Lyapunov exponent**, and the temporal autocorrelation; the
+**density of states**, two-point **work distribution**, **effective
+temperature** (ETH), **Berry phase**, **Chern number**, ETH off-diagonal
+elements, **eigenstate entanglement**, and the **Floquet quasi-energy**
+spectrum; plus **anticoncentration / Porter–Thomas**, and, in noise mode, the
+**mixed-state spectrum** and **coherent information**. See the
+[panel reference](docs/panels.md) for the full set.
+
 **AI assistant.** An optional chat panel talks to OpenRouter (any model,
 your own key), receives the current circuit as OpenQASM 3 on every turn,
 and auto-opens any OpenQASM block in its reply as a new tab. A searchable,
