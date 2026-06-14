@@ -292,6 +292,28 @@ host plus `/api/health`.
     symbols → `BerryPhasePanel`), and `gateFidelity.ts`
     (`gateFidelityMetrics` avg-gate-fidelity + diamond-norm bounds from the
     process fidelity, surfaced inside the Equivalence panel).
+  - Analysis batch 2 (2026-06-14), same pattern: `entanglementContour.ts`
+    (incremental per-site s(j)=S([0..j])−S([0..j−1]), sums to S(A) →
+    `EntanglementContourPanel`), `schmidtGap.ts` (λ₁−λ₂ per cut, SPT-transition
+    order parameter → `SchmidtGapPanel`), `renyiSpectrum.ts` (S_α(ρ_A) vs α →
+    `RenyiSpectrumPanel`), `correlationLength.ts` (ξ from an exponential fit to
+    ⟨ZᵢZⱼ⟩_c vs distance → `CorrelationLengthPanel`), `operatorWeight.ts`
+    (Heisenberg-evolved operator's Pauli-weight distribution vs t, dense
+    unitary, on-click, n≤4 → `OperatorWeightPanel`), `workDistribution.ts`
+    (two-point-measurement P(W) quench histogram; includes a self-contained
+    complex-Hermitian eigensolver via the real-symmetric embedding; on-click,
+    n≤5 → `WorkDistributionPanel`), `majoranaStars.ts` (stellar representation
+    via Durand–Kerner roots of the Majorana polynomial of the symmetric-
+    subspace projection → `MajoranaStarsPanel`), `magicSpectrum.ts` (M_α
+    stabilizer-Rényi family generalizing M₂ → `MagicSpectrumPanel`),
+    `multiparamQfi.ts` (3×3 QFI matrix 4·Cov(J_a,J_b) with analytic 3×3 eig →
+    `MultiparamQfiPanel`), and `mixedStateSpectrum.ts` (`densitySpectrum`
+    eigenvalues/purity/effective-rank of the trajectory-averaged ρ from
+    `simulateNoisy(…, { density: true })` → `MixedStateSpectrumPanel`). NOTE:
+    two pitched panels were delivered as rigorous substitutes — Majorana stars
+    in place of a spherical spin-Wigner (avoids CG-coefficient bug risk), and
+    the mixed-state spectrum in place of a noisy-Choi channel spectrum (the
+    latter needs the deferred noisy process-tomography reconstruction).
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
     anti-controls and `if (c[k] == v) …` wrappers for conditional

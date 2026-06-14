@@ -114,6 +114,16 @@ import { ImbalancePanel } from "../panels/ImbalancePanel";
 import { ButterflyVelocityPanel } from "../panels/ButterflyVelocityPanel";
 import { DensityOfStatesPanel } from "../panels/DensityOfStatesPanel";
 import { BerryPhasePanel } from "../panels/BerryPhasePanel";
+import { EntanglementContourPanel } from "../panels/EntanglementContourPanel";
+import { SchmidtGapPanel } from "../panels/SchmidtGapPanel";
+import { RenyiSpectrumPanel } from "../panels/RenyiSpectrumPanel";
+import { CorrelationLengthPanel } from "../panels/CorrelationLengthPanel";
+import { OperatorWeightPanel } from "../panels/OperatorWeightPanel";
+import { WorkDistributionPanel } from "../panels/WorkDistributionPanel";
+import { MajoranaStarsPanel } from "../panels/MajoranaStarsPanel";
+import { MagicSpectrumPanel } from "../panels/MagicSpectrumPanel";
+import { MultiparamQfiPanel } from "../panels/MultiparamQfiPanel";
+import { MixedStateSpectrumPanel } from "../panels/MixedStateSpectrumPanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
 import { RbPanel } from "../panels/RbPanel";
 import { QecPanel } from "../panels/QecPanel";
@@ -1452,6 +1462,8 @@ export function CircuitEditor() {
         <ErrorBoundary label="husimi"><HusimiPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="magic"><MagicPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="characteristic-function"><CharacteristicFunctionPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="majorana-stars"><MajoranaStarsPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="magic-spectrum"><MagicSpectrumPanel state={simState} /></ErrorBoundary>
 
         <div className="panels-cat">Expectation &amp; metrology</div>
         <ErrorBoundary label="expectation">
@@ -1469,6 +1481,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="qfi"><QfiPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="spin-squeezing"><SpinSqueezingPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="observable-variance"><ObservableVariancePanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="multiparam-qfi"><MultiparamQfiPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="qgt">
           <QgtPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
@@ -1483,6 +1496,10 @@ export function CircuitEditor() {
         <ErrorBoundary label="page-curve"><PageCurvePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="tripartite-info"><TripartiteInfoPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="counting-statistics"><CountingStatisticsPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="entanglement-contour"><EntanglementContourPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="schmidt-gap"><SchmidtGapPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="renyi-spectrum"><RenyiSpectrumPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="correlation-length"><CorrelationLengthPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="participation">
           <ParticipationPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
@@ -1521,6 +1538,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="imbalance">
           <ImbalancePanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="operator-weight">
+          <OperatorWeightPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="krylov"><KrylovPanel state={simState} /></ErrorBoundary>
 
         <div className="panels-cat">Operator &amp; spectrum</div>
@@ -1549,6 +1569,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="berry-phase">
           <BerryPhasePanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="work-distribution">
+          <WorkDistributionPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="diagonal-ensemble"><DiagonalEnsemblePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="spectral-form-factor"><SpectralFormFactorPanel /></ErrorBoundary>
         <ErrorBoundary label="level-statistics"><LevelStatisticsPanel /></ErrorBoundary>
@@ -1572,6 +1595,9 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="readout-mitigation">
           <ReadoutMitigationPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
+        </ErrorBoundary>
+        <ErrorBoundary label="mixed-state-spectrum">
+          <MixedStateSpectrumPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
         </ErrorBoundary>
 
         <div className="panels-cat">Characterization &amp; benchmarking</div>

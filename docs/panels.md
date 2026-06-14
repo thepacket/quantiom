@@ -1757,6 +1757,129 @@ symbols, n ≤ 12.
 
 ---
 
+## Entanglement contour
+
+The per-site incremental entanglement entropy s(j) = S([0..j]) − S([0..j−1])
+across a contiguous region [0..m−1] (region size selectable). The bars sum
+exactly to S(A) and show *where* the region's entanglement sits: a flat
+profile is volume-law, a profile peaked at the region boundary is area-law,
+and a negative bar flags a site whose inclusion lowers the entropy.
+
+**When available.** Statevector path only. Region ≤ 7 qubits.
+
+---
+
+## Schmidt gap
+
+Δλ(k) = λ₁ − λ₂, the gap between the two largest squared Schmidt coefficients
+of ρ_{[0..k]}, plotted across every contiguous cut. It is an order parameter
+for symmetry-protected topological transitions: the gap stays open in a
+gapped phase and **closes** at criticality, where the entanglement spectrum
+becomes degenerate.
+
+**When available.** Statevector path only. Smaller side of the cut ≤ 8.
+
+---
+
+## Rényi entropy spectrum
+
+S_α(ρ_A) as a function of the Rényi index α for a chosen cut. A flat curve
+signals a near-uniform (volume-law) entanglement spectrum; a steep one means
+a few dominant Schmidt weights. The α → 0 limit is the log Schmidt rank,
+α → ∞ the min-entropy −log₂ λ_max; the α = 1 line marks the von Neumann
+value.
+
+**When available.** Statevector path only. Smaller side of the cut ≤ 6.
+
+---
+
+## Correlation length ξ
+
+Fits the connected correlator g(r) = mean_{|i−j|=r} |⟨ZᵢZⱼ⟩_c| to
+ln g(r) = −r/ξ + const (log axis, with the exponential fit overlaid). ξ is
+short in a gapped phase and diverges toward a critical point. A uniformly
+correlated state (e.g. GHZ) reports ξ → ∞.
+
+**When available.** Statevector path only. n ≤ 16.
+
+---
+
+## Operator weight growth
+
+The Pauli-support distribution of the Heisenberg-evolved operator
+Z(t) = U_t† Z₀ U_t, swept over the `t` clock and bucketed by weight (number
+of non-identity factors), drawn as a heatmap (rows = weight, columns = time).
+Each column sums to 1; weight starts concentrated at 1 and migrates upward as
+the operator scrambles — the microscopic picture under the butterfly
+velocity. Runs **on demand** (dense unitary per time sample).
+
+**When available.** n ≤ 4.
+
+---
+
+## Work distribution (TPM)
+
+The two-point-measurement work distribution P(W) for a quench: measure the
+energy of a Hamiltonian H (entered as a Pauli sum) on |0…0⟩, apply the circuit
+as the quench unitary, then measure H again. The histogram of work
+W = Eₘ − Eₙ (weighted by the transition probabilities) is the central object
+of quantum fluctuation theorems (Jarzynski / Crooks); a W = 0 line is marked.
+Runs **on demand** (H diagonalisation + dense unitary).
+
+**When available.** n ≤ 5; H must act on the same number of qubits as the
+circuit.
+
+---
+
+## Majorana stars
+
+The stellar (Majorana) representation: the n-qubit state projected onto the
+symmetric spin-J = n/2 subspace, drawn as n "stars" on the Bloch sphere (the
+roots of the Majorana polynomial). The constellation is rotation-covariant —
+|0…0⟩ stacks all stars at the north pole, GHZ spreads them in a ring, Dicke
+states sit on a latitude. The reported symmetric weight says how much of the
+state lives in the symmetric subspace the picture represents.
+
+**When available.** Statevector path only. n ≤ 6.
+
+---
+
+## Magic spectrum M_α
+
+The stabilizer-Rényi nonstabilizerness M_α swept over the Rényi index α,
+generalising the single M₂ of the Magic panel. M_α ≥ 0 and vanishes for every
+α iff the state is a stabilizer state; the curve's shape distinguishes states
+with the same M₂ but different magic structure.
+
+**When available.** Statevector path only. n ≤ 6.
+
+---
+
+## QFI matrix (multiparameter)
+
+The quantum Fisher information *matrix* F_{ab} = 4·Cov(J_a, J_b) over the
+collective-spin generators {Jx, Jy, Jz}, as a 3×3 heatmap. Its largest
+eigenvalue is the best single-axis QFI (what the scalar QFI panel reports for
+the optimal direction); det F bounds the joint estimation of several phases
+(the multiparameter Cramér–Rao bound). The maximum eigenvalue exceeding N
+witnesses entanglement.
+
+**When available.** Statevector path only. n ≤ 14.
+
+---
+
+## Mixed-state spectrum
+
+The eigenvalue spectrum of the trajectory-averaged output density matrix ρ
+under the noise model. A noiseless channel gives a pure output ({1, 0, …});
+decoherence spreads the weight, and the effective rank 1/Σ p² counts how many
+components contribute (how far the output is from pure). Reports the spectrum,
+purity Tr(ρ²), effective rank, and S(ρ).
+
+**When available.** Requires noise mode on. n ≤ 6.
+
+---
+
 ## Selecting panels
 
 Each panel header is a toggle — click it to expand or collapse that

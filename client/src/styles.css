@@ -1584,3 +1584,77 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .berry__hero { font-size: 13px; color: var(--fg); display: flex; align-items: center; gap: 8px; }
 .berry__hero b { font-variant-numeric: tabular-nums; }
 .berry__deg { color: var(--muted); font-size: 11px; }
+
+/* ── New analysis panels (2026-06-14 batch 2) ─────────────────────────── */
+
+.econt__out, .sgap__out, .renyi__out, .corrlen__out, .opw__out, .work__out,
+.maj__out, .magsp__out, .mss__out {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.econt__stats, .sgap__stats, .renyi__stats, .corrlen__stats, .work__stats,
+.maj__stats, .magsp__stats, .mss__stats, .mqfi__stats {
+  display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted);
+}
+.econt__stats b, .sgap__stats b, .renyi__stats b, .corrlen__stats b, .work__stats b,
+.maj__stats b, .magsp__stats b, .mss__stats b, .mqfi__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.econt__axis, .sgap__axis, .renyi__axis, .corrlen__axis, .opw__axis, .work__axis, .magsp__axis {
+  fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums;
+}
+.econt__axis-line, .sgap__axis-line, .renyi__axis-line, .corrlen__axis-line,
+.work__axis-line, .magsp__axis-line, .mss__axis-line { stroke: var(--border); stroke-width: 1; }
+.econt__legend, .sgap__legend, .renyi__legend, .corrlen__legend, .opw__legend,
+.work__legend, .maj__legend, .magsp__legend, .mss__legend, .mqfi__legend {
+  font-size: 10px; color: var(--muted); line-height: 1.4;
+}
+.sgap__tag, .magsp__tag { font-size: 10px; color: var(--muted); padding: 1px 6px; border: 1px solid var(--border); border-radius: 10px; }
+
+/* Entanglement contour */
+.econt__ctrl { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+.econt__ctrl input[type=range] { flex: 1; }
+.econt__bar { fill: var(--accent-2); }
+.econt__bar--neg { fill: #ff8e6f; }
+
+/* Schmidt gap */
+.sgap__bar { fill: var(--accent-2); }
+
+/* Rényi + correlation length + magic spectrum curves */
+.renyi__cut { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 10px; }
+.renyi__cut-label { color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.renyi__qubit { display: inline-flex; align-items: center; gap: 2px; padding: 1px 4px; border: 1px solid var(--border); border-radius: 3px; color: var(--muted); cursor: pointer; }
+.renyi__qubit--on { color: var(--accent); border-color: var(--accent-2); }
+.renyi__curve, .magsp__curve { fill: none; stroke: var(--accent-2); stroke-width: 1.6; }
+.renyi__dot, .magsp__dot { fill: var(--accent-2); }
+.renyi__mark { stroke: #ffd24f; stroke-width: 1; stroke-dasharray: 3 2; opacity: 0.7; }
+.corrlen__fit { stroke: #ffd24f; stroke-width: 1.4; stroke-dasharray: 4 3; }
+.corrlen__dot { fill: var(--accent-2); }
+
+/* Operator weight heatmap */
+.opw__actions, .work__actions { display: flex; align-items: center; gap: 8px; }
+.opw__run, .work__run { cursor: pointer; }
+.opw__hint, .work__hint { font-size: 10px; color: var(--muted); }
+
+/* Work distribution */
+.work__presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.work__preset { font-size: 9px; padding: 1px 5px; color: var(--muted); cursor: pointer; }
+.work__input { width: 100%; box-sizing: border-box; font-family: var(--mono, monospace); font-size: 11px; resize: vertical; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 4px; }
+.work__bar { fill: var(--accent-2); }
+.work__zero { stroke: #ffd24f; stroke-width: 1; stroke-dasharray: 3 2; }
+
+/* Majorana stars */
+.maj__svg { display: block; max-width: 200px; margin: 0 auto; }
+.maj__globe { fill: rgba(110,177,255,0.05); stroke: var(--border); stroke-width: 1; }
+.maj__grid { fill: none; stroke: var(--border); stroke-width: 0.6; opacity: 0.6; }
+.maj__pole { fill: var(--muted); }
+.maj__star { fill: #ffd24f; stroke: #b8920f; stroke-width: 1; }
+.maj__star--back { fill: rgba(255,210,79,0.35); stroke: none; }
+
+/* Mixed-state spectrum */
+.mss__bar { fill: var(--accent-2); }
+
+/* Multiparameter QFI */
+.mqfi { display: flex; flex-direction: column; gap: 4px; }
+.mqfi__grid { display: grid; gap: 2px; font-size: 10px; }
+.mqfi__corner { }
+.mqfi__hdr { color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.mqfi__hdr--row { text-align: right; padding-right: 4px; }
+.mqfi__cell { text-align: center; padding: 4px 2px; border-radius: 2px; color: var(--fg); font-variant-numeric: tabular-nums; }
