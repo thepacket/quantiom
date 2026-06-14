@@ -1421,6 +1421,9 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .qsphere__dot { stroke: rgba(0,0,0,0.4); stroke-width: 0.5; }
 .qsphere__label { fill: var(--muted); font-size: 9px; font-family: ui-monospace, monospace; pointer-events: none; }
 .qsphere__label-phase { fill: var(--muted); opacity: 0.65; }
+.qsphere__ref { pointer-events: none; }
+.qsphere__ref-dot { fill: none; stroke: var(--fg); stroke-width: 1; opacity: 0.5; }
+.qsphere__ref-label { fill: #fff; font-size: 10px; font-family: ui-monospace, monospace; opacity: 1; }
 .qsphere__stage { position: relative; }
 .qsphere__tip {
   position: absolute; z-index: 5; pointer-events: none; white-space: nowrap;

@@ -59,6 +59,16 @@ const SIZE = 248;
 const R0 = 96;
 const DEFAULT_VIEW = { az: 0.5, el: -0.35, zoom: 1 };
 
+/** Bloch-convention cardinal reference points — faint static guides to orient
+ *  the sphere (|0⟩ north pole, |1⟩ south pole, |+⟩ / |−⟩ on the ±x equator).
+ *  Orientation aids only; they are not Q-sphere basis points. */
+const REF_POINTS: { label: string; x: number; y: number; z: number }[] = [
+  { label: "0", x: 0, y: 0, z: 1 },
+  { label: "1", x: 0, y: 0, z: -1 },
+  { label: "+", x: 1, y: 0, z: 0 },
+  { label: "−", x: -1, y: 0, z: 0 },
+];
+
 function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
 }
@@ -227,6 +237,20 @@ function Sphere({ points, n }: { points: QSpherePoint[]; n: number }) {
         {meridians.map((d, i) => <polyline key={`mer-${i}`} points={d} className="qsphere__wire" />)}
         <polyline points={equator} className="qsphere__equator" />
         <line x1={axTop.sx} y1={axTop.sy} x2={axBot.sx} y2={axBot.sy} className="qsphere__axis" />
+        {REF_POINTS.map((rp) => {
+          const p = proj(rp.x, rp.y, rp.z);
+          const front = p.depth >= -1e-6;
+          const ang = Math.atan2(p.sy - cy, p.sx - cx);
+          const off = 17;
+          const lx = p.sx + Math.cos(ang) * off;
+          const ly = p.sy + Math.sin(ang) * off;
+          return (
+            <g key={`ref-${rp.label}`} className="qsphere__ref">
+              <circle cx={p.sx} cy={p.sy} r={2.5} className="qsphere__ref-dot" opacity={front ? 0.85 : 0.3} />
+              <text x={lx} y={ly + 3} textAnchor="middle" className="qsphere__ref-label">|{rp.label}⟩</text>
+            </g>
+          );
+        })}
         {drawn.map(({ p, pr }) => {
           const r = 2 + p.mag * 9;
           const show = labelled.has(p.index);

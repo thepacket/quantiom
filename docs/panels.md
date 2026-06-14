@@ -319,7 +319,10 @@ relative phases into a single picture.
 **scroll to zoom**, **double-click to reset**. A wireframe of latitude rings
 (one per Hamming-weight level) and meridians orients the sphere, and the
 **equatorial plane** (the z = 0 great circle) is drawn as a translucent disk.
-**Hover any dot** for an IBM-Composer-style tooltip showing the **State |x⟩**,
+Faint **Bloch-convention reference guides** label the cardinal directions —
+|0⟩ at the north pole, |1⟩ at the south pole, |+⟩ and |−⟩ on the ±x equator —
+purely to orient the view (they are orientation aids, not Q-sphere basis
+points). **Hover any dot** for an IBM-Composer-style tooltip showing the **State |x⟩**,
 its **Probability** (= |amplitude|²), and the **Phase angle** (as a multiple of
 π) with a swatch in the dot's phase hue.
 
