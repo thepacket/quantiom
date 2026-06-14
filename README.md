@@ -11,10 +11,6 @@
 **A browser-native research-grade quantum circuit editor, simulator,
 workstation, and visualizer.**
 
-To get the latest version of Quantiom, do the following in your web browser:
-Windows — `Ctrl + Shift + R` (or `Ctrl + F5`); macOS — `Cmd + Shift + R`.
-Tested with Chrome.
-
 ![Quantiom — the circuit editor with an analysis panel enlarged in a dock beside the circuit, the gate palette, the right-hand panel column, and the AI assistant](screenshots/quantiom3.png)
 
 Quantiom is a quantum circuit workstation that runs entirely in your
@@ -136,6 +132,10 @@ and SVG, serialise into a shareable
 URL hash, and the `t`-animation can be recorded as a WebM video.
 
 Live: **<https://quantiom.fly.dev>**
+
+To get the latest version of Quantiom, do the following in your web browser:
+Windows — `Ctrl + Shift + R` (or `Ctrl + F5`); macOS — `Cmd + Shift + R`.
+Tested with Chrome.
 
 ## Documentation
 
