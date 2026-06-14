@@ -183,9 +183,11 @@ function Sphere({ points, n }: { points: QSpherePoint[]; n: number }) {
   const meridian = (phi: number) => {
     const cp = Math.cos(phi), sp = Math.sin(phi);
     const pts: string[] = [];
-    for (let k = 0; k <= 32; k++) {
-      const theta = (Math.PI * k) / 32;
-      const st = Math.sin(theta), ct = Math.cos(theta);
+    // Sweep the full great circle (0 … 2π): t ∈ [0,π] traces the φ semicircle,
+    // [π,2π] the φ+π semicircle, so the ring closes around the whole sphere.
+    for (let k = 0; k <= 64; k++) {
+      const t = (2 * Math.PI * k) / 64;
+      const st = Math.sin(t), ct = Math.cos(t);
       const p = proj(st * cp, st * sp, ct);
       pts.push(`${p.sx.toFixed(1)},${p.sy.toFixed(1)}`);
     }
