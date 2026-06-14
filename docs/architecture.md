@@ -27,7 +27,7 @@ their compute when collapsed.
         │            client/ (Vite + React + TS)           │
         │                                                  │
         │  editor/    ←→   sim/       ←→   panels/         │
-        │   IR, tabs,      simulate +      ~70 panels,     │
+        │   IR, tabs,      simulate +      ~100 panels,    │
         │   undo, DnD,     stabilizer +    each pure       │
         │   QASM round-    noisy traj +    function of     │
         │   trip glue,     WebGPU paths    SimResult       │
@@ -55,7 +55,7 @@ client/src/
                 share links, recorder, docs modal, the main editor shell
   sim/          the simulator core (this is the brain)
   qasm/         OpenQASM 3 parse + emit + nine SDK / LaTeX emitters
-  panels/       ~70 collapsible peer panels (40 visualisers)
+  panels/       ~100 collapsible peer panels (most are visualisers)
   styles.css    all styles in one file
 server/         FastAPI shell — static host + health endpoint
 examples/       93 .qasm files in 10 categories, imported via Vite ?raw
@@ -224,6 +224,36 @@ sim/xeb.ts              cross-entropy benchmarking: linear XEB fidelity / cycle
 sim/simultaneousRb.ts   isolated-vs-simultaneous RB crosstalk / addressability
 sim/t1t2.ts             T1 inversion-recovery + T2 Ramsey decay (gate-times)
 sim/pauliBudget.ts      per-qubit X/Y/Z Pauli error budget (Pauli-twirl approx)
+sim/pageCurve.ts        entropy profile + analytic Haar Page-value overlay
+sim/tripartiteInfo.ts   I₃ = I(A:B)+I(A:C)−I(A:BC) (scrambling diagnostic)
+sim/entanglementHamiltonian.ts  Li–Haldane spectrum ξ_i = −ln λ_i
+sim/countingStatistics.ts  FCS P(N_A=m) + charge-fluctuation variance
+sim/spinSqueezing.ts    Wineland ξ²_R (metrology + entanglement witness)
+sim/observableVariance.ts  Var(H) + σ/√N shot-noise error for a Pauli sum
+sim/charFunction.ts     discrete characteristic function (Wigner dual)
+sim/imbalance.ts        staggered ⟨Z⟩ imbalance over t (MBL vs thermal)
+sim/butterflyVelocity.ts  v_B from OTOC front arrival times
+sim/densityOfStates.ts  eigenvalue histogram of a Pauli-sum H
+sim/berryPhase.ts       Wilson-loop geometric phase over two free symbols
+sim/gateFidelity.ts     avg gate fidelity + diamond-norm bounds (in Equivalence)
+sim/entanglementContour.ts  per-site incremental entanglement contour
+sim/schmidtGap.ts       λ₁−λ₂ per cut (SPT-transition order parameter)
+sim/renyiSpectrum.ts    Rényi entanglement entropy S_α(ρ_A) vs α
+sim/correlationLength.ts  ξ from an exponential fit to ⟨ZᵢZⱼ⟩_c
+sim/operatorWeight.ts   Heisenberg operator-weight growth heatmap
+sim/workDistribution.ts  two-point-measurement quench work distribution P(W)
+sim/majoranaStars.ts    stellar representation (Majorana-polynomial roots)
+sim/magicSpectrum.ts    stabilizer-Rényi M_α family
+sim/multiparamQfi.ts    3×3 QFI matrix over {Jx,Jy,Jz}
+sim/mixedStateSpectrum.ts  eigenvalues of the trajectory-averaged ρ
+sim/mpsBondDimension.ts  required MPS bond dimension χ per cut
+sim/negativitySpectrum.ts  partial-transpose eigenvalues across a cut
+sim/threeTangle.ts      CKW residual τ₃ (GHZ→1, W→0)
+sim/totalCorrelation.ts  multi-information Σ S(ρ_i) − S(ρ)
+sim/entanglementVelocity.ts  max dS/dt of the half-cut entropy over t
+sim/anticoncentration.ts  Porter–Thomas histogram + collision ratio
+sim/effectiveTemperature.ts  Boltzmann β fit to the diagonal ensemble (ETH)
+sim/coherentInformation.ts  I_c = S(ρ_B) − S(ρ) on the noisy ρ
 (… plus the other visualiser substrates: magic, wigner, husimi, qsphere,
  negativity, ptm, otoc, loschmidt, zx, tanner, unitary, interaction, …)
 ```
@@ -472,7 +502,7 @@ Quantiom ships with a comprehensive automated test suite. The numeric
 core — the part where correctness actually matters — is covered
 thoroughly and verified against analytic ground truth.
 
-- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **1012
+- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **1082
   tests (~96% statement coverage)** cover the statevector simulator
   (Bell / GHZ / rotations / measurement / the `initialize()` gate /
   big-endian), the X/Y-basis measurement primitives, every gate's matrix
@@ -495,7 +525,7 @@ thoroughly and verified against analytic ground truth.
   DOM-only `exportSvg`, which the Node-only suite can't reach.
 - **Continuous integration.** `.github/workflows/ci.yml` type-checks
   the source and the tests, runs the full suite, and builds the client
-  on **every push and pull request**. A green build means all 1012 tests
+  on **every push and pull request**. A green build means all 1082 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
   **380-check** browser-side cross-section of the same engine the

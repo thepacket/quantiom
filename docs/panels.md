@@ -1880,6 +1880,98 @@ purity Tr(ρ²), effective rank, and S(ρ).
 
 ---
 
+## MPS bond dimension
+
+The matrix-product-state bond dimension χ needed per contiguous cut to
+represent the state within a target truncation error (selectable ε), plus the
+maximum χ over all cuts and the worst-cut error-vs-χ readout. A product state
+needs χ = 1; a volume-law state needs χ growing exponentially with the cut
+size — so this answers "could this state be stored as an MPS, and how big?".
+
+**When available.** Statevector path only. Smaller side of the cut ≤ 8.
+
+---
+
+## Negativity spectrum
+
+The eigenvalues of the partial transpose ρ^{T_A} across a chosen cut, sorted
+as a bar chart. The **negative** eigenvalues (orange) are the entanglement
+signal: 𝒩 = Σ|λ₋| and the log-negativity E_N = log₂(2𝒩+1). Distinct from the
+pairwise Negativity panel (one scalar per qubit pair) — this resolves an
+arbitrary bipartition.
+
+**When available.** Statevector path only. n ≤ 6 (builds the full ρ).
+
+---
+
+## Three-tangle (monogamy)
+
+For a pure 3-qubit state, the Coffman–Kundu–Wootters residual tangle τ₃ =
+τ_{a(bc)} − C²_{ab} − C²_{ac}, drawn as a stacked bar splitting the focal
+qubit's one-tangle into its two pairwise squared concurrences and the genuine
+tripartite residual. τ₃ = 1 for GHZ and 0 for W — the clean GHZ-vs-W
+discriminator.
+
+**When available.** Statevector path only. Exactly 3 qubits.
+
+---
+
+## Total correlation
+
+The multi-information C = Σ_i S(ρ_i) − S(ρ), the all-parties generalization of
+mutual information; for a pure state it is Σ_i S(ρ_i), shown as per-qubit bars
+plus the total. Captures the total correlation distributed across every qubit
+at once. Product state ⇒ 0; GHZ ⇒ n bits.
+
+**When available.** Statevector path only. n ≤ 14.
+
+---
+
+## Entanglement velocity dS/dt
+
+The half-chain entanglement entropy S(t) over the `t` clock, with the maximum
+slope dS/dt marked — the entanglement velocity v_E of the "entanglement
+tsunami" after a quench. A static circuit reads 0; a spreading circuit shows
+a linear ramp.
+
+**When available.** Statevector path only. n ≤ 12, half-cut side ≤ 6.
+
+---
+
+## Anticoncentration (Porter–Thomas)
+
+Histograms the rescaled output probabilities y = 2ⁿ·|⟨x|ψ⟩|² against the
+Porter–Thomas law e^{−y} that a Haar-random circuit follows. The collision
+ratio R = 2ⁿ·Σ p² is the sharp scalar: R = 1 (flat), R = 2 (anticoncentrated /
+Porter–Thomas), R ≫ 2 (peaked). The distribution underpinning random-circuit
+sampling and linear XEB.
+
+**When available.** Statevector path only. n ≤ 16.
+
+---
+
+## Effective temperature (ETH)
+
+Fits a Boltzmann law p_k ∝ e^{−βE_k} to the diagonal-ensemble energy
+populations of the current state under a chosen Hamiltonian, plotting ln p_k
+vs E_k with the fit. A straight line (high R²) is direct evidence of
+eigenstate thermalisation; the slope gives the effective β (and T = 1/β).
+
+**When available.** Statevector path only. n ≤ 6.
+
+---
+
+## Coherent information
+
+I_c(A⟩B) = S(ρ_B) − S(ρ) for a bipartition of the **noisy** state ρ — a lower
+bound on one-way distillable entanglement and the quantum-channel capacity.
+Positive I_c certifies that quantum information survives across the A|B cut;
+it goes negative once decoherence has destroyed the quantum correlations.
+
+**When available.** Requires noise mode on. n ≤ 6 (builds the full ρ).
+
+---
+
 ## Selecting panels
 
 Each panel header is a toggle — click it to expand or collapse that

@@ -314,6 +314,21 @@ host plus `/api/health`.
     in place of a spherical spin-Wigner (avoids CG-coefficient bug risk), and
     the mixed-state spectrum in place of a noisy-Choi channel spectrum (the
     latter needs the deferred noisy process-tomography reconstruction).
+  - Analysis batch 3 (2026-06-14), same pattern: `mpsBondDimension.ts`
+    (required MPS bond dimension χ per cut for a target truncation error +
+    error-vs-χ curve → `MpsBondPanel`), `negativitySpectrum.ts` (eigenvalues
+    of ρ^{T_A} across a cut + 𝒩/E_N → `NegativitySpectrumPanel`),
+    `threeTangle.ts` (CKW residual τ₃ for a pure 3-qubit state via the
+    Wootters concurrence; GHZ→1, W→0 → `ThreeTanglePanel`),
+    `totalCorrelation.ts` (multi-information Σ S(ρ_i) − S(ρ) →
+    `TotalCorrelationPanel`), `entanglementVelocity.ts` (max dS/dt of the
+    half-cut entropy over the t clock → `EntanglementVelocityPanel`),
+    `anticoncentration.ts` (Porter–Thomas histogram of D·|ψ|² + collision
+    ratio R=D·Σp² → `AnticoncentrationPanel`), `effectiveTemperature.ts`
+    (Boltzmann β fit to the diagonal-ensemble populations, ETH →
+    `EffectiveTemperaturePanel`), and `coherentInformation.ts` (I_c=S(ρ_B)−S(ρ)
+    with a density-matrix partial trace, on the noisy ρ from
+    `simulateNoisy(…, { density: true })` → `CoherentInfoPanel`).
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
     anti-controls and `if (c[k] == v) …` wrappers for conditional
@@ -466,7 +481,7 @@ host plus `/api/health`.
     `sim/t1t2.ts`), `PauliBudgetPanel` (**Pauli error budget** — per-qubit X/Y/Z
     error stacked bars via the Pauli-twirl approx of depol+amp+phase damping,
     exact/instant; `sim/pauliBudget.ts`).
-  - The right column groups all ~70 panels under 12 sticky **category headers**
+  - The right column groups all ~100 panels under 12 sticky **category headers**
     (Controls / State / Measurement / Phase space & magic / Expectation &
     metrology / Entanglement & correlations / Dynamics / Operator & spectrum /
     Circuit structure / Noise & error / Characterization & benchmarking /
@@ -704,7 +719,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (1012 tests): the simulator core is deeply covered —
+- **What's covered** (1082 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),

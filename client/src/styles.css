@@ -1658,3 +1658,77 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .mqfi__hdr { color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
 .mqfi__hdr--row { text-align: right; padding-right: 4px; }
 .mqfi__cell { text-align: center; padding: 4px 2px; border-radius: 2px; color: var(--fg); font-variant-numeric: tabular-nums; }
+
+/* ── New analysis panels (2026-06-14 batch 3) ─────────────────────────── */
+
+.mps__out, .negsp__out, .tang3__out, .totcorr__out, .evel__out, .anti__out,
+.efftemp__out, .cohinfo__out {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.mps__stats, .negsp__stats, .tang3__stats, .totcorr__stats, .evel__stats,
+.anti__stats, .efftemp__stats, .cohinfo__stats {
+  display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted);
+}
+.mps__stats b, .negsp__stats b, .tang3__stats b, .totcorr__stats b, .evel__stats b,
+.anti__stats b, .efftemp__stats b, .cohinfo__stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.mps__axis, .negsp__axis, .totcorr__axis, .evel__axis, .anti__axis, .efftemp__axis {
+  fill: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums;
+}
+.mps__axis-line, .negsp__axis-line, .totcorr__axis-line, .evel__axis-line,
+.anti__axis-line, .efftemp__axis-line { stroke: var(--border); stroke-width: 1; }
+.mps__legend, .negsp__legend, .tang3__legend, .totcorr__legend, .evel__legend,
+.anti__legend, .efftemp__legend, .cohinfo__legend { font-size: 10px; color: var(--muted); line-height: 1.4; }
+.tang3__tag, .anti__tag, .cohinfo__tag { font-size: 10px; color: var(--muted); padding: 1px 6px; border: 1px solid var(--border); border-radius: 10px; }
+
+/* MPS bond */
+.mps__ctrl { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.mps__lbl { text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; }
+.mps__tbtn { font-size: 10px; padding: 1px 6px; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
+.mps__tbtn--on { color: var(--accent); border-color: var(--accent-2); }
+.mps__bar { fill: var(--accent-2); }
+
+/* Negativity spectrum */
+.negsp__cut, .totcorr__cut, .cohinfo__cut { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 10px; }
+.negsp__cut-label, .cohinfo__cut-label { color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.negsp__qubit, .cohinfo__qubit { display: inline-flex; align-items: center; gap: 2px; padding: 1px 4px; border: 1px solid var(--border); border-radius: 3px; color: var(--muted); cursor: pointer; }
+.negsp__qubit--on, .cohinfo__qubit--on { color: var(--accent); border-color: var(--accent-2); }
+.negsp__bar { fill: var(--accent-2); }
+.negsp__bar--neg { fill: #ff8e6f; }
+
+/* Three-tangle */
+.tang3__ctrl { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.tang3__qbtn { font-size: 10px; padding: 1px 6px; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; cursor: pointer; }
+.tang3__qbtn--on { color: var(--accent); border-color: var(--accent-2); }
+.tang3__seg--ab { fill: var(--accent-2); }
+.tang3__seg--ac { fill: #6ee7c7; }
+.tang3__seg--res { fill: #ffd24f; }
+.tang3__legend { display: flex; flex-wrap: wrap; gap: 10px; }
+.tang3__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.tang3__sw { width: 10px; height: 10px; display: inline-block; border-radius: 2px; }
+.tang3__sw--ab { background: var(--accent-2); }
+.tang3__sw--ac { background: #6ee7c7; }
+.tang3__sw--res { background: #ffd24f; }
+
+/* Total correlation */
+.totcorr__bar { fill: var(--accent-2); }
+
+/* Entanglement velocity */
+.evel__curve { fill: none; stroke: var(--accent-2); stroke-width: 1.8; }
+.evel__tangent { stroke: #ffd24f; stroke-width: 1.4; stroke-dasharray: 4 3; }
+
+/* Anticoncentration */
+.anti__bar { fill: var(--accent-2); opacity: 0.75; }
+.anti__pt { fill: none; stroke: #ffd24f; stroke-width: 1.6; }
+
+/* Effective temperature */
+.efftemp__presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.efftemp__preset { font-size: 9px; padding: 1px 5px; color: var(--muted); cursor: pointer; }
+.efftemp__input { width: 100%; box-sizing: border-box; font-family: var(--mono, monospace); font-size: 11px; resize: vertical; background: var(--bg-2); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 4px; }
+.efftemp__fit { stroke: #ffd24f; stroke-width: 1.4; stroke-dasharray: 4 3; }
+.efftemp__dot { fill: var(--accent-2); }
+
+/* Coherent information */
+.cohinfo__hero { font-size: 13px; color: var(--fg); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cohinfo__hero b { font-variant-numeric: tabular-nums; }
+.cohinfo__hero--ok { color: #7ee787; }
+.cohinfo__hero--no { color: #ff8e6f; }

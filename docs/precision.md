@@ -66,6 +66,17 @@ diagonalization), not by any loss of accuracy.
 | Participation/IPR · Symmetry sectors · Structure factor | 16 | probability moments |
 | Custom plots (per quantity) | basis/scatter 10 · matrix 12 · magic/Pauli-weight/Wigner/PTM 6/6/4/3 · Husimi 7 · unitary/energy-spectrum 6 · per-qubit/scalar 16 · code program 14 | each quantity inherits its own cap; the sandboxed code path clones 2ⁿ amplitudes |
 | Readout mitigation · Classical shadows · State prep · Unitary synthesis | 8 · 12 · 8 · 4 | 2ⁿ distribution / per-snapshot rotate / 2ⁿ amplitudes / O(4ⁿ) two-level gates |
+| Page curve · Imbalance · Entanglement velocity · Berry phase | 14 · 14 · 12 · 12 | per-cut / per-sample sim |
+| Spin squeezing · QFI matrix (multiparameter) · Total correlation · Tripartite information | 14 | collective-spin / pairwise reduced-ρ moments |
+| Counting statistics · Correlation length · Anticoncentration | 18 · 16 · 16 | 2ⁿ probability/charge moments |
+| Observable variance | 20 | Pauli-sum applied to the 2ⁿ statevector |
+| Entanglement (Li–Haldane) · Schmidt gap · MPS bond | 6–8 (smaller cut side) | diagonalize reduced ρ |
+| Rényi entropy spectrum | 6 (smaller cut side) | diagonalize reduced ρ |
+| Characteristic function · Magic spectrum | 4 · 6 | 4ⁿ Pauli expectations |
+| Majorana stars | 6 | Durand–Kerner roots of the degree-n polynomial |
+| Butterfly velocity · Operator weight growth | 5 · 4 | dense unitary per sample, **on click** |
+| Work distribution · Density of states · Effective temperature | 5 · 7 · 6 | O((2ⁿ)³) diagonalization (work + DOS on click) |
+| Negativity spectrum · Coherent information · Mixed-state spectrum · Three-tangle | 6 · 6 · 6 · 3 | full 2ⁿ×2ⁿ ρ / ρ^{T_A} eigenvalues |
 
 Diagonalization-based panels (Hamiltonian spectrum, SFF, level statistics,
 diagonal ensemble, Krylov) inherit the **O((2ⁿ)³)** dense-eigensolver cost, so

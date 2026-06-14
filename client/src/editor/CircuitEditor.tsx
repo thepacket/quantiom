@@ -124,6 +124,14 @@ import { MajoranaStarsPanel } from "../panels/MajoranaStarsPanel";
 import { MagicSpectrumPanel } from "../panels/MagicSpectrumPanel";
 import { MultiparamQfiPanel } from "../panels/MultiparamQfiPanel";
 import { MixedStateSpectrumPanel } from "../panels/MixedStateSpectrumPanel";
+import { MpsBondPanel } from "../panels/MpsBondPanel";
+import { NegativitySpectrumPanel } from "../panels/NegativitySpectrumPanel";
+import { ThreeTanglePanel } from "../panels/ThreeTanglePanel";
+import { TotalCorrelationPanel } from "../panels/TotalCorrelationPanel";
+import { EntanglementVelocityPanel } from "../panels/EntanglementVelocityPanel";
+import { AnticoncentrationPanel } from "../panels/AnticoncentrationPanel";
+import { EffectiveTemperaturePanel } from "../panels/EffectiveTemperaturePanel";
+import { CoherentInfoPanel } from "../panels/CoherentInfoPanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
 import { RbPanel } from "../panels/RbPanel";
 import { QecPanel } from "../panels/QecPanel";
@@ -1456,6 +1464,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="branch-tree">
           <BranchTreePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="anticoncentration"><AnticoncentrationPanel state={simState} /></ErrorBoundary>
 
         <div className="panels-cat">Phase space &amp; magic</div>
         <ErrorBoundary label="wigner"><WignerPanel state={simState} /></ErrorBoundary>
@@ -1500,6 +1509,10 @@ export function CircuitEditor() {
         <ErrorBoundary label="schmidt-gap"><SchmidtGapPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="renyi-spectrum"><RenyiSpectrumPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="correlation-length"><CorrelationLengthPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="mps-bond"><MpsBondPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="negativity-spectrum"><NegativitySpectrumPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="three-tangle"><ThreeTanglePanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="total-correlation"><TotalCorrelationPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="participation">
           <ParticipationPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
@@ -1541,6 +1554,9 @@ export function CircuitEditor() {
         <ErrorBoundary label="operator-weight">
           <OperatorWeightPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="entanglement-velocity">
+          <EntanglementVelocityPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="krylov"><KrylovPanel state={simState} /></ErrorBoundary>
 
         <div className="panels-cat">Operator &amp; spectrum</div>
@@ -1573,6 +1589,7 @@ export function CircuitEditor() {
           <WorkDistributionPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
         <ErrorBoundary label="diagonal-ensemble"><DiagonalEnsemblePanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="effective-temperature"><EffectiveTemperaturePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="spectral-form-factor"><SpectralFormFactorPanel /></ErrorBoundary>
         <ErrorBoundary label="level-statistics"><LevelStatisticsPanel /></ErrorBoundary>
 
@@ -1598,6 +1615,9 @@ export function CircuitEditor() {
         </ErrorBoundary>
         <ErrorBoundary label="mixed-state-spectrum">
           <MixedStateSpectrumPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
+        </ErrorBoundary>
+        <ErrorBoundary label="coherent-information">
+          <CoherentInfoPanel circuit={circuit} customGates={customGates} paramValues={paramValues} noise={noise} />
         </ErrorBoundary>
 
         <div className="panels-cat">Characterization &amp; benchmarking</div>
