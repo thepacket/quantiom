@@ -394,7 +394,9 @@ to simulate classically."
 **Load** `ghz.qasm` and open the **Q-sphere**: *two big antipodal dots*
 (|000⟩ at the north pole, |111⟩ at the south), the whole state on one
 sphere with hue = phase. **Drag to orbit** the globe, scroll to zoom, and
-**hover any dot** for its state, probability, and phase angle.
+**hover any dot** for its state, probability, and phase angle. Faint
+Bloch-convention guides label the cardinal directions (|0⟩, |1⟩, |+⟩, |−⟩)
+to help you keep your bearings as you rotate.
 
 See [`panels.md`](panels.md) → Amplitude · phase / Wigner / Husimi /
 Magic / Q-sphere.
@@ -488,6 +490,44 @@ question matches yours:
   power of the circuit *unitary* across the middle cut (product → 0, CNOT →
   1, SWAP → 2 ebits) and the depth-swept ΔS_A symmetry-breaking curve, where
   a rise-then-fall is the quantum Mpemba effect.
+- **Page curve** & **Tripartite information** — the entanglement profile with
+  the analytic Haar **Page value** overlaid (a scrambled state hugs the arch)
+  and I₃ = I(A:B)+I(A:C)−I(A:BC) for three qubits (strongly negative ⇒
+  scrambling / delocalised information).
+- **Entanglement spectrum (Li–Haldane)**, **Schmidt gap** & **Rényi
+  spectrum** — the ξ_i = −ln λ_i level diagram (a topological-order
+  fingerprint), λ₁−λ₂ across cuts (an order parameter that *closes* at a
+  critical point), and S_α(ρ_A) vs the Rényi index (flat ⇒ volume-law).
+- **Entanglement contour**, **Total correlation** & **Correlation length ξ** —
+  where a region's entropy sits site-by-site (Σ = S(A)), the all-parties
+  multi-information Σ S(ρ_i) − S(ρ), and ξ from the exponential decay of the
+  connected ⟨ZᵢZⱼ⟩ correlator.
+- **Negativity spectrum**, **Three-tangle** & **MPS bond dimension** — the
+  partial-transpose eigenvalues across a cut (negative tail = entanglement),
+  the CKW residual τ₃ (GHZ → 1, W → 0), and the bond dimension χ an MPS would
+  need for a target truncation error.
+- **Counting statistics** — the charge distribution P(N_A = m) in a subregion;
+  its variance is the bipartite fluctuation that tracks entanglement.
+- **Spin squeezing**, **Observable variance** & **QFI matrix** — the Wineland
+  ξ²_R squeezing/entanglement witness, Var(H) with the σ/√N shot-noise error a
+  VQE energy pays, and the 3×3 multiparameter QFI matrix over {Jx, Jy, Jz}.
+- **Characteristic function**, **Majorana stars** & **Magic spectrum** — the
+  Fourier dual of the Wigner function, the stellar constellation on the sphere
+  (GHZ → a ring, |0…0⟩ → north pole), and the M_α stabilizer-Rényi family.
+- **Imbalance**, **Butterfly velocity**, **Operator weight growth** &
+  **Entanglement velocity** — the MBL-vs-thermal staggered ⟨Z⟩(t), v_B from the
+  OTOC light-cone, the operator-spreading heatmap, and dS/dt of the half-cut
+  entropy (the entanglement tsunami).
+- **Density of states**, **Work distribution**, **Effective temperature** &
+  **Berry phase** — the eigenvalue histogram of a Pauli-sum H, the two-point-
+  measurement quench P(W), the ETH Boltzmann β fit to the diagonal ensemble,
+  and the Wilson-loop geometric phase around a two-parameter loop.
+- **Anticoncentration** — the Porter–Thomas test of the output distribution
+  (collision ratio R: 1 flat, 2 anticoncentrated — the random-circuit / XEB
+  regime, R ≫ 2 peaked).
+- **Mixed-state spectrum** & **Coherent information** *(noise mode)* — the
+  eigenvalues of the trajectory-averaged ρ (effective rank = how mixed) and
+  I_c = S(ρ_B) − S(ρ) (positive ⇒ quantum information survives the channel).
 
 See [`panels.md`](panels.md) for the per-panel reference on each.
 
