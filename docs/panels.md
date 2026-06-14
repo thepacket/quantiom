@@ -1239,6 +1239,11 @@ unitary equivalence up to global phase.
 **Output.**
 - **Equivalent / not equivalent** verdict.
 - **Process fidelity** F = |Tr(U_A† U_B)/2ⁿ|² as a number.
+- **Average gate fidelity** F̄ = (d·F + 1)/(d + 1) and the average gate
+  error r = 1 − F̄ — the hardware-meaningful per-gate figures an RB
+  experiment would report.
+- **Diamond-norm distance** bounds ε◇ ∈ [1 − F, 2√(1 − F)] — a worst-case
+  (not just average) error budget for the difference channel.
 - **Trace-distance bound** √(1 − F).
 
 **Cost.** Full unitary comparison for n ≤ 8, sampled-column comparison
@@ -1608,6 +1613,147 @@ code-block + auto-open treatment.
 **Tip.** Use it as a tutor, not an oracle. The LLM is great at
 explaining concepts and proposing sequence changes; verify any
 non-trivial output by running it in the simulator before trusting.
+
+---
+
+## Page curve
+
+The entanglement-entropy profile S(ρ_A) across every contiguous cut, with
+two reference curves overlaid: the analytic **Page value** of a Haar-random
+pure state (the average entropy a maximally-scrambled state would have) and
+the maximal bound min(|A|, |B|) bits. A volume-law / thermalised state hugs
+the Page arch peaking at the half-cut; a gapped ground state stays flat near
+zero (area law); a product state is identically zero.
+
+**When available.** Statevector path only (not Clifford / noise). n ≤ 14.
+
+**Tip.** The "mean |S − S_Page|" readout is a one-number scrambling score:
+near zero means the state looks Haar-random across cuts.
+
+---
+
+## Tripartite information I₃
+
+I₃(A:B:C) = I(A:B) + I(A:C) − I(A:BC) for three chosen single qubits, with
+the rest of the register as the implicit fourth region. A scrambling channel
+drives I₃ **negative** — information about A is recoverable only from the
+joint BC, not from B or C alone — and a constant negative term also witnesses
+topological order. The three pairwise mutual informations are shown as bars
+beneath the I₃ verdict.
+
+**When available.** Statevector path only. n ≥ 4 (three regions + a remainder).
+
+---
+
+## Entanglement spectrum (Li–Haldane)
+
+The "entanglement energies" ξ_i = −ln λ_i of the reduced density matrix ρ_A
+across a chosen cut, drawn as a level diagram (lowest level = largest Schmidt
+weight, highlighted). Where the **Entanglement spectrum** (Schmidt) panel
+plots the squared coefficients λ_i, this plots their logarithms — the
+spectrum of the entanglement Hamiltonian H_E = −ln ρ_A, whose low-lying
+counting and gaps are the Li–Haldane fingerprint of topological order.
+
+**When available.** Statevector path only. Smaller side of the cut ≤ 6 qubits.
+
+---
+
+## Counting statistics
+
+The full probability distribution P(m) of the excitation number
+N_A = Σ_{i∈A} |1⟩⟨1| in a chosen subregion A (bars over m = 0 … |A|), with its
+mean (filling) and **variance**. The variance is the bipartite charge
+fluctuation — a cheap, experimentally accessible proxy that grows with the
+entanglement entropy for U(1)-symmetric states.
+
+**When available.** Statevector path only. n ≤ 18.
+
+---
+
+## Spin squeezing ξ²
+
+The Wineland squeezing parameter ξ²_R = N (ΔJ_⊥,min)² / |⟨J⟩|² for the
+collective spin J = ½ Σ σ. A gauge on a 0…2 scale marks the standard quantum
+limit (ξ² = 1): **ξ² < 1 certifies metrological squeezing** useful beyond
+shot noise *and* witnesses multipartite entanglement, with the gain reported
+in dB. States with zero mean spin (e.g. GHZ) make ξ² undefined — the panel
+says so and points you to the QFI panel, the right witness there.
+
+**When available.** Statevector path only. n ≤ 14.
+
+---
+
+## Observable variance & shot noise
+
+For a Pauli-sum observable H = Σ h_k P_k (entered with the same grammar as the
+Hamiltonian panels, with presets), reports ⟨H⟩, Var(H) = ⟨H²⟩ − ⟨H⟩², the
+standard deviation σ, and the **standard error σ/√N** of an N-shot estimate
+(N selectable). This is what makes the otherwise-exact Expectation panel
+honest about the finite-sampling cost a VQE energy evaluation actually pays.
+
+**When available.** Statevector path only.
+
+---
+
+## Characteristic function
+
+The discrete characteristic function |χ(u,v)| = |⟨D(u,v)⟩| on the
+Heisenberg–Weyl (Pauli) lattice — the Fourier dual of the Wigner panel. Rows
+index the X-support u, columns the Z-support v; χ(0,0) = 1 always. A
+stabilizer state shows a flat ±1 comb; generic states spread mass over the
+lattice, the complementary picture to Wigner negativity.
+
+**When available.** Statevector path only. n ≤ 4.
+
+---
+
+## Density imbalance I(t)
+
+The staggered (charge-density-wave) imbalance I(t) = (1/n) Σ_i (−1)^i ⟨Z_i⟩(t)
+swept over one period of the `t` clock — the canonical MBL-vs-thermalization
+diagnostic. Thermalising dynamics relax I → 0 (the density pattern washes
+out); a many-body-localized phase saturates to a non-zero plateau (memory of
+the initial state is retained). The "plateau" readout averages |I| over the
+back half of the window.
+
+**When available.** Statevector path only. n ≤ 14.
+
+---
+
+## Butterfly velocity (OTOC cone)
+
+Runs the OTOC with the butterfly Z on qubit 0 and the measurement Z on each
+other qubit, extracts the threshold-crossing **arrival time** t*(r) of the
+scrambling front at distance r, and linearly fits r ≈ v_B · t* — the emergent
+"speed of information" of the circuit. Plots arrival time vs distance with the
+fit line. Runs **on demand** (dense-unitary OTOC per qubit).
+
+**When available.** 2 ≤ n ≤ 5.
+
+---
+
+## Density of states
+
+A histogram of the exact energy spectrum of a Pauli-sum Hamiltonian (entered
+with presets). Where the Hamiltonian-spectrum panel draws individual levels,
+this coarse-grains them so the spectrum's *shape* is legible: a Gaussian bulk
+(generic many-body H), spectral edges, gaps, and degeneracy spikes. On-demand
+diagonalisation, n ≤ 7.
+
+---
+
+## Berry phase (Wilson loop)
+
+The geometric (Pancharatnam–Berry) phase γ = −arg Π⟨ψ_k|ψ_{k+1}⟩ the prepared
+state acquires on a closed rectangular loop in the plane of two chosen free
+symbols (centred on their current values, with a selectable radius). It is
+gauge-invariant: a quantized **γ ≈ π** signals a topological / Zak winding,
+γ ≈ 0 a trivial loop. Complements the QGT panel, which reports the Berry
+*curvature* this integrates over a finite loop. The reported overlap magnitude
+drops toward zero when the loop nears a degeneracy.
+
+**When available.** Statevector path, no mid-circuit measurement, ≥ 2 free
+symbols, n ≤ 12.
 
 ---
 

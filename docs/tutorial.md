@@ -18,6 +18,8 @@ explanatory header.
 Throughout the tour, **bold** is for actions you take; *italic* is for
 the thing you should now see.
 
+**Make sure you're on the latest version. Quantiom updates often, and your browser may be serving a cached copy. Do a hard refresh to pull the newest build: Windows — `Ctrl + Shift + R` (or `Ctrl + F5`); macOS — `Cmd + Shift + R`.**
+
 **New to quantum computing?** Start with **Part 0** — a gentle, almost
 math-free on-ramp. Parts I onward assume you're comfortable with the
 basics it covers.

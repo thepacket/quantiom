@@ -269,6 +269,29 @@ host plus `/api/health`.
     decomposition into two-level controlled-`u_arb` gates (universal, not
     CNOT-optimal), ≤ 4 qubits. (Needed `buildMatrix` to honour controls on
     `u_arb`.) Powers `UnitarySynthPanel`.
+  - Analysis batch (2026-06-14), each a pure helper + a default-collapsed
+    panel: `pageCurve.ts` (`pageCurve` reuses `entropyProfile` + the analytic
+    Haar `pageEntropyBits` overlay → `PageCurvePanel`), `tripartiteInfo.ts`
+    (`tripartiteInformation` I₃ = I(A:B)+I(A:C)−I(A:BC) for three single
+    qubits; negative ⇒ scrambling → `TripartiteInfoPanel`),
+    `entanglementHamiltonian.ts` (Li–Haldane ξ_i = −ln λ_i via
+    `entanglementSpectrum` → `EntanglementHamiltonianPanel`),
+    `countingStatistics.ts` (FCS distribution P(N_A=m) + variance of a
+    subregion charge → `CountingStatisticsPanel`), `spinSqueezing.ts`
+    (Wineland ξ²_R = N ΔJ²_⊥,min/|⟨J⟩|² via collective-spin moments →
+    `SpinSqueezingPanel`), `observableVariance.ts` (`observableMoments`
+    ⟨H⟩/Var(H) for a Pauli-sum via the qfi-style Hψ + `shotError` σ/√N →
+    `ObservableVariancePanel`), `charFunction.ts` (discrete characteristic
+    function |χ(u,v)|, Fourier dual of Wigner, a reshape of
+    `allPauliExpectations` → `CharacteristicFunctionPanel`), `imbalance.ts`
+    (`imbalanceSweep` staggered ⟨Z⟩ over the t clock, MBL vs thermal →
+    `ImbalancePanel`), `butterflyVelocity.ts` (v_B from OTOC front arrival
+    times, on-click, n ≤ 5 → `ButterflyVelocityPanel`), `densityOfStates.ts`
+    (eigenvalue histogram of a Pauli-sum H → `DensityOfStatesPanel`),
+    `berryPhase.ts` (Wilson-loop γ = −arg Π⟨ψ_k|ψ_{k+1}⟩ over two free
+    symbols → `BerryPhasePanel`), and `gateFidelity.ts`
+    (`gateFidelityMetrics` avg-gate-fidelity + diamond-norm bounds from the
+    process fidelity, surfaced inside the Equivalence panel).
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
     anti-controls and `if (c[k] == v) …` wrappers for conditional

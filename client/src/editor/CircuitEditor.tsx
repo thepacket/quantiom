@@ -103,6 +103,17 @@ import { ResourcePanel } from "../panels/ResourcePanel";
 import { ComparePanel } from "../panels/ComparePanel";
 import { ChatPanel } from "../panels/ChatPanel";
 import { EquivalencePanel } from "../panels/EquivalencePanel";
+import { PageCurvePanel } from "../panels/PageCurvePanel";
+import { TripartiteInfoPanel } from "../panels/TripartiteInfoPanel";
+import { EntanglementHamiltonianPanel } from "../panels/EntanglementHamiltonianPanel";
+import { CountingStatisticsPanel } from "../panels/CountingStatisticsPanel";
+import { SpinSqueezingPanel } from "../panels/SpinSqueezingPanel";
+import { ObservableVariancePanel } from "../panels/ObservableVariancePanel";
+import { CharacteristicFunctionPanel } from "../panels/CharacteristicFunctionPanel";
+import { ImbalancePanel } from "../panels/ImbalancePanel";
+import { ButterflyVelocityPanel } from "../panels/ButterflyVelocityPanel";
+import { DensityOfStatesPanel } from "../panels/DensityOfStatesPanel";
+import { BerryPhasePanel } from "../panels/BerryPhasePanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
 import { RbPanel } from "../panels/RbPanel";
 import { QecPanel } from "../panels/QecPanel";
@@ -461,7 +472,7 @@ function HelpMenu({ onOpen }: { onOpen: (tabId: string) => void }) {
               rel="noreferrer"
               onClick={() => setOpen(false)}
             >
-              <span>Introduction</span>
+              <span>Introduction to Quantum Computing</span>
             </a>
             <div className="examples-picker__cat-label">Reference →</div>
             {items.map((it) => (
@@ -1440,6 +1451,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="wigner"><WignerPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="husimi"><HusimiPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="magic"><MagicPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="characteristic-function"><CharacteristicFunctionPanel state={simState} /></ErrorBoundary>
 
         <div className="panels-cat">Expectation &amp; metrology</div>
         <ErrorBoundary label="expectation">
@@ -1455,6 +1467,8 @@ export function CircuitEditor() {
           />
         </ErrorBoundary>
         <ErrorBoundary label="qfi"><QfiPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="spin-squeezing"><SpinSqueezingPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="observable-variance"><ObservableVariancePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="qgt">
           <QgtPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
@@ -1464,7 +1478,11 @@ export function CircuitEditor() {
         <ErrorBoundary label="negativity"><NegativityPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="concurrence"><ConcurrencePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="schmidt"><SchmidtPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="entanglement-hamiltonian"><EntanglementHamiltonianPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="entropy-profile"><EntropyProfilePanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="page-curve"><PageCurvePanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="tripartite-info"><TripartiteInfoPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="counting-statistics"><CountingStatisticsPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="participation">
           <ParticipationPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
@@ -1497,6 +1515,12 @@ export function CircuitEditor() {
         <ErrorBoundary label="otoc">
           <OtocPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="butterfly-velocity">
+          <ButterflyVelocityPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="imbalance">
+          <ImbalancePanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="krylov"><KrylovPanel state={simState} /></ErrorBoundary>
 
         <div className="panels-cat">Operator &amp; spectrum</div>
@@ -1521,6 +1545,10 @@ export function CircuitEditor() {
           <UnitarySynthPanel circuit={circuit} customGates={customGates} paramValues={paramValues} onLoadInNewTab={(c, n) => t.newTab(c, n)} />
         </ErrorBoundary>
         <ErrorBoundary label="ham-spectrum"><HamSpectrumPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="density-of-states"><DensityOfStatesPanel /></ErrorBoundary>
+        <ErrorBoundary label="berry-phase">
+          <BerryPhasePanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="diagonal-ensemble"><DiagonalEnsemblePanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="spectral-form-factor"><SpectralFormFactorPanel /></ErrorBoundary>
         <ErrorBoundary label="level-statistics"><LevelStatisticsPanel /></ErrorBoundary>

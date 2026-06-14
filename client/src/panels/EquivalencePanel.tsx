@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { PanelShell } from "./PanelShell";
 import { equivalenceCheck, type EquivalenceResult } from "../sim/equivalence";
+import { gateFidelityMetrics } from "../sim/gateFidelity";
 import { parseQasm3 } from "../qasm/parse";
 import type { Circuit } from "../editor/types";
 import type { CustomGate } from "../editor/customGates";
@@ -155,6 +156,16 @@ function EquivalenceBody({ circuit, customGates, paramValues, otherTabs }: Props
           <div className="equiv__metrics">
             <div>max |Δa| = {result.maxDeviation.toExponential(2)}</div>
             <div>process fidelity F = {result.processFidelity.toFixed(6)}</div>
+            {(() => {
+              const g = gateFidelityMetrics(result.processFidelity, circuit.numQubits);
+              return (
+                <>
+                  <div>avg gate fidelity F̄ = {g.avgGateFidelity.toFixed(6)}</div>
+                  <div>avg gate error r = {g.avgGateInfidelity.toExponential(2)}</div>
+                  <div>diamond distance ε◇ ∈ [{g.diamondLower.toExponential(2)}, {g.diamondUpper.toFixed(4)}]</div>
+                </>
+              );
+            })()}
             <div>trace distance ≤ {result.traceDistanceProxy.toFixed(4)}</div>
             <div>global phase φ = {(result.globalPhase * 180 / Math.PI).toFixed(2)}°</div>
             {!result.equivalent && result.worstColumn >= 0 && (
