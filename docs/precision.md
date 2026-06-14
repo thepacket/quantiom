@@ -80,6 +80,8 @@ diagonalization), not by any loss of accuracy.
 | CHSH / Bell map · Multifractal spectrum | 12 · 16 | Pauli correlators / 2ⁿ probability moments |
 | Quantum discord · Entanglement-spectrum stats · Negativity dynamics | 8 · 8 · 12 | per-pair measurement opt / reduced-ρ eigenvalues (cut side ≤ 8/6) |
 | ETH off-diagonal · Floquet quasi-energies · OTOC light-cone | 5 · 6 · 5 | dense H/U eigendecomposition or dense-unitary OTOC, **on click** |
+| Eigenstate entanglement · Lyapunov · Temporal autocorrelation | 6 · 6 · 6 | dense H eig + reduced-ρ / OTOC / dense-U per sample (eigenstate + autocorr on click) |
+| Chern number · PT moments | 12 · 6 | N×N torus statevector overlaps / full 2ⁿ×2ⁿ ρ^{T_A} eigenvalues |
 
 Diagonalization-based panels (Hamiltonian spectrum, SFF, level statistics,
 diagonal ensemble, Krylov) inherit the **O((2ⁿ)³)** dense-eigensolver cost, so

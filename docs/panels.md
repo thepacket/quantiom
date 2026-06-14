@@ -2068,6 +2068,60 @@ phase, so no general complex eigensolver is needed. Runs **on demand**, n ≤ 6.
 
 ---
 
+## Eigenstate entanglement (ETH)
+
+The half-chain entanglement entropy S(ρ_A) of every *energy eigenstate* of an
+entered Pauli-sum Hamiltonian, scattered against energy. A thermalizing H (ETH)
+shows a volume-law arch peaking mid-spectrum near the Page ceiling; an
+integrable / MBL H shows low, scattered area-law points. This characterises
+H's eigenstates, complementing the prepared-state panels (diagonal ensemble,
+effective temperature, ETH off-diagonal). Runs **on demand**, n ≤ 6.
+
+---
+
+## Chern number
+
+The topological Chern number of the prepared state over the 2-torus of two
+free symbols, via the gauge-invariant Fukui–Hatsugai–Suzuki lattice flux
+C = (1/2π) Σ F(k) (quantized to an integer). The per-plaquette Berry flux is
+drawn as a curvature heatmap (blue +, orange −). A non-zero C is a topological
+fingerprint. Tiles the whole torus, where the Berry-phase panel does one loop
+and the QGT panel gives the local curvature. Needs ≥ 2 free symbols;
+statevector path, n ≤ 12.
+
+---
+
+## Lyapunov exponent (OTOC)
+
+Fits the early-time exponential growth of the OTOC, C(t) ∝ e^{λ_L t}, on a log
+axis and reports the slope λ_L — the *temporal* growth rate of scrambling (the
+companion to the spatial butterfly velocity). The fit uses the growth window
+between a small floor and the approach to saturation. Statevector path, n ≤ 6.
+
+---
+
+## Temporal autocorrelation ⟨Z(t)Z(0)⟩
+
+The infinite-temperature two-time autocorrelation C(t) = (1/2ⁿ) Tr[Z_q(t)Z_q(0)]
+of a chosen qubit over the `t` clock, plus its spectral function (Fourier
+transform). C(t) stays near 1 for a conserved / localized mode and decays to 0
+for a thermalizing one; the spectrum's peaks are the relaxation frequencies.
+State-independent; built from the dense unitary per sample, run **on demand**,
+n ≤ 6.
+
+---
+
+## PT moments (p₃ criterion)
+
+The partial-transpose moments p_n = Tr[(ρ^{T_A})ⁿ] across a cut, and the p₃-PPT
+entanglement criterion (p₃ < p₂² ⇒ entangled). These are the moments a
+randomized-measurement / classical-shadow protocol estimates directly without
+full state reconstruction, so they are the practical entanglement probe for
+noisy states; here they're computed exactly from the partial-transpose
+eigenvalues. Statevector path, n ≤ 6.
+
+---
+
 ## Selecting panels
 
 Each panel header is a toggle — click it to expand or collapse that

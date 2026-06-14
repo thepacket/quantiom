@@ -27,7 +27,7 @@ their compute when collapsed.
         │            client/ (Vite + React + TS)           │
         │                                                  │
         │  editor/    ←→   sim/       ←→   panels/         │
-        │   IR, tabs,      simulate +      ~108 panels,    │
+        │   IR, tabs,      simulate +      ~113 panels,    │
         │   undo, DnD,     stabilizer +    each pure       │
         │   QASM round-    noisy traj +    function of     │
         │   trip glue,     WebGPU paths    SimResult       │
@@ -55,7 +55,7 @@ client/src/
                 share links, recorder, docs modal, the main editor shell
   sim/          the simulator core (this is the brain)
   qasm/         OpenQASM 3 parse + emit + nine SDK / LaTeX emitters
-  panels/       ~108 collapsible peer panels (most are visualisers)
+  panels/       ~113 collapsible peer panels (most are visualisers)
   styles.css    all styles in one file
 server/         FastAPI shell — static host + health endpoint
 examples/       93 .qasm files in 10 categories, imported via Vite ?raw
@@ -263,6 +263,11 @@ sim/negativityDynamics.ts  log-negativity across a cut over the t clock
 sim/otocLightcone.ts    OTOC C(t) over the (qubit, time) plane (light-cone)
 sim/ethOffDiagonal.ts   ETH off-diagonal |⟨E_m|O|E_n⟩|² vs ω scatter
 sim/floquetSpectrum.ts  Floquet quasi-energies (eigenphases of U, normal-matrix)
+sim/eigenstateEntanglement.ts  S(ρ_A) of every energy eigenstate vs E (ETH/MBL)
+sim/chernNumber.ts      Chern number over a 2-symbol torus (Fukui–Hatsugai–Suzuki)
+sim/lyapunov.ts         quantum Lyapunov exponent λ_L from OTOC growth
+sim/autocorrelation.ts  infinite-T ⟨Z(t)Z(0)⟩ + spectral function
+sim/ptMoments.ts        partial-transpose moments p_n + p₃-PPT criterion
 (… plus the other visualiser substrates: magic, wigner, husimi, qsphere,
  negativity, ptm, otoc, loschmidt, zx, tanner, unitary, interaction, …)
 ```
@@ -511,7 +516,7 @@ Quantiom ships with a comprehensive automated test suite. The numeric
 core — the part where correctness actually matters — is covered
 thoroughly and verified against analytic ground truth.
 
-- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **1096
+- **Framework: Vitest** (`client/test/*.test.ts`), run in Node. **1106
   tests (~96% statement coverage)** cover the statevector simulator
   (Bell / GHZ / rotations / measurement / the `initialize()` gate /
   big-endian), the X/Y-basis measurement primitives, every gate's matrix
@@ -534,7 +539,7 @@ thoroughly and verified against analytic ground truth.
   DOM-only `exportSvg`, which the Node-only suite can't reach.
 - **Continuous integration.** `.github/workflows/ci.yml` type-checks
   the source and the tests, runs the full suite, and builds the client
-  on **every push and pull request**. A green build means all 1096 tests
+  on **every push and pull request**. A green build means all 1106 tests
   passed.
 - **In-app live Self-test.** The toolbar **Self-test** button runs a
   **380-check** browser-side cross-section of the same engine the

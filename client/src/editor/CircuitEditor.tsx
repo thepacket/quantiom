@@ -140,6 +140,11 @@ import { NegativityDynamicsPanel } from "../panels/NegativityDynamicsPanel";
 import { OtocLightconePanel } from "../panels/OtocLightconePanel";
 import { EthOffDiagonalPanel } from "../panels/EthOffDiagonalPanel";
 import { FloquetSpectrumPanel } from "../panels/FloquetSpectrumPanel";
+import { EigenstateEntanglementPanel } from "../panels/EigenstateEntanglementPanel";
+import { ChernNumberPanel } from "../panels/ChernNumberPanel";
+import { LyapunovPanel } from "../panels/LyapunovPanel";
+import { AutocorrelationPanel } from "../panels/AutocorrelationPanel";
+import { PtMomentsPanel } from "../panels/PtMomentsPanel";
 import { SyndromePanel } from "../panels/SyndromePanel";
 import { RbPanel } from "../panels/RbPanel";
 import { QecPanel } from "../panels/QecPanel";
@@ -1525,6 +1530,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="discord"><DiscordPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="ent-spectrum-stats"><EntSpectrumStatsPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="multifractal"><MultifractalPanel state={simState} /></ErrorBoundary>
+        <ErrorBoundary label="pt-moments"><PtMomentsPanel state={simState} /></ErrorBoundary>
         <ErrorBoundary label="participation">
           <ParticipationPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
@@ -1575,6 +1581,12 @@ export function CircuitEditor() {
         <ErrorBoundary label="otoc-lightcone">
           <OtocLightconePanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
+        <ErrorBoundary label="lyapunov">
+          <LyapunovPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="autocorrelation">
+          <AutocorrelationPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
         <ErrorBoundary label="krylov"><KrylovPanel state={simState} /></ErrorBoundary>
 
         <div className="panels-cat">Operator &amp; spectrum</div>
@@ -1611,6 +1623,10 @@ export function CircuitEditor() {
         <ErrorBoundary label="eth-offdiagonal"><EthOffDiagonalPanel circuit={circuit} /></ErrorBoundary>
         <ErrorBoundary label="floquet-spectrum">
           <FloquetSpectrumPanel circuit={circuit} customGates={customGates} paramValues={paramValues} />
+        </ErrorBoundary>
+        <ErrorBoundary label="eigenstate-entanglement"><EigenstateEntanglementPanel circuit={circuit} /></ErrorBoundary>
+        <ErrorBoundary label="chern-number">
+          <ChernNumberPanel state={simState} circuit={circuit} customGates={customGates} paramValues={paramValues} />
         </ErrorBoundary>
         <ErrorBoundary label="spectral-form-factor"><SpectralFormFactorPanel /></ErrorBoundary>
         <ErrorBoundary label="level-statistics"><LevelStatisticsPanel /></ErrorBoundary>

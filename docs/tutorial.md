@@ -543,6 +543,15 @@ question matches yours:
   vs ω (a smooth small envelope ⇒ ETH/thermal; sparse large ⇒ integrable) and
   the eigenphases of the circuit unitary on the unit circle with their
   level-spacing statistics.
+- **Eigenstate entanglement** & **Chern number** — the half-cut entropy of
+  every energy eigenstate vs E (a volume-law arch ⇒ ETH, low &amp; flat ⇒ MBL)
+  and the quantized topological invariant over a 2-symbol parameter torus (with
+  its Berry-curvature heatmap).
+- **Lyapunov exponent**, **Temporal autocorrelation** & **PT moments** — λ_L
+  from the early-time exponential OTOC growth, the infinite-T ⟨Z(t)Z(0)⟩ two-
+  time correlator with its spectral function, and the partial-transpose moments
+  with the p₃ entanglement criterion (the quantities a shadow protocol
+  estimates for noisy states).
 
 See [`panels.md`](panels.md) for the per-panel reference on each.
 

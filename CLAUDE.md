@@ -344,6 +344,17 @@ host plus `/api/health`.
     `EthOffDiagonalPanel`), and `floquetSpectrum.ts` (Floquet quasi-energies
     e^{iθ}=arg⟨v|U|v⟩ from the commuting Hermitian parts of the normal U — no
     complex eigensolver needed; on-click, n≤6 → `FloquetSpectrumPanel`).
+  - Analysis batch 5 (2026-06-14), same pattern: `eigenstateEntanglement.ts`
+    (half-cut S(ρ_A) of every energy eigenstate vs E via `hermitianEig`; ETH
+    volume-law arch vs MBL area-law, on-click, n≤6 → `EigenstateEntanglementPanel`),
+    `chernNumber.ts` (Fukui–Hatsugai–Suzuki lattice flux over a 2-free-symbol
+    torus → quantized Chern number + Berry-curvature heatmap → `ChernNumberPanel`),
+    `lyapunov.ts` (λ_L from a log-linear fit to early-time OTOC growth →
+    `LyapunovPanel`), `autocorrelation.ts` (infinite-T ⟨Z_q(t)Z_q(0)⟩ =
+    (1/2ⁿ)Σ z_a z_b|U_ba|² + spectral function, on-click, n≤6 →
+    `AutocorrelationPanel`), and `ptMoments.ts` (partial-transpose moments
+    p_n = Tr[(ρ^{T_A})ⁿ] + the p₃<p₂² PPT criterion, reusing
+    `negativitySpectrum` → `PtMomentsPanel`).
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
     anti-controls and `if (c[k] == v) …` wrappers for conditional
@@ -496,7 +507,7 @@ host plus `/api/health`.
     `sim/t1t2.ts`), `PauliBudgetPanel` (**Pauli error budget** — per-qubit X/Y/Z
     error stacked bars via the Pauli-twirl approx of depol+amp+phase damping,
     exact/instant; `sim/pauliBudget.ts`).
-  - The right column groups all ~108 panels under 12 sticky **category headers**
+  - The right column groups all ~113 panels under 12 sticky **category headers**
     (Controls / State / Measurement / Phase space & magic / Expectation &
     metrology / Entanglement & correlations / Dynamics / Operator & spectrum /
     Circuit structure / Noise & error / Characterization & benchmarking /
@@ -734,7 +745,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (1096 tests): the simulator core is deeply covered —
+- **What's covered** (1106 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
