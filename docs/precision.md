@@ -77,6 +77,9 @@ diagonalization), not by any loss of accuracy.
 | Butterfly velocity · Operator weight growth | 5 · 4 | dense unitary per sample, **on click** |
 | Work distribution · Density of states · Effective temperature | 5 · 7 · 6 | O((2ⁿ)³) diagonalization (work + DOS on click) |
 | Negativity spectrum · Coherent information · Mixed-state spectrum · Three-tangle | 6 · 6 · 6 · 3 | full 2ⁿ×2ⁿ ρ / ρ^{T_A} eigenvalues |
+| CHSH / Bell map · Multifractal spectrum | 12 · 16 | Pauli correlators / 2ⁿ probability moments |
+| Quantum discord · Entanglement-spectrum stats · Negativity dynamics | 8 · 8 · 12 | per-pair measurement opt / reduced-ρ eigenvalues (cut side ≤ 8/6) |
+| ETH off-diagonal · Floquet quasi-energies · OTOC light-cone | 5 · 6 · 5 | dense H/U eigendecomposition or dense-unitary OTOC, **on click** |
 
 Diagonalization-based panels (Hamiltonian spectrum, SFF, level statistics,
 diagonal ensemble, Krylov) inherit the **O((2ⁿ)³)** dense-eigensolver cost, so

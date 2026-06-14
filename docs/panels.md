@@ -1975,6 +1975,99 @@ it goes negative once decoherence has destroyed the quantum correlations.
 
 ---
 
+## CHSH / Bell nonlocality
+
+The maximal CHSH value per qubit pair via the Horodecki criterion
+S_max = 2√(t₁²+t₂²), where t₁,t₂ are the two largest singular values of the
+correlation matrix T_ij = ⟨σ_iσ_j⟩. A heatmap; cells with **S > 2** (orange)
+are a device-independent certificate of Bell nonlocality — strictly stronger
+than entanglement (some entangled states stay local). The Tsirelson bound is
+2√2 ≈ 2.83.
+
+**When available.** Statevector path only. n ≤ 12.
+
+---
+
+## Quantum discord
+
+Pairwise quantum discord D(A|B) = I(A:B) − J(A:B) — the quantum correlation
+that survives *beyond* entanglement (J is the most a projective measurement on
+B can reveal about A, minimised over the measurement axis). D > 0 even for some
+separable states, so it catches correlation that concurrence and negativity
+miss. An asymmetric heatmap (row A, measured qubit B).
+
+**When available.** Statevector path only. n ≤ 8 (per-pair measurement
+optimisation).
+
+---
+
+## Entanglement-spectrum statistics
+
+The consecutive-gap-ratio distribution of the entanglement energies
+ξ_i = −ln λ_i across a cut. ⟨r⟩ ≈ 0.386 (Poisson) flags a localized / MBL
+phase; ⟨r⟩ ≈ 0.536 (GOE) flags an ergodic / thermal phase — the level-
+statistics diagnostic applied to the *entanglement* Hamiltonian rather than
+the energy spectrum, with the two reference lines marked.
+
+**When available.** Statevector path only. Smaller cut side ≤ 8.
+
+---
+
+## Multifractal spectrum D_q
+
+The generalized fractal dimensions D_q of the wavefunction from the
+inverse-participation moments I_q = Σ p_xᵍ. D_q ≈ 1 for all q is a fully
+delocalised (ergodic) state; D_q ≈ 0 is localised; a curve that falls with q
+is **multifractal** (the critical regime) — a finer localization probe than
+the single IPR in the Participation panel.
+
+**When available.** Statevector path only. n ≤ 16.
+
+---
+
+## Negativity dynamics
+
+The logarithmic negativity across a chosen cut over one period of the `t`
+clock, read cheaply from the Schmidt coefficients (E_N = 2 log₂ Σ√λ). Shows
+entanglement growth, oscillation, and "sudden death / revival" — dips to zero
+mark instants where the cut briefly disentangles.
+
+**When available.** Statevector path only. n ≤ 12, smaller cut side ≤ 6.
+
+---
+
+## OTOC light-cone
+
+The out-of-time-order correlator C(t) over the full (qubit, time) plane — the
+butterfly Z on qubit 0, the measurement Z swept across every qubit and the `t`
+clock, as a heatmap. The rising wavefront is the operator light-cone (its slope
+is the butterfly velocity). Runs **on demand** (dense-unitary OTOC per qubit).
+
+**When available.** 2 ≤ n ≤ 5.
+
+---
+
+## ETH off-diagonal elements
+
+Scatters |⟨E_m|O|E_n⟩|² against the energy difference ω = E_m − E_n for an
+entered Hamiltonian H and observable O. A thermalising H shows a smooth,
+small-magnitude envelope (the ETH ansatz f(ω)); an integrable / MBL H shows
+sparse, large, structured elements. The diagonal ⟨E_n|O|E_n⟩ vs E is the
+microcanonical curve. Completes the thermalization story with the
+diagonal-ensemble and effective-temperature panels. Runs **on demand**, n ≤ 5.
+
+---
+
+## Floquet quasi-energies
+
+The eigenphases e^{iθ_k} of the circuit unitary (the one-period Floquet
+operator) on the unit circle, plus the level-spacing gap-ratio ⟨r⟩
+(Poisson ≈ 0.39 integrable vs circular-ensemble repulsion ≈ 0.53 chaotic).
+Recovered from the commuting Hermitian parts of U via the Rayleigh-quotient
+phase, so no general complex eigensolver is needed. Runs **on demand**, n ≤ 6.
+
+---
+
 ## Selecting panels
 
 Each panel header is a toggle — click it to expand or collapse that

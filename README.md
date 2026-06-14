@@ -72,7 +72,7 @@ shadows** estimate observables from randomized single-qubit measurements, and
 **readout-error mitigation** inverts the measurement confusion matrix to
 correct a noisy distribution.
 
-**Visualisers.** A column of 30-plus entanglement, dynamics, and
+**Visualisers.** A column of 60-plus entanglement, dynamics, and
 diagnostic visualisers sits alongside the statevector / probability /
 Bloch panels: mutual information, entanglement spectrum and entropy
 profile, ZZ correlations, space–time ⟨Z⟩ and entropy, t-sweep traces and
@@ -155,7 +155,7 @@ bug reports and feature requests in
 **[Issues](https://github.com/thepacket/quantiom/issues)**.
 
 Quantiom is moving fast and the surface to verify is wide — 64 gates,
-three simulator backends, an AI chat assistant, ~100 panels (most of them
+three simulator backends, an AI chat assistant, ~108 panels (most of them
 entanglement / dynamics / state / phase-space visualisers), OpenQASM 3 round-trip,
 and nine code/format emitters. Expect rough edges; bug
 reports against any of it are welcome.
@@ -163,7 +163,7 @@ reports against any of it are welcome.
 ## Testing
 
 The numeric core is backed by a **comprehensive automated test suite** —
-**1082 tests (~96% statement coverage)** that run in continuous integration
+**1096 tests (~96% statement coverage)** that run in continuous integration
 on **every push** (`.github/workflows/ci.yml`). They verify the statevector
 simulator (incl. the `initialize()` gate and X/Y-basis measurement), every
 gate's matrix unitarity and algebra, the Clifford tableau (with the
@@ -183,7 +183,7 @@ against analytic ground truth.
 You don't have to take that on faith: the toolbar **Self-test** button
 re-runs a **413-check** cross-section of the same engine **live in your
 browser** in ~10 ms and shows the pass/fail report — itself a subset of
-the full **1082-test** suite that runs in CI on every commit. See
+the full **1096-test** suite that runs in CI on every commit. See
 [Architecture → Testing](docs/architecture.md#testing) for the full
 breakdown.
 

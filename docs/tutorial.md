@@ -528,6 +528,21 @@ question matches yours:
 - **Mixed-state spectrum** & **Coherent information** *(noise mode)* — the
   eigenvalues of the trajectory-averaged ρ (effective rank = how mixed) and
   I_c = S(ρ_B) − S(ρ) (positive ⇒ quantum information survives the channel).
+- **CHSH / Bell nonlocality** & **Quantum discord** — the per-pair maximal
+  CHSH value (S > 2 ⇒ device-independent nonlocality; Bell reaches the
+  Tsirelson bound 2√2) and the per-pair discord D = I − J (quantum correlation
+  *beyond* entanglement, non-zero even for some separable states).
+- **Entanglement-spectrum statistics** & **Multifractal spectrum D_q** — the
+  gap-ratio of the entanglement energies (Poisson 0.39 localized vs GOE 0.53
+  ergodic) and the generalized fractal dimensions of the wavefunction (flat at
+  1 ⇒ ergodic, falling ⇒ multifractal, ≈ 0 ⇒ localized).
+- **Negativity dynamics** & **OTOC light-cone** — log-negativity across a cut
+  over the `t` clock (dips to 0 = entanglement sudden death) and the OTOC over
+  the whole (qubit, time) plane, whose rising front is the operator light-cone.
+- **ETH off-diagonal elements** & **Floquet quasi-energies** — |⟨E_m|O|E_n⟩|²
+  vs ω (a smooth small envelope ⇒ ETH/thermal; sparse large ⇒ integrable) and
+  the eigenphases of the circuit unitary on the unit circle with their
+  level-spacing statistics.
 
 See [`panels.md`](panels.md) for the per-panel reference on each.
 

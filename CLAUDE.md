@@ -329,6 +329,21 @@ host plus `/api/health`.
     `EffectiveTemperaturePanel`), and `coherentInformation.ts` (I_c=S(ρ_B)−S(ρ)
     with a density-matrix partial trace, on the noisy ρ from
     `simulateNoisy(…, { density: true })` → `CoherentInfoPanel`).
+  - Analysis batch 4 (2026-06-14), same pattern; `sim/eig.ts` is a new shared
+    dense eigensolver module (`jacobiSym`/`hermitianEig`/`eig3`): `chsh.ts`
+    (Horodecki CHSH map S_max=2√(t₁²+t₂²) per pair; Bell→2√2, >2 = nonlocal →
+    `ChshPanel`), `quantumDiscord.ts` (pairwise discord D=I−J with projective-
+    measurement optimisation over the Bloch sphere → `DiscordPanel`),
+    `entanglementSpectrumStats.ts` (gap-ratio stats of ξ_i=−ln λ_i; Poisson
+    0.386 vs GOE 0.536 → `EntSpectrumStatsPanel`), `multifractal.ts`
+    (generalized fractal dimensions D_q from Σpᵍ → `MultifractalPanel`),
+    `negativityDynamics.ts` (log-negativity across a cut over the t clock via
+    E_N=2log₂Σ√λ → `NegativityDynamicsPanel`), `otocLightcone.ts` (OTOC over the
+    (qubit,time) plane, on-click, n≤5 → `OtocLightconePanel`), `ethOffDiagonal.ts`
+    (|⟨E_m|O|E_n⟩|² vs ω ETH scatter via `hermitianEig`, on-click, n≤5 →
+    `EthOffDiagonalPanel`), and `floquetSpectrum.ts` (Floquet quasi-energies
+    e^{iθ}=arg⟨v|U|v⟩ from the commuting Hermitian parts of the normal U — no
+    complex eigensolver needed; on-click, n≤6 → `FloquetSpectrumPanel`).
 - `client/src/qasm/`
   - `emit.ts`: OpenQASM 3 emitter. Emits `negctrl @` chains for
     anti-controls and `if (c[k] == v) …` wrappers for conditional
@@ -481,7 +496,7 @@ host plus `/api/health`.
     `sim/t1t2.ts`), `PauliBudgetPanel` (**Pauli error budget** — per-qubit X/Y/Z
     error stacked bars via the Pauli-twirl approx of depol+amp+phase damping,
     exact/instant; `sim/pauliBudget.ts`).
-  - The right column groups all ~100 panels under 12 sticky **category headers**
+  - The right column groups all ~108 panels under 12 sticky **category headers**
     (Controls / State / Measurement / Phase space & magic / Expectation &
     metrology / Entanglement & correlations / Dynamics / Operator & spectrum /
     Circuit structure / Noise & error / Characterization & benchmarking /
@@ -719,7 +734,7 @@ host plus `/api/health`.
   tests via `tsconfig.test.json`.
 - **CI**: `.github/workflows/ci.yml` runs typecheck (src + tests) →
   `npm test` → `npm run build` on every push and PR.
-- **What's covered** (1082 tests): the simulator core is deeply covered —
+- **What's covered** (1096 tests): the simulator core is deeply covered —
   `complex`/`matrices` (every gate's unitarity + known identities),
   `simulate` (Bell/GHZ/rotations/measurement/big-endian + the full
   `initialize()` gate: basis labels, amplitude tuples, failure paths),
