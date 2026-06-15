@@ -72,6 +72,7 @@ diagonalization), not by any loss of accuracy.
 | Observable variance | 20 | Pauli-sum applied to the 2ⁿ statevector |
 | Entanglement (Li–Haldane) · Schmidt gap · MPS bond | 6–8 (smaller cut side) | diagonalize reduced ρ |
 | Rényi entropy spectrum | 6 (smaller cut side) | diagonalize reduced ρ |
+| Entanglement contour | 7 (region size) | diagonalize each growing prefix reduced ρ |
 | Characteristic function · Magic spectrum | 4 · 6 | 4ⁿ Pauli expectations |
 | Majorana stars | 6 | Durand–Kerner roots of the degree-n polynomial |
 | Butterfly velocity · Operator weight growth | 5 · 4 | dense unitary per sample, **on click** |
