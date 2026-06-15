@@ -550,9 +550,10 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
               width={b.right - b.left} height={b.bottom - b.top}
               rx={4} ry={4}
               fill="none"
-              stroke="var(--accent-2)"
-              strokeWidth={2}
-              strokeDasharray="4 3"
+              stroke="#b8bdc6"
+              strokeWidth={1}
+              strokeDasharray="1 3"
+              strokeLinecap="round"
               pointerEvents="none"
             />
           );
@@ -568,7 +569,8 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
             fillOpacity={0.12}
             stroke="var(--accent-2)"
             strokeWidth={1}
-            strokeDasharray="3 2"
+            strokeDasharray="1 3"
+            strokeLinecap="round"
             pointerEvents="none"
           />
         )}

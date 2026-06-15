@@ -37,3 +37,4 @@ id_ed25519*
 secrets.*
 .secrets
 .fly/
+.claude/
