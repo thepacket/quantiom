@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { HistoryAction } from "./state";
 import { buildPlacedGate, qubitSpan } from "./state";
 import type { Circuit, GateDef, PlacedGate } from "./types";
@@ -141,6 +142,7 @@ type HoverState =
 export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, currentStep, customGates = [], highlightedIds, selectedIds, onSelectionChange, coneIds, skipped, folds, onUnfold }: Props) {
   const [hover, setHover] = useState<HoverState>(null);
   const [ctxMenu, setCtxMenu] = useState<ContextMenu>(null);
+  const ctxMenuRef = useRef<HTMLDivElement>(null);
   // Tracks the in-flight move-gate drag so dragOver (which can't read payload) knows the gate.
   const dragMove = useRef<{ placedId: string; gateId: string } | null>(null);
   // Rubber-band rectangle drag for multi-gate selection. Coords are in
@@ -318,10 +320,14 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
 
   useEffect(() => {
     if (!ctxMenu) return;
-    const close = () => setCtxMenu(null);
-    window.addEventListener("mousedown", close);
-    window.addEventListener("scroll", close, true);
-    return () => { window.removeEventListener("mousedown", close); window.removeEventListener("scroll", close, true); };
+    // The menu is portaled to <body> (to escape the canvas zoom transform), so
+    // dismiss by hit-testing the menu node rather than relying on event
+    // bubbling through the React root.
+    const onDown = (e: MouseEvent) => { if (!ctxMenuRef.current?.contains(e.target as Node)) setCtxMenu(null); };
+    const onScroll = () => setCtxMenu(null);
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("scroll", onScroll, true);
+    return () => { window.removeEventListener("mousedown", onDown); window.removeEventListener("scroll", onScroll, true); };
   }, [ctxMenu]);
 
   const onReassignDragStart = (
@@ -651,11 +657,11 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
           />
         ))}
       </div>
-      {ctxMenu && (
+      {ctxMenu && createPortal(
         <div
+          ref={ctxMenuRef}
           className="gate-ctx"
           style={{ position: "fixed", left: ctxMenu.x, top: ctxMenu.y, zIndex: 1000 }}
-          onMouseDown={(e) => e.stopPropagation()}
         >
           <button onClick={() => ctxAction(ctxMenu.gate, "edit")}>Edit…</button>
           <button onClick={() => ctxAction(ctxMenu.gate, "duplicate")}>Duplicate</button>
@@ -670,7 +676,8 @@ export function CircuitCanvas({ circuit, dispatch, selectedGateId, onSelect, cur
           <button disabled={ctxMenu.gate.controls.length === 0} onClick={() => ctxAction(ctxMenu.gate, "toggle-anti")}>Toggle anti-control</button>
           <div className="gate-ctx__sep" />
           <button className="gate-ctx__danger" onClick={() => ctxAction(ctxMenu.gate, "delete")}>Delete</button>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
