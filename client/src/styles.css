@@ -212,14 +212,28 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .editor__right-bar-toggle { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .editor__right-bar-tick { color: var(--accent); font-variant-numeric: tabular-nums; }
 .editor__right-bar-end { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+/* Filter box pinned below the right-bar; type to narrow the panel list. */
+.editor__panel-filter {
+  position: sticky; top: 33px; z-index: 5;
+  padding: 6px 8px; background: var(--bg-2); border-bottom: 1px solid var(--border);
+}
+.editor__panel-filter-input {
+  width: 100%; box-sizing: border-box; font-size: 13px; padding: 4px 8px;
+  background: var(--panel); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 4px;
+}
+.editor__panel-filter-input:focus { outline: none; border-color: var(--accent); }
+
 /* Category section headers in the right-column panel list. */
 .panels-cat {
   font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--fg); background: var(--bg-2);
   padding: 6px 10px 5px; border-bottom: 1px solid var(--border);
-  position: sticky; top: 33px; z-index: 4;
+  position: sticky; top: 68px; z-index: 4;
 }
 .panels-cat:first-of-type { border-top: none; }
+/* While filtering, the flat match list reads better without category headers. */
+.editor__right--filtering .panels-cat { display: none; }
 .editor__panels-btn { padding: 2px 8px; background: transparent; border: 1px solid var(--border); border-radius: 4px; color: var(--fg); cursor: pointer; font-size: 11px; }
 .editor__panels-btn:hover { background: var(--bg-3, var(--bg-2)); }
 /* Five grid rows for editor__center's children:

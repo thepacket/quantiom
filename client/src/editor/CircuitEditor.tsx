@@ -51,7 +51,7 @@ import { randomCliffordCircuit } from "../sim/randomClifford";
 import { compileForDevice } from "../sim/compile";
 import { recordAnimationWebM } from "./recordAnimation";
 import { EndiannessToggle } from "../panels/endianness";
-import { setAllPanelsCollapsed, SpotlightProvider, SPOTLIGHT_DND_MIME, PANEL_COLUMN_REVEAL_EVENT } from "../panels/PanelShell";
+import { setAllPanelsCollapsed, SpotlightProvider, PanelFilterProvider, SPOTLIGHT_DND_MIME, PANEL_COLUMN_REVEAL_EVENT } from "../panels/PanelShell";
 import { HoverTip } from "./HoverTip";
 import { StatevectorPanel } from "../panels/StatevectorPanel";
 import { QasmPanel } from "../panels/QasmPanel";
@@ -711,6 +711,7 @@ export function CircuitEditor() {
   // circuit (drag a panel header onto the canvas, or click its ⤢ grip).
   const [spotlightId, setSpotlightId] = useState<string | null>(null);
   const [spotlightEl, setSpotlightEl] = useState<HTMLElement | null>(null);
+  const [panelQuery, setPanelQuery] = useState("");
   const [spotlightDragOver, setSpotlightDragOver] = useState(false);
   const onSpotlightDragOver = useCallback((e: React.DragEvent) => {
     if (!Array.from(e.dataTransfer.types).includes(SPOTLIGHT_DND_MIME)) return;
@@ -1011,6 +1012,7 @@ export function CircuitEditor() {
 
   return (
     <SpotlightProvider value={{ id: spotlightId, container: spotlightEl, setId: setSpotlightId }}>
+    <PanelFilterProvider value={panelQuery.trim().toLowerCase()}>
     <div className={`editor${paletteCollapsed ? " editor--palette-collapsed" : ""}${panelsCollapsed ? " editor--panels-collapsed" : ""}`}>
       <HoverTip />
       {showDocs !== null && <DocsModal initialTab={showDocs} onClose={() => setShowDocs(null)} />}
@@ -1376,7 +1378,7 @@ export function CircuitEditor() {
           />
         </ErrorBoundary>
       </div>
-      <div className="editor__right">
+      <div className={"editor__right" + (panelQuery.trim() ? " editor__right--filtering" : "")}>
         <button
           className="panels__reopen"
           onClick={() => setPanelsCollapsed(false)}
@@ -1442,6 +1444,16 @@ export function CircuitEditor() {
             <button className="editor__panels-btn" onClick={() => setAllPanelsCollapsed(false)} title="Expand all panels">all</button>
             <button className="editor__panels-btn" onClick={() => setAllPanelsCollapsed(true)} title="Collapse all panels">none</button>
           </span>
+        </div>
+        <div className="editor__panel-filter">
+          <input
+            type="search"
+            className="editor__panel-filter-input"
+            placeholder="Filter panels…"
+            value={panelQuery}
+            onChange={(e) => setPanelQuery(e.target.value)}
+            aria-label="Filter panels by name"
+          />
         </div>
         <div className="panels-cat">Controls</div>
         <ErrorBoundary label="parameters">
@@ -1705,6 +1717,7 @@ export function CircuitEditor() {
         <ErrorBoundary label="qasm"><QasmPanel circuit={circuit} dispatch={dispatch} /></ErrorBoundary>
       </div>
     </div>
+    </PanelFilterProvider>
     </SpotlightProvider>
   );
 }

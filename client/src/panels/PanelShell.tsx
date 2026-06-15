@@ -35,6 +35,15 @@ export function usePanelCollapsed(): boolean {
   return useContext(CollapsedContext);
 }
 
+/**
+ * Panel-filter context: a lowercased search query. When non-empty, a
+ * PanelShell whose title doesn't contain it removes itself, so the panel
+ * column filters down to matches as the user types.
+ */
+const PanelFilterContext = createContext<string>("");
+export const PanelFilterProvider = PanelFilterContext.Provider;
+export function usePanelFilter(): string { return useContext(PanelFilterContext); }
+
 type Props = {
   id: string;
   title: string;
@@ -146,6 +155,11 @@ export function PanelShell({ id, title, children, toolbar, defaultCollapsed = fa
   // the dock via a portal; the inline slot shows a small placeholder instead.
   const bodyContext = isSpotlit ? false : collapsed;
   const inlineHidden = collapsed && !isSpotlit;
+
+  // Panel-column filter: drop panels whose title doesn't match the query.
+  // (All hooks above run unconditionally, so this early return is safe.)
+  const filterQuery = useContext(PanelFilterContext);
+  if (filterQuery && !title.toLowerCase().includes(filterQuery) && !isSpotlit) return null;
 
   return (
     <section ref={sectionRef} className={`panel${className ? " " + className : ""}${isSpotlit ? " panel--spotlit" : ""}`}>
