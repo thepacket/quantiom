@@ -105,6 +105,18 @@ legend { color: var(--muted); font-size: 11px; padding: 0 4px; text-transform: u
 .chat__msg--assistant .chat__msg-role { color: #b2d2ff; }
 .chat__msg--streaming .chat__msg-body { opacity: 0.85; }
 .chat__text { white-space: pre-wrap; word-wrap: break-word; font-size: 1em; line-height: 1.5; }
+/* In-app documentation (Help → docs). The docs are heading-heavy with many
+   bold lead-ins, so soften the weights and open up the spacing. The Markdown
+   renderer sets some margins inline, hence the !important overrides. */
+.docs-body h1, .docs-body h2, .docs-body h3 { font-weight: 600; }
+.docs-body h2 { margin-top: 26px !important; }
+.docs-body h3 { margin-top: 18px !important; }
+.docs-body strong { font-weight: 600; }
+.docs-body p { margin: 11px 0 !important; }
+.docs-body li { margin: 5px 0; }
+.docs-body ul, .docs-body ol { margin: 10px 0 !important; }
+.docs-body hr { margin: 22px 0; border: none; border-top: 1px solid var(--border); }
+
 /* Rendered-markdown body for assistant replies. */
 .chat__md { font-size: 1em; line-height: 1.5; word-wrap: break-word; overflow-wrap: anywhere; min-width: 0; }
 /* Wide display-math doesn't wrap; let it scroll within the bubble rather than

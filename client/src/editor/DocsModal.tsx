@@ -72,9 +72,9 @@ export function DocsModal({ onClose, initialTab }: { onClose: () => void; initia
             title="Close (Esc)"
           >×</button>
         </div>
-        <div style={{
-          flex: 1, overflowY: "auto", padding: "14px 24px",
-          fontSize: 16, lineHeight: 1.6, color: "var(--fg)",
+        <div className="docs-body" style={{
+          flex: 1, overflowY: "auto", padding: "16px 26px",
+          fontSize: 16, lineHeight: 1.7, color: "var(--fg)",
         }}>
           <Markdown source={tab.content} />
         </div>
