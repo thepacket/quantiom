@@ -3,11 +3,9 @@
 Quantiom is a solo-authored project. **It does not accept pull requests.** An
 automated workflow closes incoming PRs and points the author here.
 
-This isn't hostility — it's a deliberate scope choice that keeps the codebase
-moving in one direction, with one set of design opinions, and lets the
-maintainer ship at their own cadence. Open-source means you can read it, run
-it, fork it, and modify your fork freely. The MIT license
-([`LICENSE`](./LICENSE)) explicitly grants you those rights.
+This project does not accept pull requests — any PR opened here is closed
+automatically. This is a deliberate choice to keep the project's provenance
+and direction clear.
 
 ## Welcome ways to engage
 
