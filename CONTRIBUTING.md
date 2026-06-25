@@ -1,11 +1,8 @@
 # Contributing
 
-Quantiom is a solo-authored project. **It does not accept pull requests.** An
-automated workflow closes incoming PRs and points the author here.
-
-This project does not accept pull requests — any PR opened here is closed
-automatically. This is a deliberate choice to keep the project's provenance
-and direction clear.
+Quantiom is a solo-authored project. It does not accept pull requests — 
+any PR opened here is closed automatically. This is a deliberate choice to
+keep the project's provenance and direction clear.
 
 ## Welcome ways to engage
 
