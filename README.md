@@ -976,7 +976,6 @@ are permissively licensed (BSD / MIT / PSF); none are copyleft.
 
 ## Contributing
 
-Quantiom is a single-author project and **does not accept pull requests**;
-see [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports go to
+Pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports go to
 [Issues](../../issues); everything else — questions, ideas, just saying hi
 — is the right fit for [Discussions](../../discussions).

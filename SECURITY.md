@@ -81,9 +81,8 @@ is user-provided and lives only in the user's browser.
 
 ## Reporting a vulnerability
 
-Since Quantiom is a personal project that does not accept pull requests (see
-[`CONTRIBUTING.md`](./CONTRIBUTING.md)), the most direct way to report a
-non-sensitive security concern is to open a GitHub
+The most direct way to report a non-sensitive security concern is to open a
+GitHub
 [discussion](../../discussions) or an [issue](../../issues) labelled "security".
 For anything sensitive (active exploit, credential exposure), please contact the
 maintainer privately rather than filing publicly.

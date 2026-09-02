@@ -1,8 +1,7 @@
 # Contributing
 
-Quantiom is a solo-authored project. It does not accept pull requests — 
-any PR opened here is closed automatically. This is a deliberate choice to
-keep the project's provenance and direction clear.
+Quantiom is maintained by one person, and pull requests are welcome. Bug
+reports, ideas and questions are just as useful; here is where each goes.
 
 ## Welcome ways to engage
 
@@ -14,10 +13,14 @@ keep the project's provenance and direction clear.
 - **Feature requests** — open a [discussion](../../discussions). Concrete use
   cases (what gates, what visualization, what workflow) are more useful than
   abstract suggestions.
+- **Pull requests** — fork, make a focused change, and open a PR that says
+  what it does and how you checked it (see below).
 - **Fork it** — go ahead. That's what the license is for.
 
-## What happens to pull requests
+## Pull requests
 
-A GitHub Action ([`.github/workflows/no-prs.yml`](./.github/workflows/no-prs.yml))
-posts a friendly comment, closes the PR, and locks it. Your diff is still
-visible on your fork and can inform issues you might file.
+Keep each one focused on a single bug or feature, describe what it changes and
+how you checked it, and expect a review that may ask for changes. For a larger
+idea, open a discussion first so the direction can be agreed before you spend
+time on it. By contributing you agree that your work is released under the
+project's license.
